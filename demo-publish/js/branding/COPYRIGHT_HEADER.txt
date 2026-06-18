@@ -1,0 +1,5 @@
+/**
+ * Standard source-file copyright header — PlanAI Field™
+ * Developed by PiriStrategy. © Taner Piri / PiriStrategy. All rights reserved.
+ * Proprietary software — unauthorized redistribution prohibited. See LICENSE.
+ */

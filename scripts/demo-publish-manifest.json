@@ -1,0 +1,15 @@
+{
+  "purpose": "GitHub Pages safe publish allowlist for planai.tr/demo/",
+  "include": {
+    "files": ["index.html", "manifest.json", "integrity-manifest.json", "LICENSE", "NOTICE", "README.md"],
+    "directories": ["assets", "css", "js", "libs", "mpyy"]
+  },
+  "exclude": {
+    "directories": ["scripts", "yedek", "releases", "interaktif", "interaktif-replay", "workers"],
+    "files": [
+      "app.css", "app.js", "index - Kopya.html", "planai-field-app.html",
+      "AGENTS.md", "DEPLOY_CHECKLIST.md", "RELEASE_HARDENING_v1.0.md",
+      "THREAT_MODEL.md", "CONTRIBUTING.md", "SECURITY.md"
+    ]
+  }
+}
