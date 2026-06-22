@@ -204,6 +204,10 @@
 
     prog(10, i18n.progress.build);
     const demo = buildDemoPayload(opts);
+    const voicePhoto = demo.photos.find(p => p.hasVoice);
+    if (voicePhoto && typeof opts.synthesizeDemoVoiceDataUrl === 'function') {
+      voicePhoto.audioDataUrl = await opts.synthesizeDemoVoiceDataUrl(voicePhoto.voiceDuration || 12);
+    }
     await new Promise(r => setTimeout(r, 120));
 
     prog(25, i18n.progress.satellite);

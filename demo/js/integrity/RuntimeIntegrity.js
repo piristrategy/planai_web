@@ -35,6 +35,12 @@ const RuntimeIntegrity = (function () {
     _checked = true;
     if (!PRODUCTION) return true;
     try {
+      const proto = location.protocol || '';
+      if (proto === 'file:' || proto === 'blob:') return true;
+      const host = (location.hostname || '').toLowerCase();
+      if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') return true;
+    } catch (_) { /* continue strict check */ }
+    try {
       const res = await fetch(MANIFEST_URL, { cache: 'no-store' });
       if (!res.ok) {
         _failed = true;

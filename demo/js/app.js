@@ -84,6 +84,11 @@ const GPS_TRACK_JUMP_SEC = 2.5;
 const GPS_TRACK_DUP_EPS = 1e-6;
 const GPS_STALE_FIX_MS = 12000;
 const GPS_JITTER_STANDSTILL_M = 1.6;
+const GPS_AGPS_WEAK_THRESHOLD_M = 35;
+const GPS_LIVE_REJECT_ACCURACY_M = 120;
+const GPS_FIX_FUSE_MAX = 6;
+const GPS_AGPS_POLL_WEAK_MS = 3500;
+const GPS_AGPS_POLL_OK_MS = 12000;
 const GPS_TRACK_VIS_MIN_SEG_M = 2.8;
 const GPS_TRACK_VIS_MAX_STEP_M = 6.5;
 const GPS_TRACK_VIS_CORNER_DEG = 32;
@@ -111,6 +116,10 @@ let _gpsDerivedPathM = 0;
 let _gpsDerivedPathRef = null;
 let _gpsSpeedSamples = [];
 let _gpsCompassBound = false;
+let _gpsFixBuffer = [];
+let _gpsAgpsPollTimer = null;
+let _gpsDisplayAccuracySmooth = null;
+let _gpsAgpsHintShown = false;
 let _gpsHudSpeedSmooth = null;
 let _gpsHudHeadingSmooth = null;
 let _gpsHudLongPressTimer = null;
@@ -668,6 +677,7 @@ const PA_I18N = {
     'gps.hint.acquire': 'Konum alınıyor… birkaç saniye bekleyin.',
     'gps.hint.deniedHelp': 'Konum izni gerekli. Tarayıcı kilit → Site ayarları → Konum → İzin ver.',
     'gps.hint.waiting': 'GPS sinyali bekleniyor — açık alanda deneyin',
+    'gps.hint.agpsWeak': 'Zayıf GPS — AGPS konum iyileştiriliyor, açık alanda bekleyin',
     'gps.hint.on': 'GPS açıldı — konum aranıyor', 'gps.hint.off': 'GPS durduruldu',
     'gps.hint.followOn': 'GPS ve harita takibi açıldı', 'gps.hint.noFix': 'Konum henüz alınamadı — bekleyin',
     'gps.hint.openFirst': 'Önce GPS\'i açın', 'gps.hint.centered': 'Merkeze gidildi',
@@ -1257,6 +1267,7 @@ const PA_I18N = {
     'gps.hint.acquire': 'Getting location… wait a few seconds.',
     'gps.hint.deniedHelp': 'Location permission required. Browser lock → Site settings → Location → Allow.',
     'gps.hint.waiting': 'Waiting for GPS — try outdoors',
+    'gps.hint.agpsWeak': 'Weak GPS — refining position (AGPS); try open sky',
     'gps.hint.on': 'GPS on — locating', 'gps.hint.off': 'GPS stopped',
     'gps.hint.followOn': 'GPS and map follow enabled', 'gps.hint.noFix': 'No fix yet — wait',
     'gps.hint.openFirst': 'Turn on GPS first', 'gps.hint.centered': 'Centered on GPS',
@@ -2648,6 +2659,101 @@ function gpsRecentMoveRadius() {
   return maxR;
 }
 
+function gpsClearFixFusion() {
+  _gpsFixBuffer = [];
+  _gpsDisplayAccuracySmooth = null;
+  _gpsAgpsHintShown = false;
+  clearTimeout(_gpsAgpsPollTimer);
+  _gpsAgpsPollTimer = null;
+}
+
+function gpsPushFixBuffer(fix) {
+  _gpsFixBuffer.push({
+    lat: fix.lat,
+    lon: fix.lon,
+    accuracy: fix.accuracy,
+    ts: fix.ts || Date.now(),
+  });
+  if (_gpsFixBuffer.length > GPS_FIX_FUSE_MAX) _gpsFixBuffer.shift();
+}
+
+function gpsFuseLiveFix(incoming) {
+  gpsPushFixBuffer(incoming);
+  if (_gpsFixBuffer.length < 2) return { ...incoming };
+  let wSum = 0;
+  let lat = 0;
+  let lon = 0;
+  let accBest = incoming.accuracy || 999;
+  for (const f of _gpsFixBuffer) {
+    const acc = Math.max(4, f.accuracy || 50);
+    accBest = Math.min(accBest, f.accuracy || acc);
+    const w = 1 / (acc * acc);
+    lat += f.lat * w;
+    lon += f.lon * w;
+    wSum += w;
+  }
+  if (wSum <= 0) return { ...incoming };
+  return {
+    ...incoming,
+    lat: lat / wSum,
+    lon: lon / wSum,
+    accuracy: accBest,
+  };
+}
+
+function gpsAcceptLiveFix(fix) {
+  const acc = fix.accuracy || 999;
+  const prev = _fieldGpsFix;
+  if (!prev) return acc <= GPS_LIVE_REJECT_ACCURACY_M || acc <= 180;
+  const dist = haversineM(prev.lat, prev.lon, fix.lat, fix.lon);
+  const dt = Math.max(0.05, ((fix.ts || Date.now()) - (prev.ts || 0)) / 1000);
+  const spd = fix.speed != null && !isNaN(fix.speed) ? fix.speed : dist / dt;
+  const gate = Math.max(10, Math.min(prev.accuracy || 25, acc) * 1.25);
+  if (acc > GPS_AGPS_WEAK_THRESHOLD_M && dist > gate && spd < 1.8) {
+    gpsDbgLog('LIVE', 'reject weak outlier', dist.toFixed(1) + 'm', '±' + Math.round(acc) + 'm');
+    return false;
+  }
+  if (acc > GPS_LIVE_REJECT_ACCURACY_M && dist > gate * 1.4) {
+    gpsDbgLog('LIVE', 'reject poor accuracy jump', dist.toFixed(1) + 'm');
+    return false;
+  }
+  return true;
+}
+
+function gpsSmoothDisplayAccuracy(acc) {
+  if (acc == null || isNaN(acc)) return _gpsDisplayAccuracySmooth;
+  const a = Math.max(4, acc);
+  if (_gpsDisplayAccuracySmooth == null) _gpsDisplayAccuracySmooth = a;
+  else _gpsDisplayAccuracySmooth += (a - _gpsDisplayAccuracySmooth) * 0.2;
+  return _gpsDisplayAccuracySmooth;
+}
+
+function gpsScheduleAgpsRefresh(urgent) {
+  clearTimeout(_gpsAgpsPollTimer);
+  if (!_fieldGpsOn) return;
+  const delay = urgent ? GPS_AGPS_POLL_WEAK_MS : GPS_AGPS_POLL_OK_MS;
+  _gpsAgpsPollTimer = setTimeout(() => gpsPollAgpsFix(), delay);
+}
+
+function gpsPollAgpsFix() {
+  if (!_fieldGpsOn || !navigator.geolocation) return;
+  const acc = _fieldGpsFix?.accuracy || 999;
+  const urgent = acc > GPS_AGPS_WEAK_THRESHOLD_M || _gpsStatus === 'weak' || _gpsStatus === 'searching';
+  navigator.geolocation.getCurrentPosition(onGpsPosition, () => {}, {
+    enableHighAccuracy: true,
+    maximumAge: urgent ? 0 : 2500,
+    timeout: urgent ? 28000 : 16000,
+  });
+  gpsScheduleAgpsRefresh(urgent);
+}
+
+function gpsClassifyFixAccuracy(acc) {
+  if (acc == null || isNaN(acc)) return 'searching';
+  if (acc > 65) return 'weak';
+  if (acc > 28) return 'connected';
+  return 'connected';
+}
+
 function gpsDerivedSpeed(fix) {
   if (fix.speed != null && !isNaN(fix.speed) && fix.speed >= 0) return fix.speed;
   if (_gpsMoveHist.length < 2) return 0;
@@ -2708,7 +2814,7 @@ function gpsAdaptiveParams(state) {
     case GPS_MOVE.ACTIVE:
       return { posLerp: 0.44, posBoost: 0.58, follow: 0.27, hdgLerp: 0.36 };
     case GPS_MOVE.LOW:
-      return { posLerp: 0.10, posBoost: 0.16, follow: 0.08, hdgLerp: 0.09 };
+      return { posLerp: 0.05, posBoost: 0.09, follow: 0.04, hdgLerp: 0.06 };
     default:
       return { posLerp: 0.20, posBoost: 0.32, follow: 0.17, hdgLerp: 0.20 };
   }
@@ -2775,11 +2881,11 @@ function updateGpsMovementState(fix) {
   const hasGnssSpeed = fix.speed != null && !isNaN(fix.speed);
   const radius = gpsRecentMoveRadius();
   const enterR = Math.max(3, acc * 0.5);
-  let wantsStationary = radius < enterR;
+  let wantsStationary = radius < enterR || acc > GPS_AGPS_WEAK_THRESHOLD_M;
   if (hasGnssSpeed) wantsStationary = wantsStationary && decisionSpd < 0.5;
 
   let next = GPS_MOVE.WALKING;
-  if (acc > 26 || _gpsStatus === 'weak') next = GPS_MOVE.LOW;
+  if (acc > 22 || _gpsStatus === 'weak') next = GPS_MOVE.LOW;
   else if (wantsStationary) next = GPS_MOVE.STATIONARY;
   else if (decisionSpd > 1.55 || (hasGnssSpeed && decisionSpd > 0.95 && radius > enterR * 1.8)) next = GPS_MOVE.ACTIVE;
 
@@ -2879,6 +2985,7 @@ function resetGpsMovementEngine() {
   _gpsStateCandidateSince = 0;
   _gpsExitCandidateSince = 0;
   _gpsSpeedSamples = [];
+  gpsClearFixFusion();
   gpsResetDerivedPath();
 }
 
@@ -2914,7 +3021,7 @@ function ensureGpsMotionLoop() {
         _fieldGpsDisplay.lat = p.lat;
         _fieldGpsDisplay.lon = p.lon;
       }
-      _fieldGpsDisplay.accuracy = raw.accuracy;
+      _fieldGpsDisplay.accuracy = gpsSmoothDisplayAccuracy(raw.accuracy);
       _fieldGpsDisplay.speed = spd;
       _fieldGpsDisplay.moveState = _gpsMoveState;
       const hdgTarget = resolveDisplayHeadingTarget(raw, spd);
@@ -3092,9 +3199,13 @@ function gpsAcceptTrackPoint(lat, lon, accuracy, speed, ts, lastPt) {
 
 function gpsTrackOnPosition(pos) {
   if (_gpsTrack.state !== 'recording') return;
-  const lat = pos.coords.latitude, lon = pos.coords.longitude, ts = Date.now();
-  const acc = pos.coords.accuracy;
-  const speed = pos.coords.speed;
+  const fix = _fieldGpsFix;
+  if (!fix) return;
+  const lat = fix.lat;
+  const lon = fix.lon;
+  const ts = fix.ts || Date.now();
+  const acc = fix.accuracy;
+  const speed = fix.speed != null ? fix.speed : pos.coords.speed;
   const pts = _gpsTrack.points;
   const last = pts.length ? pts[pts.length - 1] : null;
   if (!gpsAcceptTrackPoint(lat, lon, acc, speed, ts, last)) {
@@ -7770,6 +7881,7 @@ function serializeProjectSnapshot() {
 
 function applyProjectSnapshot(snap) {
   if (!snap) return;
+  finalizeFieldInspectionPanels();
   FIELD_PROJECT.id = snap.id;
   FIELD_PROJECT.name = snap.name || 'Gezi';
   FIELD_PROJECT.createdAt = snap.createdAt || snap.updatedAt || new Date().toISOString();
@@ -8602,11 +8714,58 @@ async function submitNewProject() {
   await createNewProject(name);
 }
 
+function finalizeFieldInspectionPanels() {
+  closeNotePopup();
+  const sheet = document.getElementById('field-photo-voice-sheet');
+  if (sheet?.classList.contains('open')) {
+    saveFieldPhotoDetail();
+    if (sheet._thumbUrl) { URL.revokeObjectURL(sheet._thumbUrl); sheet._thumbUrl = null; }
+    sheet.classList.remove('open');
+    if (_fieldVoiceRec?.state === 'recording') try { _fieldVoiceRec.stop(); } catch (_) {}
+  }
+  closeFieldPhotoViewer();
+  if (typeof closeFieldExportSheet === 'function') closeFieldExportSheet();
+  hideFeatureInfoPanel();
+  clearGpsGuidance();
+}
+
+function clearFieldInspectionWorkspaceState() {
+  _fieldCtxPhotoId = null;
+  _fieldCtxNoteId = null;
+  _notePopupId = null;
+  _observationPopupPrimaryId = null;
+  _fieldInfoObjId = null;
+  S.selectedIds = [];
+  setDeleteButtonVisible(false);
+  if (_fieldPhotoPreviewUrl) {
+    URL.revokeObjectURL(_fieldPhotoPreviewUrl);
+    _fieldPhotoPreviewUrl = null;
+  }
+  _photoThumbCache.clear();
+  updateFieldRightPanel(null);
+  document.getElementById('right-panel')?.classList.remove('field-has-selection');
+  buildFieldNotesList();
+}
+
+function resetGpsTrackForFreshInspection() {
+  stopGpsTrackReplay();
+  _gpsTrack.state = 'idle';
+  _gpsTrack.points = [];
+  _gpsTrack.objId = null;
+  _gpsTrack.startTs = null;
+  _gpsTrack.pausedAt = null;
+  _gpsTrack.pauseMs = 0;
+  _gpsStationaryAnchor = null;
+  updateGpsTrackHud();
+}
+
 async function createNewProject(name) {
   try {
     if (FIELD_PROJECT.id && _projectDirty) {
       await saveCurrentProject(true);
     }
+    finalizeFieldInspectionPanels();
+
     const projName = (name || '').trim() || defaultProjectName();
     FIELD_PROJECT.id = 'prj_' + Date.now();
     FIELD_PROJECT.name = projName;
@@ -8619,8 +8778,9 @@ async function createNewProject(name) {
     _fieldInfoObjId = null;
     _activePlanOverlayLayerId = null;
     _fieldProjectReports = [];
+    clearFieldInspectionWorkspaceState();
+    resetGpsTrackForFreshInspection();
     clearLocalSlopeAnalysis();
-    hideFeatureInfoPanel();
     closePlanOverlayPanel();
     initLayers();
     buildLayerPanel();
@@ -8643,7 +8803,7 @@ async function createNewProject(name) {
     closeProjectPanel();
     scheduleRender();
     renderFieldProjectReportsList();
-    if (FIELD_MODE) scheduleEnsureFieldGpsSessionActive(true);
+    if (FIELD_MODE) await activateFieldLocationSession(true);
   } catch (e) {
     console.error('[New Project]', e);
     showHint('Gezi oluşturulamadı: ' + (e.message || e));
@@ -8691,6 +8851,7 @@ async function openProjectById(id, opts = {}) {
       return false;
     }
     const meta = await idbGet(db, 'projects', id);
+    finalizeFieldInspectionPanels();
     applyProjectSnapshot(JSON.parse(row.json));
     _projectDirty = false;
     localStorage.setItem('planai_field_last_project', id);
@@ -9150,6 +9311,9 @@ function resetFieldWorkspaceShell() {
   S.selectedIds = [];
   _fieldProjectReports = [];
   _projectDirty = false;
+  finalizeFieldInspectionPanels();
+  clearFieldInspectionWorkspaceState();
+  resetGpsTrackForFreshInspection();
   initLayers();
   buildLayerPanel();
   updateProjectTitleUi();
@@ -9165,9 +9329,12 @@ async function createDefaultFieldProject() {
   } else if (!FIELD_PROJECT.name || FIELD_PROJECT.name === 'Adsız Gezi' || FIELD_PROJECT.name === 'Adsız Proje') {
     FIELD_PROJECT.name = defaultProjectName();
   }
+  finalizeFieldInspectionPanels();
   S.objects = [];
   S.history = [[]];
   S.histIdx = 0;
+  clearFieldInspectionWorkspaceState();
+  resetGpsTrackForFreshInspection();
   initLayers();
   buildLayerPanel();
   updateProjectTitleUi();
@@ -9175,7 +9342,7 @@ async function createDefaultFieldProject() {
   await saveCurrentProject(true);
   await refreshProjectRecentList();
   await updateFieldCtxProject();
-  scheduleEnsureFieldGpsSessionActive();
+  await activateFieldLocationSession(true);
 }
 
 async function wipeFieldLocalWorkspace() {
@@ -9240,6 +9407,7 @@ function importObjectsToGeoJson(objects) {
 let _fieldExportPending = null;
 let _fieldExportPreviewWin = null;
 let _fieldExportPreviewWatch = null;
+let _fieldExportReturnToSheet = false;
 let _fieldProjectReports = [];
 
 function safeProjectExportFilename(ext) {
@@ -9277,6 +9445,7 @@ function watchFieldExportPreviewClose(win) {
   _fieldExportPreviewWatch = setInterval(() => {
     if (!_fieldExportPreviewWin || _fieldExportPreviewWin.closed) {
       stopFieldExportPreviewWatch();
+      _fieldExportReturnToSheet = false;
       if (_fieldExportPending) showFieldExportSheet();
     }
   }, 350);
@@ -9300,7 +9469,7 @@ function showFieldExportSheet() {
       : p.kind === 'pdf' ? t('report.pdfReady') : t('export.sheetTitle');
   }
   if (fnameEl) fnameEl.textContent = p.filename || '';
-  if (prevBtn) prevBtn.style.display = (p.previewHtml || p.pdfBlob) ? 'block' : 'none';
+  if (prevBtn) prevBtn.style.display = (p.previewHtml || p.pdfBlob || (p.blob && p.kind === 'pdf')) ? 'block' : 'none';
   document.getElementById('field-export-backdrop')?.classList.add('open');
   document.getElementById('field-export-sheet')?.classList.add('open');
   document.body.classList.add('field-export-open');
@@ -9531,14 +9700,40 @@ function fieldExportActionDownload() {
 
 function fieldExportActionPreview() {
   const p = _fieldExportPending;
-  if (!p?.previewHtml) return;
+  if (!p) return;
   hideFieldExportSheet();
-  const win = openReportPreview(p.previewHtml, p.pdfBlob || null, FIELD_PROJECT.name, p.kind);
-  if (!win) {
+  _fieldExportReturnToSheet = true;
+  const done = () => {
+    if (!_fieldExportReturnToSheet) return;
+    _fieldExportReturnToSheet = false;
     showFieldExportSheet();
+  };
+  if (p.kind === 'pdf' && (p.pdfBlob || p.blob)) {
+    const blob = p.pdfBlob || p.blob;
+    openFieldReportViewerBlob(blob, p.filename || FIELD_PROJECT.name, p, 'pdf').catch((e) => {
+      console.warn('[Export preview PDF]', e);
+      done();
+    });
     return;
   }
-  watchFieldExportPreviewClose(win);
+  if (p.previewHtml && p.kind === 'interactive') {
+    const blob = new Blob([p.previewHtml], { type: 'text/html;charset=utf-8' });
+    openFieldReportViewerBlob(blob, p.filename || FIELD_PROJECT.name, p, 'interactive').catch((e) => {
+      console.warn('[Export preview interactive]', e);
+      done();
+    });
+    return;
+  }
+  if (p.previewHtml) {
+    const win = openReportPreview(p.previewHtml, p.pdfBlob || null, FIELD_PROJECT.name, p.kind);
+    if (!win) {
+      done();
+      return;
+    }
+    watchFieldExportPreviewClose(win);
+    return;
+  }
+  done();
 }
 
 async function exportProjectZip() {
@@ -10220,6 +10415,8 @@ function toggleFieldProjectReportsPanel() {
 }
 
 function closeFieldReportViewer() {
+  const restoreExportSheet = _fieldExportReturnToSheet;
+  _fieldExportReturnToSheet = false;
   document.getElementById('field-report-viewer')?.classList.remove('open');
   document.getElementById('field-report-viewer-backdrop')?.classList.remove('open');
   document.body.classList.remove('field-report-viewer-open');
@@ -10234,6 +10431,7 @@ function closeFieldReportViewer() {
     _fieldReportViewerUrl = null;
   }
   _fieldReportViewerPending = null;
+  if (restoreExportSheet && _fieldExportPending) showFieldExportSheet();
 }
 
 let _pdfJsModule = null;
@@ -10515,10 +10713,10 @@ async function collectReportPhotos() {
     };
     if (ph.hasVoice) {
       try {
-        const aud = await getPhotoBlobRecord(ph.photoId, 'audio');
+        const aud = await getPhotoAudioBlob([ph.photoId, ph.id]);
         if (aud?.data) row.audioDataUrl = await blobToDataUrl(aud.data);
       } catch (e) {
-        console.warn('[Report audio]', ph.photoId, e);
+        console.warn('[Report audio]', ph.photoId || ph.id, e);
       }
     }
     out.push(row);
@@ -10843,107 +11041,32 @@ function openReportPreview(html, pdfBlob, projectName, kind) {
     w.triggerReportHtmlShareOrDownload = triggerReportHtmlShareOrDownload;
   } catch (_) {}
   w.document.open();
-  w.document.write(html);
+  if (pdfBlob && kind === 'pdf') {
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    w.__planaiPreview.pdfUrl = pdfUrl;
+    const title = (projectName || 'PlanAI Field').replace(/</g, '');
+    w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>'
+      + '<title>' + title + '</title>'
+      + '<style>html,body{margin:0;height:100%;background:#525659}#pdf-frame{width:100%;height:100%;border:0}'
+      + '.planai-close{position:fixed;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));z-index:9;'
+      + 'min-width:48px;min-height:48px;border-radius:50%;border:2px solid rgba(255,255,255,.45);background:rgba(0,0,0,.55);color:#fff;font-size:20px;font-weight:700;cursor:pointer}</style></head><body>'
+      + '<embed id="pdf-frame" type="application/pdf" src="' + pdfUrl + '"/>'
+      + '<button type="button" class="planai-close" onclick="window.close()" aria-label="Close">✕</button></body></html>');
+  } else {
+    w.document.write(html);
+  }
   w.document.close();
+  if (pdfBlob && kind === 'pdf') return w;
   setTimeout(() => {
     try {
       const doc = w.document;
-      const overlay = doc.createElement('div');
-      overlay.id = 'planai-preview-actions';
-      overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:rgba(8,18,28,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);pointer-events:auto;box-sizing:border-box;';
-      const panel = doc.createElement('div');
-      panel.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;width:min(400px,100%);';
-      const row = doc.createElement('div');
-      row.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;justify-content:center;width:100%;';
-      const actionBtn = 'min-height:48px;padding:12px 18px;font-weight:700;border-radius:10px;font-size:14px;cursor:pointer;touch-action:manipulation;font-family:system-ui,-apple-system,sans-serif;';
-      if (pdfBlob) {
-        const a = doc.createElement('a');
-        a.href = URL.createObjectURL(pdfBlob);
-        a.download = safe + '.pdf';
-        a.textContent = PA_LANG === 'tr' ? '💾 PDF Kaydet' : '💾 Save PDF';
-        a.style.cssText = actionBtn + 'background:#fff;color:#1a3358;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;';
-        row.appendChild(a);
-      }
-      if (kind === 'interactive' || !pdfBlob) {
-        const s = doc.createElement('button');
-        s.type = 'button';
-        const shareLbl = PA_LANG === 'tr' ? '📤 HTML Paylaş' : '📤 Share HTML';
-        const dlLbl = PA_LANG === 'tr' ? '💾 HTML İndir' : '💾 Download HTML';
-        s.textContent = shareLbl;
-        s.style.cssText = actionBtn + 'background:#27ae60;color:#fff;border:none;';
-        s.onclick = async () => {
-          if (s.disabled) return;
-          const p = w.__planaiPreview;
-          if (!p?.html) return;
-          s.disabled = true;
-          s.textContent = PA_LANG === 'tr' ? 'Paylaşılıyor…' : 'Sharing…';
-          try {
-            const opener = w.opener;
-            const runShare = opener?.triggerReportHtmlShareOrDownload || w.triggerReportHtmlShareOrDownload;
-            if (typeof runShare === 'function') {
-              await runShare(p.html, p.htmlName, p.projectName);
-              return;
-            }
-            const blob = new Blob([p.html], { type: 'text/html;charset=utf-8' });
-            const file = new File([blob], p.htmlName, { type: 'text/html' });
-            if (navigator.share) {
-              try {
-                if (!navigator.canShare || navigator.canShare({ files: [file] })) {
-                  await navigator.share({ files: [file], title: p.projectName });
-                  return;
-                }
-              } catch (shareErr) {
-                if (/abort|cancel/i.test(String(shareErr?.message || shareErr))) return;
-              }
-            }
-            const dl = doc.createElement('a');
-            dl.href = URL.createObjectURL(blob);
-            dl.download = p.htmlName;
-            doc.body.appendChild(dl);
-            dl.click();
-            dl.remove();
-            if (opener?.showHint) opener.showHint(opener.t?.('export.downloaded') || 'Download started');
-          } catch (err) {
-            const msg = PA_LANG === 'tr' ? 'Paylaşım hatası: ' : 'Share failed: ';
-            if (w.opener?.showHint) w.opener.showHint(msg + (err?.message || err));
-            else alert(msg + (err?.message || err));
-          } finally {
-            s.disabled = false;
-            s.textContent = shareLbl;
-          }
-        };
-        row.appendChild(s);
-        const dlBtn = doc.createElement('button');
-        dlBtn.type = 'button';
-        dlBtn.textContent = dlLbl;
-        dlBtn.style.cssText = actionBtn + 'background:#fff;color:#1a3358;border:1px solid rgba(255,255,255,.35);';
-        dlBtn.onclick = () => {
-          const p = w.__planaiPreview;
-          if (!p?.html) return;
-          if (w.opener?.downloadReportPreviewHtml) w.opener.downloadReportPreviewHtml(p.html, p.htmlName);
-          else if (w.opener?.triggerReportHtmlShareOrDownload) w.opener.triggerReportHtmlShareOrDownload(p.html, p.htmlName, p.projectName);
-          else {
-            const blob = new Blob([p.html], { type: 'text/html;charset=utf-8' });
-            const dl = doc.createElement('a');
-            dl.href = URL.createObjectURL(blob);
-            dl.download = p.htmlName;
-            doc.body.appendChild(dl);
-            dl.click();
-            dl.remove();
-          }
-        };
-        row.appendChild(dlBtn);
-      }
       const closeBtn = doc.createElement('button');
       closeBtn.type = 'button';
       closeBtn.textContent = '✕';
       closeBtn.setAttribute('aria-label', PA_LANG === 'tr' ? 'Kapat' : 'Close');
-      closeBtn.style.cssText = 'min-width:48px;min-height:48px;margin-top:4px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.1);color:#fff;font-size:20px;font-weight:700;line-height:1;cursor:pointer;touch-action:manipulation;';
+      closeBtn.style.cssText = 'position:fixed;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));z-index:2147483647;min-width:48px;min-height:48px;border-radius:50%;border:2px solid rgba(255,255,255,.45);background:rgba(0,0,0,.55);color:#fff;font-size:20px;font-weight:700;line-height:1;cursor:pointer;touch-action:manipulation;';
       closeBtn.onclick = () => { try { w.close(); } catch (_) {} };
-      panel.appendChild(row);
-      panel.appendChild(closeBtn);
-      overlay.appendChild(panel);
-      doc.body.appendChild(overlay);
+      doc.body.appendChild(closeBtn);
     } catch (_) {}
   }, 300);
   return w;
@@ -11169,6 +11292,13 @@ async function buildCinematicInteractiveReportHTML(data, opts) {
   try {
     if (!data.brandLogoUrl) data.brandLogoUrl = await loadBrandLogoDataUrl();
     if (!data.brandLogoUrl) data.brandLogoUrl = embeddedBrandLogoDataUrl();
+    if (Array.isArray(data.photos)) {
+      data.photos = await enrichPhotosWithAudio(data.photos);
+      const voiceMissing = data.photos.find(p => p.hasVoice && !p.audioDataUrl);
+      if (voiceMissing && data.meta?.simulation) {
+        voiceMissing.audioDataUrl = await synthesizeDemoVoiceDataUrl(voiceMissing.voiceDuration || 12);
+      }
+    }
     const payload = buildReplayPayloadFromReport(data);
     if (!payload.brandLogoUrl) payload.brandLogoUrl = data.brandLogoUrl || embeddedBrandLogoDataUrl() || '';
     if (!payload.basemapUrl) {
@@ -11187,9 +11317,7 @@ async function buildCinematicInteractiveReportHTML(data, opts) {
     if (prepared.track && !(prepared.events || []).some(e => e?.kind === 'track' && e.path?.length >= 2)) {
       prepared.events = [prepared.track, ...(prepared.events || [])];
     }
-    return FieldCinematicReport.buildReplayHtml(prepared, {
-      includeCinematic: !!opts?.includeCinematic,
-    });
+    return FieldCinematicReport.buildReplayHtml(prepared);
   } catch (e) {
     console.warn('[CinematicReport]', e);
     return null;
@@ -11501,6 +11629,7 @@ async function createSimulatedFieldReports() {
       computeReportGeoBounds,
       buildSatelliteBasemapDataUrl,
       loadBrandLogoDataUrl,
+      synthesizeDemoVoiceDataUrl,
     });
     const saved = await persistProjectReportBundle(report, { interactiveHtml: report.interactiveHtml });
     showHint(report.pdfBlob ? t('report.journeyBundleReady') : t('report.demoReady'));
@@ -11641,8 +11770,10 @@ function scheduleGpsFallbackFix() {
 function clearGpsTimers() {
   clearTimeout(_gpsFirstFixTimer);
   clearTimeout(_gpsRetryTimer);
+  clearTimeout(_gpsAgpsPollTimer);
   _gpsFirstFixTimer = null;
   _gpsRetryTimer = null;
+  _gpsAgpsPollTimer = null;
 }
 
 function updateGpsHud() {
@@ -11713,9 +11844,10 @@ function onGpsPosition(pos) {
   const hwAge = pos.timestamp ? Date.now() - pos.timestamp : 0;
   if (hwAge > GPS_STALE_FIX_MS) {
     gpsDbgLog('POSITION', 'stale fix skipped', Math.round(hwAge) + 'ms');
+    gpsScheduleAgpsRefresh(true);
     return;
   }
-  _fieldGpsFix = {
+  const rawFix = {
     lat: pos.coords.latitude,
     lon: pos.coords.longitude,
     accuracy: pos.coords.accuracy,
@@ -11724,12 +11856,23 @@ function onGpsPosition(pos) {
     speed: pos.coords.speed,
     ts: Date.now(),
   };
+  if (!gpsAcceptLiveFix(rawFix)) {
+    gpsScheduleAgpsRefresh(true);
+    if (!_fieldGpsFix) setGpsStatus('searching');
+    return;
+  }
+  _fieldGpsFix = gpsFuseLiveFix(rawFix);
   gpsDbgLog('POSITION', _fieldGpsFix.lat.toFixed(6), _fieldGpsFix.lon.toFixed(6),
     '±' + Math.round(_fieldGpsFix.accuracy || 0) + 'm', 'tick', _gpsPositionTick);
   const acc = _fieldGpsFix.accuracy || 999;
-  setGpsStatus(acc > 80 ? 'weak' : 'connected');
+  setGpsStatus(gpsClassifyFixAccuracy(acc));
+  if (acc > 65 && !_gpsAgpsHintShown) {
+    _gpsAgpsHintShown = true;
+    showHint(t('gps.hint.agpsWeak'), 5500);
+  }
   if (!_fieldGpsDisplay) {
-    _fieldGpsDisplay = { lat: _fieldGpsFix.lat, lon: _fieldGpsFix.lon, accuracy: acc,
+    _fieldGpsDisplay = { lat: _fieldGpsFix.lat, lon: _fieldGpsFix.lon,
+      accuracy: gpsSmoothDisplayAccuracy(acc),
       heading: _fieldGpsFix.heading, speed: _fieldGpsFix.speed, ts: _fieldGpsFix.ts, moveState: GPS_MOVE.WALKING };
     _gpsStationaryAnchor = { lat: _fieldGpsFix.lat, lon: _fieldGpsFix.lon };
     if (fieldLiveLocationLocked()) {
@@ -11742,6 +11885,7 @@ function onGpsPosition(pos) {
   ensureGpsMotionLoop();
   updateGpsHud();
   gpsTrackOnPosition(pos);
+  gpsScheduleAgpsRefresh(acc > GPS_AGPS_WEAK_THRESHOLD_M);
 }
 
 function startGpsWatch() {
@@ -11763,14 +11907,17 @@ function startGpsWatch() {
   document.getElementById('btn-field-gps')?.classList.add('active');
   _gpsDenyStreak = 0;
   _gpsPositionTick = 0;
-  const optsHi = { enableHighAccuracy: true, maximumAge: 2000, timeout: 30000 };
+  gpsClearFixFusion();
+  const optsHi = { enableHighAccuracy: true, maximumAge: 1000, timeout: 30000 };
   const optsLo = { enableHighAccuracy: false, maximumAge: 8000, timeout: 20000 };
+  const optsAgps = { enableHighAccuracy: true, maximumAge: 0, timeout: 35000 };
   gpsDbgLog('GPS', 'watchPosition start', optsHi);
   _gpsWatchId = navigator.geolocation.watchPosition(onGpsPosition, onGpsWatchError, optsHi);
   startGpsWatchdog();
   refreshGpsTestPermission();
-  navigator.geolocation.getCurrentPosition(onGpsPosition, e => onGpsError(e, false), optsHi);
+  navigator.geolocation.getCurrentPosition(onGpsPosition, e => onGpsError(e, false), optsAgps);
   scheduleGpsFallbackFix();
+  gpsScheduleAgpsRefresh(true);
   _gpsFirstFixTimer = setTimeout(() => {
     if (_fieldGpsOn && !_fieldGpsFix) {
       setGpsStatus('searching');
@@ -12174,6 +12321,23 @@ function revokeObservationPopupImages() {
       img._blobUrl = null;
     }
   });
+  document.querySelectorAll('#fnp-body .fnp-photo-audio').forEach(aud => {
+    if (aud._blobUrl) {
+      URL.revokeObjectURL(aud._blobUrl);
+      aud._blobUrl = null;
+    }
+    aud.removeAttribute('src');
+    aud.pause?.();
+  });
+}
+
+function fieldPhotoNoteText(photo) {
+  const desc = String(photo?.description || '').trim();
+  if (desc) return desc;
+  const cap = String(photo?.caption || '').trim();
+  const title = String(photo?.title || '').trim();
+  if (cap && cap !== title) return cap;
+  return '';
 }
 
 async function loadPhotoIntoObservationPopup(photo) {
@@ -12190,6 +12354,39 @@ async function loadPhotoIntoObservationPopup(photo) {
   img.src = img._blobUrl;
   img.title = 'Büyütmek için tıklayın';
   img.onclick = e => { e.stopPropagation(); openFieldPhotoEarthViewer(photo.id); };
+}
+
+async function loadPhotoVoiceIntoObservationPopup(photo) {
+  const aud = document.querySelector('#fnp-body .fnp-photo-audio[data-photo-id="' + photo.id + '"]');
+  if (!aud || !photo.hasVoice) return;
+  const row = await getPhotoAudioBlob([photo.photoId, photo.id]);
+  const src = await resolvePhotoAudioPlaySrc(row);
+  if (!src) {
+    const wrap = aud.closest('.fnp-photo-voice-wrap');
+    if (wrap) {
+      wrap.insertAdjacentHTML('beforeend',
+        '<div class="fnp-photo-voice-missing">' +
+        (PA_LANG === 'tr' ? 'Ses dosyası bulunamadı' : 'Voice file not found') + '</div>');
+    }
+    aud.remove();
+    return;
+  }
+  if (aud._blobUrl) {
+    URL.revokeObjectURL(aud._blobUrl);
+    aud._blobUrl = null;
+  }
+  if (src.startsWith('blob:')) aud._blobUrl = src;
+  aud.src = src;
+  aud.load();
+  aud.onerror = () => {
+    const wrap = aud.closest('.fnp-photo-voice-wrap');
+    if (wrap && !wrap.querySelector('.fnp-photo-voice-missing')) {
+      wrap.insertAdjacentHTML('beforeend',
+        '<div class="fnp-photo-voice-missing">' +
+        (PA_LANG === 'tr' ? 'Ses oynatılamadı — notu yeniden kaydedin' : 'Could not play — re-record the voice note') +
+        '</div>');
+    }
+  };
 }
 
 function openNoteInfoSheet() {
@@ -12258,17 +12455,21 @@ async function showFieldObservationPopup(primary) {
       html += '<div class="fnp-photo-block">';
       html += '<div class="fnp-photo-lbl">📷 ' + escapeHtml(photo.title || 'Fotoğraf') + '</div>';
       html += '<div class="fnp-photo-img-wrap"><img class="fnp-photo-img" data-photo-id="' + photo.id + '" alt=""/></div>';
-      const desc = (photo.description || photo.caption || '').trim();
-      if (desc && desc !== (photo.title || '').trim()) {
-        html += '<div class="fnp-photo-desc">' + escapeHtml(desc).replace(/\n/g, '<br>') + '</div>';
-      } else if (!desc) {
-        html += '<div class="fnp-photo-desc" style="color:var(--muted);">' +
+      const noteText = fieldPhotoNoteText(photo);
+      html += '<div class="fnp-photo-desc-label">' + (PA_LANG === 'tr' ? 'Not' : 'Note') + '</div>';
+      if (noteText) {
+        html += '<div class="fnp-photo-desc">' + escapeHtml(noteText).replace(/\n/g, '<br>') + '</div>';
+      } else {
+        html += '<div class="fnp-photo-desc fnp-photo-desc-empty">' +
           (PA_LANG === 'tr' ? 'Foto notu yok' : 'No photo note') + '</div>';
       }
       if (photo.hasVoice) {
-        html += '<div class="fnp-photo-voice">🎤 ' +
-          (PA_LANG === 'tr' ? 'Sesli not' : 'Voice note') + ' · ' +
-          Math.round(photo.voiceDuration || 0) + ' sn</div>';
+        html += '<div class="fnp-photo-voice-wrap">';
+        html += '<div class="fnp-photo-voice-lbl">🎤 ' +
+          (PA_LANG === 'tr' ? 'Sesli not' : 'Voice note') +
+          (photo.voiceDuration ? ' · ' + Math.round(photo.voiceDuration) + ' sn' : '') + '</div>';
+        html += '<audio class="fnp-photo-audio" controls preload="metadata" data-photo-id="' + photo.id + '"></audio>';
+        html += '</div>';
       }
       html += '<div class="fnp-meta">' + (photo.timestamp || '').slice(0, 16).replace('T', ' ') + '</div>';
       html += '</div>';
@@ -12310,7 +12511,10 @@ async function showFieldObservationPopup(primary) {
   buildLayerPanel();
   scheduleRender();
 
-  await Promise.all(cluster.photos.map(p => loadPhotoIntoObservationPopup(p)));
+  await Promise.all(cluster.photos.flatMap(p => [
+    loadPhotoIntoObservationPopup(p),
+    loadPhotoVoiceIntoObservationPopup(p),
+  ]));
 }
 
 function editFromObservationPopup() {
@@ -13112,6 +13316,146 @@ async function getPhotoBlobRecord(photoId, kind) {
   return row;
 }
 
+async function getPhotoAudioBlob(photoIds) {
+  const ids = [...new Set((photoIds || []).filter(Boolean))];
+  for (let i = 0; i < ids.length; i++) {
+    const aud = await getPhotoBlobRecord(ids[i], 'audio');
+    if (aud?.data) return aud;
+  }
+  return null;
+}
+
+function ensureBlobWithMime(data, mime) {
+  const m = mime || 'application/octet-stream';
+  if (!data) return null;
+  if (data instanceof Blob) return data.type ? data : new Blob([data], { type: m });
+  if (data instanceof ArrayBuffer) return new Blob([data], { type: m });
+  if (ArrayBuffer.isView(data)) {
+    return new Blob([data.buffer, data.byteOffset, data.byteLength], { type: m });
+  }
+  return null;
+}
+
+async function resolvePhotoAudioPlaySrc(row) {
+  const blob = ensureBlobWithMime(row?.data, row?.mime || 'audio/webm');
+  if (!blob?.size) return null;
+  const wav = await audioBlobToWavDataUrl(blob);
+  if (wav) return wav;
+  try {
+    return await blobToDataUrl(blob);
+  } catch (_) {
+    return URL.createObjectURL(blob);
+  }
+}
+
+async function audioBlobToWavDataUrl(blob) {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx || !blob?.size) return '';
+  try {
+    const ab = await blob.arrayBuffer();
+    if (!ab.byteLength) return '';
+    const ctx = new Ctx();
+    const decoded = await ctx.decodeAudioData(ab.slice(0));
+    if (ctx.close) await ctx.close();
+    return audioBufferToWavDataUrl(decoded);
+  } catch (e) {
+    console.warn('[Photo audio decode]', e);
+    return '';
+  }
+}
+
+function audioBufferToWavDataUrl(buffer) {
+  const numCh = buffer.numberOfChannels;
+  const sr = buffer.sampleRate;
+  const samples = buffer.length;
+  const bytesPerSample = 2;
+  const blockAlign = numCh * bytesPerSample;
+  const dataSize = samples * blockAlign;
+  const buf = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buf);
+  const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numCh, true);
+  view.setUint32(24, sr, true);
+  view.setUint32(28, sr * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, 'data');
+  view.setUint32(40, dataSize, true);
+  let off = 44;
+  const ch0 = buffer.getChannelData(0);
+  for (let i = 0; i < samples; i++) {
+    let s = ch0[i];
+    if (numCh > 1) {
+      let mix = ch0[i];
+      for (let c = 1; c < numCh; c++) mix += buffer.getChannelData(c)[i];
+      s = mix / numCh;
+    }
+    s = Math.max(-1, Math.min(1, s));
+    view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    off += 2;
+  }
+  const b64 = arrayBufferToBase64(buf);
+  return 'data:audio/wav;base64,' + b64;
+}
+
+function arrayBufferToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+async function synthesizeDemoVoiceDataUrl(durationSec) {
+  try {
+    const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!Ctx) return '';
+    const sec = Math.min(30, Math.max(1, Number(durationSec) || 3));
+    const sr = 22050;
+    const len = Math.round(sec * sr);
+    const ctx = new Ctx(1, len, sr);
+    const buf = ctx.createBuffer(1, len, sr);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      const t = i / sr;
+      data[i] = 0.12 * Math.sin(2 * Math.PI * 440 * t) * (0.35 + 0.65 * Math.exp(-t * 0.25));
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+    const rendered = await ctx.startRendering();
+    return audioBufferToWavDataUrl(rendered);
+  } catch (e) {
+    console.warn('[Demo voice synth]', e);
+    return '';
+  }
+}
+
+async function enrichPhotosWithAudio(photos) {
+  if (!Array.isArray(photos)) return photos;
+  const out = [];
+  for (const p of photos) {
+    const row = Object.assign({}, p);
+    if (row.hasVoice && !row.audioDataUrl) {
+      const aud = await getPhotoAudioBlob([row.photoId, row.id, p.photoId, p.id]);
+      if (aud?.data) {
+        try { row.audioDataUrl = await blobToDataUrl(aud.data); } catch (e) { console.warn('[Report audio]', e); }
+      }
+    }
+    out.push(row);
+  }
+  return out;
+}
+
 async function generatePhotoThumbnail(file, maxPx) {
   maxPx = maxPx || 96;
   return new Promise(resolve => {
@@ -13339,11 +13683,11 @@ function toggleFieldVoiceRecordFromSheet() {
 
 function closeFieldPhotoVoiceSheet(skipOnly) {
   const sheet = document.getElementById('field-photo-voice-sheet');
+  saveFieldPhotoDetail();
   if (sheet?._thumbUrl) { URL.revokeObjectURL(sheet._thumbUrl); sheet._thumbUrl = null; }
   sheet?.classList.remove('open');
   if (_fieldVoiceRec && _fieldVoiceRec.state === 'recording') _fieldVoiceRec.stop();
-  if (!skipOnly) saveFieldPhotoDetail();
-  showHint(t('photo.ready'));
+  if (!skipOnly) showHint(t('photo.ready'));
   scheduleRender();
 }
 
@@ -13865,6 +14209,7 @@ async function toggleFieldVoiceRecord() {
   const obj = S.objects.find(o => o.id === _fieldCtxPhotoId);
   if (!obj) return;
   if (_fieldVoiceRec && _fieldVoiceRec.state === 'recording') {
+    try { _fieldVoiceRec.requestData(); } catch (_) {}
     _fieldVoiceRec.stop();
     return;
   }
@@ -13881,9 +14226,14 @@ async function toggleFieldVoiceRecord() {
     _fieldVoiceRec.ondataavailable = e => { if (e.data?.size) _fieldVoiceChunks.push(e.data); };
     _fieldVoiceRec.onstop = async () => {
       stream.getTracks().forEach(tr => tr.stop());
-      const dur = Math.round((Date.now() - _fieldVoiceStart) / 1000);
+      const dur = Math.max(1, Math.round((Date.now() - _fieldVoiceStart) / 1000));
       const outMime = _fieldVoiceRec.mimeType || mime || 'audio/webm';
       const blob = new Blob(_fieldVoiceChunks, { type: outMime });
+      if (!blob.size) {
+        _fieldVoiceRec = null;
+        showHint(PA_LANG === 'tr' ? 'Ses kaydı boş — tekrar deneyin' : 'Empty recording — try again');
+        return;
+      }
       const db = await openProjectDb();
       await idbPut(db, 'blobs', { key: projectBlobKey(obj.photoId, 'audio'), data: blob, mime: outMime });
       obj.hasVoice = true;
@@ -13902,7 +14252,7 @@ async function toggleFieldVoiceRecord() {
       showHint(t('photo.micUnsupported'));
     };
     _fieldVoiceStart = Date.now();
-    _fieldVoiceRec.start();
+    _fieldVoiceRec.start(250);
     updateFieldPhotoVoiceUi(obj);
     const sheet = document.getElementById('field-photo-voice-sheet');
     if (sheet?.classList.contains('open')) updateFieldPhotoVoiceSheetUi(obj);
@@ -13917,12 +14267,17 @@ async function playFieldVoiceNote() {
   const obj = S.objects.find(o => o.id === _fieldCtxPhotoId);
   if (!obj?.hasVoice) return;
   const row = await getPhotoBlobRecord(obj.photoId, 'audio');
-  if (!row?.data) { showHint('Ses dosyası bulunamadı'); return; }
+  const src = await resolvePhotoAudioPlaySrc(row);
+  if (!src) { showHint('Ses dosyası bulunamadı'); return; }
   if (_fieldVoicePlayUrl) URL.revokeObjectURL(_fieldVoicePlayUrl);
-  _fieldVoicePlayUrl = URL.createObjectURL(row.data);
-  const a = new Audio(_fieldVoicePlayUrl);
-  a.play();
-  showHint('Oynatılıyor…');
+  _fieldVoicePlayUrl = src.startsWith('blob:') ? src : null;
+  const a = new Audio(src);
+  try {
+    await a.play();
+    showHint('Oynatılıyor…');
+  } catch (_) {
+    showHint(PA_LANG === 'tr' ? 'Ses oynatılamadı' : 'Could not play audio');
+  }
 }
 
 async function deleteFieldVoiceNote() {

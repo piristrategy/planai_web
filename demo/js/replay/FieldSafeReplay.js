@@ -68,6 +68,7 @@
     '"use strict";',
     'var R=window.__PLANAI_REPORT__;',
     'if(!R){document.body.innerHTML="<p style=\\"padding:16px\\">Report data missing.</p>";return;}',
+    'window.__PLANAI_SAFE_BOOTED__=1;',
     'var caps=(function(){var p=location.protocol||"";var fileLike=p==="file:"||p==="content:"||p==="capacitor-file:";var bw=false;try{if(URL&&URL.createObjectURL){var u=URL.createObjectURL(new Blob([""],{type:"text/javascript"}));bw=!!u;URL.revokeObjectURL(u);}}catch(e){}return{fileLike:fileLike,canCinematic:!fileLike&&bw&&(p==="https:"||p==="http:"||p==="blob:"||p==="capacitor:")};})();',
     'if(caps.canCinematic&&window.__PLANAI_CINEMATIC_JS__){try{var s=document.createElement("script");s.type="module";s.textContent=window.__PLANAI_CINEMATIC_JS__;document.body.appendChild(s);var root=document.getElementById("psr-app");if(root)root.style.display="none";return;}catch(e){console.warn("[PlanAI] cinematic upgrade failed",e);}}',
     'var B=R.bounds||R.geoBounds||{};',
@@ -141,12 +142,118 @@
     '})();',
   ].join('');
 
-  function sanitizeShell(html) {
+  const GATE_SCRIPT = [
+    '(function(){',
+    '"use strict";',
+    'var p=location.protocol||"";',
+    'var fileLike=p==="file:"||p==="content:"||p==="capacitor-file:";',
+    'if(!fileLike){window.__PLANAI_REPLAY_MODE__="cinematic";return;}',
+    'window.__PLANAI_REPLAY_MODE__="safe";',
+    'var mods=document.querySelectorAll(\'script[type="module"]\');',
+    'for(var i=0;i<mods.length;i++){mods[i].setAttribute("type","application/json");mods[i].setAttribute("data-planai-disabled","1");}',
+    'var root=document.getElementById("root");',
+    'if(root)root.style.display="none";',
+    'var psr=document.getElementById("psr-app");',
+    'if(psr)psr.style.display="block";',
+    '})();',
+  ].join('');
+
+  function stripExternalFonts(html) {
     if (!html) return html;
     return html
       .replace(/<link[^>]*fonts\.googleapis[^>]*>/gi, '')
       .replace(/<link[^>]*rel=["']preconnect["'][^>]*fonts\.googleapis[^>]*>/gi, '')
-      .replace(/<script type=["']module["'][^>]*>[\s\S]*?<\/script>/gi, '');
+      .replace(/<link[^>]*rel=["']preconnect["'][^>]*fonts\.gstatic[^>]*>/gi, '');
+  }
+
+  /** @deprecated use stripExternalFonts — never strip cinematic module scripts */
+  function sanitizeShell(html) {
+    return stripExternalFonts(html);
+  }
+
+  /**
+   * Inject mobile file:// fallback (classic safe replay) before cinematic module scripts.
+   * On https/blob/capacitor the gate no-ops and MapLibre cinematic runs unchanged.
+   */
+  function injectMobileFallback(html) {
+    if (!html) return html;
+    html = stripExternalFonts(html);
+    const fallbackStyle = '<style id="planai-psr-fallback">' + SAFE_CSS + '#psr-app{display:none}#psr-app.planai-safe-on{display:block!important}#root.planai-safe-off{display:none!important}</style>';
+    if (!html.includes('id="planai-psr-fallback"')) {
+      if (html.includes('</head>')) {
+        html = html.replace('</head>', fallbackStyle + '</head>');
+      } else {
+        html = fallbackStyle + html;
+      }
+    }
+    if (!html.includes('id="psr-app"')) {
+      if (html.includes('<div id="root">')) {
+        html = html.replace('<div id="root">', '<div id="psr-app" style="display:none"></div><div id="root">');
+      } else if (html.includes('<div id="root"></div>')) {
+        html = html.replace('<div id="root"></div>', '<div id="psr-app" style="display:none"></div><div id="root"></div>');
+      } else {
+        html = html.replace('<body>', '<body><div id="psr-app" style="display:none"></div>');
+      }
+    }
+    if (html.includes('id="planai-replay-gate"')) {
+      if (!html.includes('id="planai-replay-watchdog"') && html.includes('</body>')) {
+        html = html.replace('</body>', buildWatchdogScript() + '</body>');
+      }
+      return html;
+    }
+    const gateBlock = '<script id="planai-replay-gate">' + GATE_SCRIPT + '<\/script>' +
+      '<script id="planai-replay-safe">if(window.__PLANAI_REPLAY_MODE__==="safe"){' + BOOT_SCRIPT + '}<\/script>';
+    const modIdx = html.search(/<script[^>]*type=["']module["']/i);
+    if (modIdx >= 0) {
+      html = html.slice(0, modIdx) + gateBlock + html.slice(modIdx);
+    } else if (html.includes('</body>')) {
+      html = html.replace('</body>', gateBlock + '</body>');
+    } else {
+      html = html + gateBlock;
+    }
+    if (!html.includes('id="planai-replay-watchdog"') && html.includes('</body>')) {
+      html = html.replace('</body>', buildWatchdogScript() + '</body>');
+    }
+    return html;
+  }
+
+  /**
+   * Upgrade legacy pure-cinematic exports (no mobile gate) for tablet/phone file viewing.
+   * Idempotent — already-upgraded HTML is returned unchanged.
+   */
+  function upgradeLegacyCinematicHtml(html) {
+    if (!html || typeof html !== 'string') return html;
+    if (html.includes('id="planai-replay-gate"')) return html;
+    if (!html.includes('window.__PLANAI_REPORT__')) return html;
+    if (!/<script[^>]*type=["']module["']/i.test(html)) return html;
+    return injectMobileFallback(html);
+  }
+
+  function ensureMobileViewableReplayHtml(html) {
+    return upgradeLegacyCinematicHtml(html);
+  }
+
+  function buildWatchdogScript() {
+    return '<script id="planai-replay-watchdog">(function(){' +
+      '"use strict";' +
+      'if(window.__PLANAI_REPLAY_MODE__==="safe")return;' +
+      'function runSafe(){' +
+      'if(window.__PLANAI_SAFE_BOOTED__)return;' +
+      'var root=document.getElementById("root");' +
+      'if(root&&root.childElementCount>0)return;' +
+      'window.__PLANAI_REPLAY_MODE__="safe";' +
+      'var mods=document.querySelectorAll(\'script[type="module"]\');' +
+      'for(var i=0;i<mods.length;i++){mods[i].setAttribute("type","application/json");}' +
+      'if(root)root.style.display="none";' +
+      'var psr=document.getElementById("psr-app");' +
+      'if(psr)psr.style.display="block";' +
+      'var s=document.createElement("script");' +
+      's.textContent=' + JSON.stringify(BOOT_SCRIPT) + ';' +
+      'document.body.appendChild(s);' +
+      '}' +
+      'setTimeout(runSafe,7000);' +
+      'window.addEventListener("error",function(ev){var m=ev&&ev.message?String(ev.message):"";if(/module|import|worker|maplibre|blob/i.test(m))setTimeout(runSafe,300);},true);' +
+      '})();<\/script>';
   }
 
   /**
@@ -177,7 +284,12 @@
   global.FieldSafeReplay = {
     detectReplayCapabilities,
     buildSafeReplayHtml,
+    injectMobileFallback,
+    upgradeLegacyCinematicHtml,
+    ensureMobileViewableReplayHtml,
+    stripExternalFonts,
     sanitizeShell,
     BOOT_SCRIPT,
+    GATE_SCRIPT,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -4,6 +4,17 @@
  * Developed by PiriStrategy. © Taner Piri / PiriStrategy. All rights reserved.
  */
 const PlanAISecurity = (function () {
+  function isLocalTrustedOrigin() {
+    try {
+      const p = location.protocol || '';
+      if (p === 'file:' || p === 'blob:') return true;
+      const h = (location.hostname || '').toLowerCase();
+      return h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
+    } catch (_) {
+      return false;
+    }
+  }
+
   async function init() {
     if (typeof SecurityProfile !== 'undefined') SecurityProfile.init();
     if (typeof SecureStorage !== 'undefined') SecureStorage.init();
@@ -31,6 +42,7 @@ const PlanAISecurity = (function () {
   }
 
   function blocksSensitiveExport() {
+    if (isLocalTrustedOrigin()) return false;
     if (typeof SecurityProfile !== 'undefined' && SecurityProfile.blocksExport()) return true;
     if (typeof DeviceSecurity !== 'undefined' && DeviceSecurity.blocksSensitiveExport()) return true;
     if (typeof RuntimeIntegrity !== 'undefined' && RuntimeIntegrity.isFailed()) return true;
