@@ -12576,6 +12576,11 @@ function closeFieldNotesSheet() {
   document.body.classList.remove('field-notes-sheet-open');
 }
 
+function raiseFieldNotesPanel() {
+  closeNotePopup();
+  openFieldNotesSheet();
+}
+
 function cancelFieldNotePinMode() {
   cancelFieldNoteEditor(true);
   showHint(PA_LANG === 'tr' ? 'Raptiye iptal edildi' : 'Pin placement cancelled');
@@ -12583,6 +12588,7 @@ function cancelFieldNotePinMode() {
 
 function startFieldNotePlacement() {
   requireProject(() => {
+    closeNotePopup();
     _editingNoteId = null;
     _notePinMode = true;
     _pendingNoteGeo = null;
@@ -12605,7 +12611,7 @@ function openFieldNotes() {
 
 function openFieldNoteEditorPanel() {
   buildFieldNotesList();
-  openFieldNotesSheet();
+  raiseFieldNotesPanel();
   setNotePanelMode(_notePanelMode || 'text');
   updateFieldNoteDeleteButton();
   requestAnimationFrame(() => initNoteHandCanvas());

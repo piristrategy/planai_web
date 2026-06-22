@@ -1334,12 +1334,12 @@ body.field-mode .gps-status-pill{display:inline-flex;align-items:center;gap:6px;
   background:var(--panel-bg);border-left:1px solid var(--border);
   box-shadow:-6px 0 24px rgba(0,0,0,.15);overflow:hidden;
 }
-body.field-mode #field-notes-panel.open{display:flex;}
+body.field-mode #field-notes-panel.open{display:flex;z-index:1975;}
 #field-notes-sheet-backdrop{
   position:fixed;inset:0;z-index:1945;display:none;background:rgba(0,0,0,.28);
   pointer-events:auto;
 }
-body.field-notes-sheet-open #field-notes-sheet-backdrop{display:block;}
+body.field-notes-sheet-open #field-notes-sheet-backdrop{display:block;z-index:1970;}
 .fn-panel-scroll{
   flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
   overscroll-behavior:contain;
