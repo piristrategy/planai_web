@@ -1,6 +1,7 @@
 /**
- * Builds self-contained cinematic spatial inspection playback HTML from Field app data.
- * Uses the verified 17.06.2026 reference shell when available (green/yellow route replay).
+ * Builds self-contained cinematic / mobile-safe spatial inspection playback HTML.
+ * Exported reports use FieldSafeReplay (file:// compatible). Cinematic MapLibre is
+ * optional in-app upgrade only when the host origin supports ES modules + workers.
  */
 (function (global) {
   'use strict';
@@ -24,7 +25,6 @@
     const r = Object.assign({}, payload || {});
     if (!Array.isArray(r.events)) r.events = [];
     if (!r.bounds && r.geoBounds) r.bounds = r.geoBounds;
-    // Drop external basemap URLs; template basemap is merged in buildReplayHtml when needed.
     if (r.basemapUrl && !/^data:image\//i.test(r.basemapUrl)) r.basemapUrl = '';
 
     const trLabel = r.lang === 'tr' ? 'GPS Rota' : 'GPS Route';
@@ -75,7 +75,9 @@
   function mergeTemplateShellFields(prepared, tpl) {
     const ref = extractTemplateReport(tpl);
     if (!ref) return prepared;
-    if (!prepared.basemapUrl && ref.basemapUrl) prepared.basemapUrl = ref.basemapUrl;
+    if (!prepared.basemapUrl && ref.basemapUrl && /^data:image\//i.test(ref.basemapUrl)) {
+      prepared.basemapUrl = ref.basemapUrl;
+    }
     if (!prepared.brandLogoUrl && ref.brandLogoUrl) prepared.brandLogoUrl = ref.brandLogoUrl;
     return prepared;
   }
@@ -103,13 +105,15 @@
   function buildFromTemplate(prepared, safePayload) {
     const tpl = loadTemplateSync();
     if (!tpl) return null;
-    let html = tpl;
-    if (tpl.includes('window.__PLANAI_REPORT__=')) {
+    let html = global.FieldSafeReplay?.sanitizeShell
+      ? global.FieldSafeReplay.sanitizeShell(tpl)
+      : tpl;
+    if (html.includes('window.__PLANAI_REPORT__=')) {
       html = html.replace(
         /<script>window\.__PLANAI_REPORT__=[\s\S]*?<\/script>/,
         '<script>window.__PLANAI_REPORT__=' + safePayload + ';<\/script>',
       );
-    } else if (tpl.includes('id="planai-report-data"')) {
+    } else if (html.includes('id="planai-report-data"')) {
       html = html.replace(
         /(<script type="application\/json" id="planai-report-data">)[\s\S]*?(<\/script>)/,
         '$1' + safePayload + '$2',
@@ -123,10 +127,14 @@
     return html;
   }
 
-  function buildFromAssets(prepared, safePayload) {
+  function buildFromAssets(prepared, safePayload, opts) {
     const assets = global.FieldReplayAssets;
     if (!assets?.js) return null;
-    // Match working reference shell: inline report + module bundle, no CSP (MapLibre needs blob workers).
+    if (global.FieldSafeReplay?.buildSafeReplayHtml) {
+      return global.FieldSafeReplay.buildSafeReplayHtml(prepared, safePayload, {
+        cinematicJs: opts?.includeCinematic ? assets.js : '',
+      });
+    }
     return '<!DOCTYPE html><html lang="' + (prepared.lang || 'en') + '"><head><meta charset="UTF-8"/>' +
       '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>' +
       '<title>' + escapeAttr((prepared.projectName || 'PlanAI Field') + ' — Inspection Replay') + '</title>' +
@@ -137,7 +145,11 @@
       '</body></html>';
   }
 
-  function buildReplayHtml(payload) {
+  /**
+   * @param {object} payload
+   * @param {{ includeCinematic?: boolean }} [opts] — cinematic bundle only for in-app https preview
+   */
+  function buildReplayHtml(payload, opts) {
     const tpl = loadTemplateSync();
     let prepared = prepareReplayPayload(payload);
     prepared = mergeTemplateShellFields(prepared, tpl);
@@ -145,13 +157,20 @@
       ? ExportSafety.safeJsonInHtml(prepared)
       : JSON.stringify(prepared).replace(/</g, '\\u003c');
 
+    if (global.FieldSafeReplay?.buildSafeReplayHtml) {
+      const assets = global.FieldReplayAssets;
+      return global.FieldSafeReplay.buildSafeReplayHtml(prepared, safePayload, {
+        cinematicJs: (opts?.includeCinematic && assets?.js) ? assets.js : '',
+      });
+    }
+
     const fromTemplate = buildFromTemplate(prepared, safePayload);
     if (fromTemplate) return fromTemplate;
 
-    const fromAssets = buildFromAssets(prepared, safePayload);
+    const fromAssets = buildFromAssets(prepared, safePayload, opts);
     if (fromAssets) return fromAssets;
 
-    console.warn('[FieldReplay] No template or assets — check interaktif/ reference and FieldReplayAssets.js');
+    console.warn('[FieldReplay] No safe replay or assets — check FieldSafeReplay.js');
     return null;
   }
 
@@ -163,5 +182,6 @@
     buildReplayHtml,
     prepareReplayPayload,
     preloadReplayTemplate,
+    detectReplayCapabilities: () => global.FieldSafeReplay?.detectReplayCapabilities?.() || {},
   };
 })(typeof window !== 'undefined' ? window : globalThis);

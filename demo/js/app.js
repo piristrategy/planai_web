@@ -10074,6 +10074,56 @@ function buildReportMapFallbackDataUrl() {
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
 
+/** Offline-safe basemap for exported replay when satellite tiles unavailable. */
+function buildReportBoundsFallbackDataUrl(bounds, events, lang) {
+  const tr = lang === 'tr';
+  const feats = [];
+  (events || []).forEach(e => {
+    if (!e) return;
+    if (e.kind === 'track' && e.path) {
+      e.path.forEach(p => {
+        if (p?.lat != null && (p.lon != null || p.lng != null)) {
+          feats.push({ lat: p.lat, lon: p.lon != null ? p.lon : p.lng, col: '#1565c0' });
+        }
+      });
+    } else if (e.lat != null && (e.lon != null || e.lng != null)) {
+      const col = (e.kind === 'photo' || e.kind === 'audio') ? '#e67e22' : '#1a73e8';
+      feats.push({ lat: e.lat, lon: e.lon != null ? e.lon : e.lng, col });
+    }
+  });
+  if (!feats.length && bounds?.minLat != null) {
+    feats.push({ lat: (bounds.minLat + bounds.maxLat) / 2, lon: (bounds.minLon + bounds.maxLon) / 2, col: '#1a73e8' });
+  }
+  if (!feats.length) return '';
+  let minLat = bounds?.minLat ?? 90;
+  let maxLat = bounds?.maxLat ?? -90;
+  let minLon = bounds?.minLon ?? 180;
+  let maxLon = bounds?.maxLon ?? -180;
+  if (minLat > maxLat) {
+    feats.forEach(f => {
+      minLat = Math.min(minLat, f.lat); maxLat = Math.max(maxLat, f.lat);
+      minLon = Math.min(minLon, f.lon); maxLon = Math.max(maxLon, f.lon);
+    });
+  }
+  const pad = 0.12;
+  const dLat = (maxLat - minLat) * pad || 0.004;
+  const dLon = (maxLon - minLon) * pad || 0.004;
+  minLat -= dLat; maxLat += dLat; minLon -= dLon; maxLon += dLon;
+  const proj = (lat, lon) => ({
+    x: ((lon - minLon) / (maxLon - minLon || 1)) * 960,
+    y: ((maxLat - lat) / (maxLat - minLat || 1)) * 540,
+  });
+  let body = '<rect width="960" height="540" fill="#1a2838"/>';
+  body += '<text x="12" y="22" font-size="12" fill="#9ab0c8">' +
+    (tr ? 'PlanAI Field — vektör özet (çevrimdışı)' : 'PlanAI Field — vector summary (offline)') + '</text>';
+  feats.forEach(f => {
+    const q = proj(f.lat, f.lon);
+    body += '<circle cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="6" fill="' + f.col + '" stroke="#fff" stroke-width="1.5"/>';
+  });
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">' + body + '</svg>';
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
 function reportArtifactBlobKey(rptId, kind) {
   return (FIELD_PROJECT.id || 'none') + ':report:' + rptId + ':' + kind;
 }
@@ -10444,12 +10494,13 @@ window.deleteProjectReport = deleteProjectReport;
 async function collectReportPhotos() {
   const list = S.objects.filter(o => o.type === 'field_photo' && o.visible !== false);
   const out = [];
+  const exportMaxPx = 680;
   for (const ph of list) {
     let blob = (await getPhotoBlobRecord(ph.photoId, 'thumb'))?.data;
     if (!blob) blob = (await getPhotoBlobRecord(ph.photoId, 'full'))?.data;
-    if (blob) blob = await resizeImageBlob(blob, 720);
+    if (blob) blob = await resizeImageBlob(blob, exportMaxPx);
     const dataUrl = blob ? await blobToDataUrl(blob) : '';
-    out.push({
+    const row = {
       id: ph.photoId || ph.id,
       photoNum: ph.photoNum,
       lat: ph.lat,
@@ -10460,7 +10511,17 @@ async function collectReportPhotos() {
       imageDataUrl: dataUrl,
       hasVoice: !!ph.hasVoice,
       voiceDuration: ph.voiceDuration || 0,
-    });
+      audioDataUrl: '',
+    };
+    if (ph.hasVoice) {
+      try {
+        const aud = await getPhotoBlobRecord(ph.photoId, 'audio');
+        if (aud?.data) row.audioDataUrl = await blobToDataUrl(aud.data);
+      } catch (e) {
+        console.warn('[Report audio]', ph.photoId, e);
+      }
+    }
+    out.push(row);
   }
   return out;
 }
@@ -11005,6 +11066,7 @@ function buildReplayPayloadFromReport(data) {
       lat: p.lat,
       lon: p.lon,
       imageDataUrl: p.imageDataUrl || '',
+      audioDataUrl: p.audioDataUrl || '',
       hasVoice: !!p.hasVoice,
       voiceDuration: p.voiceDuration || 0,
     };
@@ -11100,7 +11162,7 @@ function buildReplayPayloadFromReport(data) {
   };
 }
 
-async function buildCinematicInteractiveReportHTML(data) {
+async function buildCinematicInteractiveReportHTML(data, opts) {
   if (typeof FieldCinematicReport === 'undefined') {
     return null;
   }
@@ -11109,14 +11171,25 @@ async function buildCinematicInteractiveReportHTML(data) {
     if (!data.brandLogoUrl) data.brandLogoUrl = embeddedBrandLogoDataUrl();
     const payload = buildReplayPayloadFromReport(data);
     if (!payload.brandLogoUrl) payload.brandLogoUrl = data.brandLogoUrl || embeddedBrandLogoDataUrl() || '';
-    if (typeof FieldCinematicReport.prepareReplayPayload === 'function') {
-      return FieldCinematicReport.buildReplayHtml(FieldCinematicReport.prepareReplayPayload(payload));
+    if (!payload.basemapUrl) {
+      payload.basemapUrl = data.interactiveBasemapUrl || data.mapDataUrl || '';
     }
-    if (payload.track && !(payload.events || []).some(e => e?.kind === 'track' && e.path?.length >= 2)) {
-      payload.events = [payload.track, ...(payload.events || [])];
+    if (!payload.basemapUrl || !/^data:image\//i.test(payload.basemapUrl)) {
+      payload.basemapUrl = buildReportBoundsFallbackDataUrl(
+        payload.bounds || payload.geoBounds,
+        payload.events,
+        payload.lang,
+      ) || '';
     }
-    payload.basemapUrl = '';
-    return FieldCinematicReport.buildReplayHtml(payload);
+    const prepared = typeof FieldCinematicReport.prepareReplayPayload === 'function'
+      ? FieldCinematicReport.prepareReplayPayload(payload)
+      : payload;
+    if (prepared.track && !(prepared.events || []).some(e => e?.kind === 'track' && e.path?.length >= 2)) {
+      prepared.events = [prepared.track, ...(prepared.events || [])];
+    }
+    return FieldCinematicReport.buildReplayHtml(prepared, {
+      includeCinematic: !!opts?.includeCinematic,
+    });
   } catch (e) {
     console.warn('[CinematicReport]', e);
     return null;

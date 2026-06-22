@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<base href="/demo/">
+<meta charset="UTF-8">`n<base href="/demo/">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1425,7 +1424,22 @@
 <script src="js/branding/PlanAIBranding.js?v=1.1.50"></script>
 <script src="js/share/FieldFileBridge.js?v=1.1.52"></script>
 <script src="js/replay/FieldReplayAssets.js?v=1.1.70"></script>
-<script src="js/replay/FieldCinematicReport.js?v=1.3.2"></script>
+<script src="js/replay/FieldSafeReplay.js?v=1.0.0"></script>
+<script src="js/replay/FieldCinematicReport.js?v=1.4.0"></script>
+<script>
+(function () {
+  try {
+    var x = new XMLHttpRequest();
+    x.open('GET', 'interaktif/Field_Journey_17_06_2026_interaktif.html', false);
+    x.send(null);
+    if ((x.status === 200 || x.status === 0) && x.responseText) {
+      window.__PLANAI_REPLAY_TEMPLATE__ = x.responseText;
+    }
+  } catch (e) {
+    console.warn('[FieldReplay] template preload failed', e);
+  }
+})();
+</script>
 <script type="module">
 import * as pdfjs from './libs/pdfjs/pdf.min.mjs';
 pdfjs.GlobalWorkerOptions.workerSrc = './libs/pdfjs/pdf.worker.min.mjs';
