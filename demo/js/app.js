@@ -10947,9 +10947,17 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
     if (embed) { embed.removeAttribute('src'); embed.style.display = 'none'; }
     if (frame) {
       frame.style.display = 'block';
-      frame.removeAttribute('src');
-      if (html) frame.srcdoc = html;
-      else frame.src = URL.createObjectURL(blob);
+      frame.removeAttribute('srcdoc');
+      if (html) {
+        if (_fieldReportViewerUrl) {
+          try { URL.revokeObjectURL(_fieldReportViewerUrl); } catch (_) {}
+        }
+        _fieldReportViewerUrl = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+        frame.src = _fieldReportViewerUrl;
+      } else {
+        frame.removeAttribute('src');
+        frame.src = URL.createObjectURL(blob);
+      }
     }
     document.getElementById('field-report-viewer-backdrop')?.classList.add('open');
     document.getElementById('field-report-viewer')?.classList.add('open');
