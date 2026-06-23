@@ -1810,6 +1810,9 @@ function updateFieldAnalysisActions(obj) {
 const _demTileCache = {};
 const _slopeState = { active: false, objId: null, imageCanvas: null, worldBounds: null, clipWorld: null, stats: null };
 let _slopeRunning = false;
+let _slopeDebounceTimer = null;
+let _slopePendingObj = null;
+let _fieldDrawDragRaf = 0;
 let _slopeAnalysisReport = null;
 
 const SLOPE_LEGEND_STOPS = [
@@ -2174,7 +2177,10 @@ function terrariumTilesHaveData(elevTiles) {
 }
 
 async function runLocalSlopeAnalysis(obj) {
-  if (_slopeRunning) return;
+  if (_slopeRunning) {
+    _slopePendingObj = obj;
+    return;
+  }
   const ring = analysisRegionLatLonRing(obj);
   if (!ring || ring.length < 3) {
     showHint(t('slope.needArea'));
@@ -2301,7 +2307,23 @@ async function runLocalSlopeAnalysis(obj) {
     showHint(t('slope.offline'));
   } finally {
     _slopeRunning = false;
+    const pending = _slopePendingObj;
+    _slopePendingObj = null;
+    if (pending && pending.id !== obj?.id) {
+      setTimeout(() => { runLocalSlopeAnalysis(pending).catch(() => {}); }, 0);
+    }
   }
+}
+
+function scheduleCircleSlopeAnalysis(obj) {
+  if (!obj || obj.type !== 'circle') return;
+  clearTimeout(_slopeDebounceTimer);
+  _slopeDebounceTimer = setTimeout(() => {
+    _slopeDebounceTimer = null;
+    updateFieldAnalysisActions(obj);
+    showHint(t('hint.slopeAfterCircle'));
+    runLocalSlopeAnalysis(obj).catch(() => showHint(t('slope.offline')));
+  }, 380);
 }
 
 function polygonAreaM2FromRing(ring) {
@@ -10687,6 +10709,23 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
     return;
   }
   if (pdfPane) { pdfPane.innerHTML = ''; pdfPane.style.display = 'none'; pdfPane.classList.remove('open'); }
+  const isHtml = viewKind === 'interactive' || viewKind === 'html' ||
+    (blob.type && String(blob.type).indexOf('html') >= 0);
+  if (isHtml) {
+    let html = '';
+    try { html = await blob.text(); } catch (_) {}
+    if (embed) { embed.removeAttribute('src'); embed.style.display = 'none'; }
+    if (frame) {
+      frame.style.display = 'block';
+      frame.removeAttribute('src');
+      if (html) frame.srcdoc = html;
+      else frame.src = URL.createObjectURL(blob);
+    }
+    document.getElementById('field-report-viewer-backdrop')?.classList.add('open');
+    document.getElementById('field-report-viewer')?.classList.add('open');
+    document.body.classList.add('field-report-viewer-open');
+    return;
+  }
   const url = URL.createObjectURL(blob);
   _fieldReportViewerUrl = url;
   if (embed) { embed.removeAttribute('src'); embed.style.display = 'none'; }
@@ -10726,12 +10765,10 @@ async function openSavedProjectReport(rptId, kind) {
   }
   if (kind === 'interactive' || kind === 'html') {
     const html = await blob.text();
-    const win = openReportPreview(html, null, FIELD_PROJECT.name, kind === 'interactive' ? 'interactive' : 'pdf');
-    if (!win) {
-      await openFieldReportViewerBlob(blob, fname, {
-        blob, filename: fname, mimeType: 'text/html', previewHtml: html, kind: kind === 'interactive' ? 'interactive' : 'pdf',
-      }, 'html');
-    }
+    await openFieldReportViewerBlob(blob, fname, {
+      blob, filename: fname, mimeType: 'text/html;charset=utf-8', previewHtml: html,
+      kind: kind === 'interactive' ? 'interactive' : 'file',
+    }, kind === 'interactive' ? 'interactive' : 'html');
     return;
   }
   await openFieldReportViewerBlob(blob, fname, { blob, filename: fname, mimeType: blob.type || 'application/octet-stream', kind: 'file' });
@@ -14841,9 +14878,19 @@ function fieldActiveDrawTool() {
 }
 
 function fieldIsDragDrawPointerTool(pointerType) {
-  if (!FIELD_MODE || !fieldDrawingAllowed(pointerType)) return false;
-  return S.tool === 'circle' || S.tool === 'zone' || S.tool === 'arrow' ||
-    S.tool === 'freedraw' || S.tool === 'analysis';
+  if (!FIELD_MODE) return false;
+  const dragTools = new Set(['circle', 'zone', 'arrow', 'freedraw', 'analysis']);
+  if (!dragTools.has(S.tool)) return false;
+  if (pointerType === 'touch' || pointerType === 'pen') return true;
+  return fieldDrawingAllowed(pointerType || 'mouse');
+}
+
+function fieldScheduleDrawDragRender() {
+  if (_fieldDrawDragRaf) return;
+  _fieldDrawDragRaf = requestAnimationFrame(() => {
+    _fieldDrawDragRaf = 0;
+    scheduleRender();
+  });
 }
 
 function fieldTapVertexTool() {
@@ -15647,6 +15694,7 @@ function fieldPointerDown(e) {
     return true;
   }
   if (fieldIsDragDrawPointerTool(e.pointerType)) {
+    if (S.drawing) return true;
     try { e.preventDefault(); } catch (_) {}
     _fieldTouch = {
       id: e.pointerId,
@@ -15861,7 +15909,7 @@ const S = {
 
   // Pen settings
   color:          '#e53935',
-  strokeWidth:    10,
+  strokeWidth:    2.5,
   opacity:        1,
   lineStyle:      'solid',
   lineDecoration: 'none',
@@ -19887,7 +19935,11 @@ function onMouseMove(e) {
     }
   }
 
-  scheduleRender();
+  if (S.drawing && (S.tool === 'circle' || S.tool === 'zone' || S.tool === 'arrow' || S.tool === 'freedraw' || S.tool === 'analysis')) {
+    fieldScheduleDrawDragRender();
+  } else {
+    scheduleRender();
+  }
 }
 
 function onMouseUp(e) {
@@ -19933,17 +19985,15 @@ function onMouseUp(e) {
       const tooSmall =
         (obj.type==='line'||obj.type==='arrow') && Math.hypot(obj.points[2]-obj.points[0],obj.points[3]-obj.points[1])<3 ||
         obj.type==='zone' && Math.abs(obj.points[2]-obj.points[0])<4 ||
-        obj.type==='circle' && obj.r < Math.max(3, 8 / S.scale) ||
+        obj.type==='circle' && obj.r < 3 ||
         obj.type==='freedraw' && obj.points.length<4;
       if (tooSmall) S.objects = S.objects.filter(o => o.id !== S.activeId);
       else {
         pushHistory();
         S.selectedIds = [obj.id];
         updateSelPanel(obj);
-        if (FIELD_MODE && obj.type === 'circle' && obj.r >= Math.max(8, 12 / S.scale)) {
-          updateFieldAnalysisActions(obj);
-          showHint(t('hint.slopeAfterCircle'));
-          runLocalSlopeAnalysis(obj).catch(() => showHint(t('slope.offline')));
+        if (FIELD_MODE && obj.type === 'circle' && obj.r >= 8) {
+          scheduleCircleSlopeAnalysis(obj);
         }
       }
     }
@@ -20131,6 +20181,7 @@ function setTool(tool) {
   };
   if (FIELD_MODE) {
     if (tool === 'circle') {
+      applyFieldStrokeStyle(2.5, null, { silent: true });
       showHint(t('hint.circle'));
       updateFieldAnalysisActions(null);
     } else {

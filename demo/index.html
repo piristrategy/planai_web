@@ -14,7 +14,7 @@
 <meta name="application-name" content="PlanAI Field">
 <meta name="organization" content="PiriStrategy">
 <meta name="creator" content="PiriStrategy">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob:; connect-src 'self' https: blob:; worker-src 'self' blob:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob:; connect-src 'self' https: blob:; worker-src 'self' blob:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self' blob: data:; child-src 'self' blob: data:; frame-ancestors 'none'; upgrade-insecure-requests">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -970,7 +970,7 @@
         <input type="range" id="field-draw-hue" class="field-stroke-hue-range" min="0" max="360" step="1" value="4" aria-label="Çizim rengi" oninput="onFieldDrawHueInput(this.value)">
       </div>
       <span class="p-label" id="field-draw-sw-label"></span>
-      <input type="range" min="0.5" max="32" step="0.5" value="10" id="field-draw-sw" oninput="applyFieldDrawStyle()">
+      <input type="range" min="0.5" max="32" step="0.5" value="2.5" id="field-draw-sw" oninput="applyFieldDrawStyle()">
       <span class="p-label" id="field-draw-op-label"></span>
       <input type="range" min="0.05" max="1" step="0.05" value="1" id="field-draw-op" oninput="applyFieldDrawStyle()">
     </div>
@@ -1458,6 +1458,6 @@ window.pdfjsLib = pdfjs;
 <script src="js/security/FieldAccessGate.js?v=1.4.0"></script>
 <script src="js/security/FieldDbCrypto.js?v=1.2.2"></script>
 <script src="js/ui/LegacyClickBridge.js?v=1.2.0"></script>
-<script src="js/app.js?v=1.1.2"></script>
+<script src="js/app.js?v=1.1.3"></script>
 </body>
 </html>
