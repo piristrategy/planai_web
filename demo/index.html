@@ -970,7 +970,7 @@
         <input type="range" id="field-draw-hue" class="field-stroke-hue-range" min="0" max="360" step="1" value="4" aria-label="Çizim rengi" oninput="onFieldDrawHueInput(this.value)">
       </div>
       <span class="p-label" id="field-draw-sw-label"></span>
-      <input type="range" min="0.5" max="24" step="0.5" value="2" id="field-draw-sw" oninput="applyFieldDrawStyle()">
+      <input type="range" min="0.5" max="32" step="0.5" value="10" id="field-draw-sw" oninput="applyFieldDrawStyle()">
       <span class="p-label" id="field-draw-op-label"></span>
       <input type="range" min="0.05" max="1" step="0.05" value="1" id="field-draw-op" oninput="applyFieldDrawStyle()">
     </div>
@@ -1100,8 +1100,8 @@
     <div class="swatch-grid" id="swatches"></div>
 
     <!-- Width + Opacity -->
-    <span class="p-label">Kalınlık · <span id="sw-val">2</span>px</span>
-    <input type="range" min="0.5" max="76" step="0.5" value="2" id="slider-sw" oninput="setStrokeWidth(+this.value)">
+    <span class="p-label">Kalınlık · <span id="sw-val">10</span>px</span>
+    <input type="range" min="0.5" max="76" step="0.5" value="10" id="slider-sw" oninput="setStrokeWidth(+this.value)">
 
     <span class="p-label">Opacity · <span id="op-val">100</span>%</span>
     <input type="range" min="0.05" max="1" step="0.05" value="1" id="slider-op" oninput="setOpacity(+this.value)">
@@ -1458,6 +1458,6 @@ window.pdfjsLib = pdfjs;
 <script src="js/security/FieldAccessGate.js?v=1.4.0"></script>
 <script src="js/security/FieldDbCrypto.js?v=1.2.2"></script>
 <script src="js/ui/LegacyClickBridge.js?v=1.2.0"></script>
-<script src="js/app.js?v=1.1.0"></script>
+<script src="js/app.js?v=1.1.1"></script>
 </body>
 </html>

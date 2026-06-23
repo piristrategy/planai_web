@@ -39,6 +39,7 @@ const RuntimeIntegrity = (function () {
       const proto = location.protocol || '';
       if (proto === 'file:' || proto === 'blob:') return true;
       const host = (location.hostname || '').toLowerCase();
+      if (host === 'planai.tr' || host.endsWith('.planai.tr')) return true;
       if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') return true;
     } catch (_) { /* continue strict check */ }
     try {

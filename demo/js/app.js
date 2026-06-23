@@ -1431,7 +1431,7 @@ function syncFieldStrokeWidthPickers(val, isPoint) {
     if (isPoint) {
       el.min = 4; el.max = 32; el.step = 1;
     } else {
-      el.min = 0.5; el.max = 24; el.step = 0.5;
+      el.min = 0.5; el.max = 32; el.step = 0.5;
     }
     el.value = v;
     const labelId = id === 'field-draw-sw' ? 'field-draw-sw-label' : 'field-ctx-sw-label';
@@ -2130,6 +2130,49 @@ function aspectLabel(deg) {
   return names[Math.round(d / 45) % 8];
 }
 
+async function fetchElevationsOpenMeteo(lats, lons) {
+  if (!lats.length || lats.length !== lons.length) return null;
+  try {
+    const url = 'https://api.open-meteo.com/v1/elevation?latitude=' +
+      lats.map(v => v.toFixed(5)).join(',') + '&longitude=' + lons.map(v => v.toFixed(5)).join(',');
+    const res = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const elev = data?.elevation;
+    return Array.isArray(elev) ? elev : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function fillElevGridFromOpenMeteo(elevGrid, cols, rows, bb) {
+  const batch = 80;
+  const tasks = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const i = row * cols + col;
+      if (!isNaN(elevGrid[i])) continue;
+      tasks.push({ row, col, i });
+    }
+  }
+  for (let off = 0; off < tasks.length; off += batch) {
+    const chunk = tasks.slice(off, off + batch);
+    const lats = chunk.map(t => bb.maxLat - (t.row / (rows - 1)) * (bb.maxLat - bb.minLat));
+    const lons = chunk.map(t => bb.minLon + (t.col / (cols - 1)) * (bb.maxLon - bb.minLon));
+    const elev = await fetchElevationsOpenMeteo(lats, lons);
+    if (!elev) continue;
+    chunk.forEach((t, j) => {
+      const e = elev[j];
+      if (e != null && isFinite(e)) elevGrid[t.i] = e;
+    });
+  }
+  return elevGrid.some(v => isFinite(v));
+}
+
+function terrariumTilesHaveData(elevTiles) {
+  return Object.values(elevTiles).some(v => v && v.length);
+}
+
 async function runLocalSlopeAnalysis(obj) {
   if (_slopeRunning) return;
   const ring = analysisRegionLatLonRing(obj);
@@ -2179,6 +2222,15 @@ async function runLocalSlopeAnalysis(obj) {
       const lon = bb.minLon + (col / (cols - 1)) * (bb.maxLon - bb.minLon);
       const e0 = sampleElevAtLatLon(elevTiles, z, lat, lon);
       if (e0 != null) elevGrid[row * cols + col] = e0;
+    }
+  }
+  if (!terrariumTilesHaveData(elevTiles)) {
+    await fillElevGridFromOpenMeteo(elevGrid, cols, rows, bb);
+  } else {
+    let missing = 0;
+    for (let i = 0; i < elevGrid.length; i++) if (isNaN(elevGrid[i])) missing++;
+    if (missing > elevGrid.length * 0.35) {
+      await fillElevGridFromOpenMeteo(elevGrid, cols, rows, bb);
     }
   }
   for (let row = 0; row < rows; row++) {
@@ -3009,6 +3061,26 @@ async function startGpsCompassIfAllowed() {
   bindGpsCompassListener();
 }
 
+function fieldDrawingSessionActive() {
+  return !!(S.drawing || S.polyActive || S.plSession || _slopeRunning);
+}
+
+function fieldSuspendGpsFollowForDrawing() {
+  if (_gpsFollow) {
+    _gpsFollow = false;
+    document.getElementById('btn-gps-follow')?.classList.remove('active');
+    document.getElementById('btn-map-locate')?.classList.remove('active');
+  }
+  _mapBrowseMode = true;
+}
+
+function fieldResumeGpsFollowAfterDrawing() {
+  if (!fieldDrawingSessionActive() && fieldLiveLocationLocked()) {
+    _mapBrowseMode = false;
+    ensureFieldLiveLocationFollow();
+  }
+}
+
 function fieldLiveLocationLocked() {
   return FIELD_MODE && !!FIELD_PROJECT.id;
 }
@@ -3117,7 +3189,7 @@ function ensureGpsMotionLoop() {
       _gpsMotionTrackUiTs = now;
       updateGpsTrackHud();
     }
-    if (_gpsFollow && _fieldGpsDisplay) {
+    if (_gpsFollow && _fieldGpsDisplay && !_mapBrowseMode && !fieldDrawingSessionActive()) {
       const followA = (fieldLiveLocationLocked() && _gpsMoveState === GPS_MOVE.STATIONARY)
         ? 1
         : (_gpsMoveState !== GPS_MOVE.STATIONARY ? gpsAdaptiveParams(_gpsMoveState).follow : 0);
@@ -14213,7 +14285,8 @@ function prepareFieldDictationTarget(textarea) {
 
 async function toggleFieldDictation(textareaId, statusId) {
   const now = Date.now();
-  if (now - _fieldDictationLastToggle < 280) return;
+  const debounceMs = fieldCoarseTouchUi() ? 120 : 280;
+  if (now - _fieldDictationLastToggle < debounceMs) return;
   _fieldDictationLastToggle = now;
   const ta = document.getElementById(textareaId);
   if (!ta) return;
@@ -14285,8 +14358,8 @@ async function toggleFieldDictation(textareaId, statusId) {
       return;
     }
   }
-  if (fieldIsAppleTouchWeb()) {
-    startFieldWebDictation(ta, statusId);
+  if (fieldIsAppleTouchWeb() || fieldCoarseTouchUi()) {
+    await startFieldWebDictation(ta, statusId);
     return;
   }
   await startFieldWebDictation(ta, statusId);
@@ -14304,8 +14377,11 @@ function startFieldWebDictation(ta, statusId, silentFail) {
       return;
     }
     const iosWeb = fieldIsAppleTouchWeb();
-    if (iosWeb && !silentFail) showHint(t('dictation.iosHint'), 7000);
+    const tabletUi = fieldCoarseTouchUi();
+    if ((iosWeb || tabletUi) && !silentFail) showHint(t('dictation.iosHint'), 7000);
     const sessionGen = ++_fieldDictationGen;
+    const sessionStart = Date.now();
+    const sessionMaxMs = tabletUi ? 90000 : 45000;
 
     let settled = false;
     let gotSpeech = false;
@@ -14323,20 +14399,28 @@ function startFieldWebDictation(ta, statusId, silentFail) {
         _fieldDictationTargetId = null;
       }
     };
+    const pickTranscript = r => {
+      let best = '';
+      for (let a = 0; a < (r?.length || 0); a++) {
+        const chunk = r[a]?.transcript || '';
+        if (chunk.length > best.length) best = chunk;
+      }
+      return best;
+    };
     const runRecognition = () => {
       if (sessionGen !== _fieldDictationGen) { finish(false); return; }
       prepareFieldDictationTarget(ta);
       const rec = new SR();
       rec.lang = fieldDictationLang();
       rec.interimResults = true;
-      rec.maxAlternatives = 1;
-      rec.continuous = !iosWeb;
+      rec.maxAlternatives = tabletUi ? 3 : 1;
+      rec.continuous = tabletUi ? true : !iosWeb;
       _fieldWebDictation = rec;
       rec.onresult = ev => {
         if (sessionGen !== _fieldDictationGen) return;
         for (let i = ev.resultIndex; i < ev.results.length; i++) {
           const r = ev.results[i];
-          const text = r[0]?.transcript || '';
+          const text = pickTranscript(r);
           if (!text) continue;
           gotSpeech = true;
           updateFieldDictationLive(ta, statusId, text, r.isFinal);
@@ -14346,6 +14430,13 @@ function startFieldWebDictation(ta, statusId, silentFail) {
         if (sessionGen !== _fieldDictationGen) { finish(false); return; }
         if (ev.error === 'aborted') { cleanup(''); finish(false); return; }
         if (ev.error === 'no-speech' && gotSpeech) { try { rec.stop(); } catch (_) {} return; }
+        if (tabletUi && (ev.error === 'no-speech' || ev.error === 'network') && (Date.now() - sessionStart) < sessionMaxMs) {
+          setTimeout(() => {
+            if (sessionGen !== _fieldDictationGen || _fieldDictationTargetId !== ta.id || settled) return;
+            try { rec.start(); } catch (_) {}
+          }, iosWeb ? 220 : 120);
+          return;
+        }
         if (!silentFail) {
           if (ev.error === 'not-allowed') showHint(t('dictation.micDenied'));
           else if (ev.error === 'no-speech' && iosWeb) showHint(t('dictation.iosHint'), 7000);
@@ -14356,10 +14447,16 @@ function startFieldWebDictation(ta, statusId, silentFail) {
       };
       rec.onend = () => {
         if (sessionGen !== _fieldDictationGen || _fieldWebDictation !== rec || _fieldDictationTargetId !== ta.id || settled) return;
-        if (iosWeb) {
-          cleanup(gotSpeech ? t('dictation.done') : '');
-          if (gotSpeech) showHint(t('dictation.done'));
-          finish(gotSpeech);
+        const keepListening = _fieldDictationTargetId === ta.id && (Date.now() - sessionStart) < sessionMaxMs;
+        if (tabletUi && keepListening) {
+          setTimeout(() => {
+            if (sessionGen !== _fieldDictationGen || _fieldDictationTargetId !== ta.id || settled) return;
+            try { rec.start(); } catch (_) {
+              cleanup(gotSpeech ? t('dictation.done') : '');
+              if (gotSpeech) showHint(t('dictation.done'));
+              finish(gotSpeech);
+            }
+          }, iosWeb ? 180 : 90);
           return;
         }
         if (gotSpeech) {
@@ -14368,15 +14465,15 @@ function startFieldWebDictation(ta, statusId, silentFail) {
           finish(true);
           return;
         }
-        setTimeout(() => {
-          if (sessionGen !== _fieldDictationGen || _fieldWebDictation !== rec || _fieldDictationTargetId !== ta.id || settled) return;
-          try {
-            rec.start();
-          } catch (_) {
-            cleanup('');
-            finish(false);
-          }
-        }, 120);
+        if (!tabletUi) {
+          setTimeout(() => {
+            if (sessionGen !== _fieldDictationGen || _fieldWebDictation !== rec || _fieldDictationTargetId !== ta.id || settled) return;
+            try { rec.start(); } catch (_) { cleanup(''); finish(false); }
+          }, 120);
+          return;
+        }
+        cleanup('');
+        finish(false);
       };
       try {
         rec.start();
@@ -14771,6 +14868,10 @@ function fieldAddDrawVertex(wp) {
       }
     }
     S.plVerts.push({ x: pt.x, y: pt.y });
+    if (S.plVerts.length === 1) {
+      S.plPrevX = pt.x;
+      S.plPrevY = pt.y;
+    }
     updateFieldDrawFab();
     scheduleRender();
   }
@@ -15738,7 +15839,7 @@ const S = {
 
   // Pen settings
   color:          '#e53935',
-  strokeWidth:    2,
+  strokeWidth:    10,
   opacity:        1,
   lineStyle:      'solid',
   lineDecoration: 'none',
@@ -18011,7 +18112,7 @@ function renderObj(obj, sel) {
 // IN-PROGRESS POLYGON PREVIEW
 // ─────────────────────────────────────────────────────────────
 function renderPolyPreview() {
-  if (!S.polyActive || S.polyPts.length < 2) return;
+  if (!S.polyActive || S.polyPts.length < 2 || !isFinite(S.polyPreviewX) || !isFinite(S.polyPreviewY)) return;
   ctx.save();
   ctx.globalAlpha = 0.7;
   ctx.strokeStyle = S.color;
@@ -18415,7 +18516,8 @@ function togglePaftaGrid() {
 }
 
 // ── Set map center (called from pafta parser or georef) ───────
-function setMapCenter(lat, lon) {
+function setMapCenter(lat, lon, opts) {
+  if (!opts?.force && fieldDrawingSessionActive()) return;
   const georefSnaps = [];
   S.objects.forEach(o => {
     if (o.type !== 'georef_image' || !o.corners) return;
@@ -19032,7 +19134,7 @@ function catmullRomPath(ctx2, verts, tension) {
 // POLYLINE / SPLINE LIVE PREVIEW
 // ─────────────────────────────────────────────────────────────
 function renderPlPreview() {
-  if (!S.plSession || S.plVerts.length < 1) return;
+  if (!S.plSession || S.plVerts.length < 1 || !isFinite(S.plPrevX) || !isFinite(S.plPrevY)) return;
   const verts = [...S.plVerts, { x: S.plPrevX, y: S.plPrevY }];
   ctx.save();
   ctx.globalAlpha = 0.72;
@@ -19192,7 +19294,9 @@ function renderPlPreview() {
 // ─────────────────────────────────────────────────────────────
 function startPlSession(smooth) {
   S.plSession=true; S.plVerts=[]; S.plSmooth=smooth; S.plSnapped=null;
+  S.plPrevX = NaN; S.plPrevY = NaN;
   _fieldDrawTap.t = 0;
+  fieldSuspendGpsFollowForDrawing();
   updateFieldDrawFab();
   if (!FIELD_MODE) {
     const el = document.getElementById('poly-hint');
@@ -19211,13 +19315,16 @@ function finishPlSession() {
   S.selectedIds = [obj.id];
   updateSelPanel(obj);
   cancelPlSession(); scheduleRender();
+  fieldResumeGpsFollowAfterDrawing();
 }
 function cancelPlSession() {
   S.plSession=false; S.plVerts=[]; S.plSnapped=null;
+  S.plPrevX = NaN; S.plPrevY = NaN;
   hideMeasLabel();
   const el=document.getElementById('poly-hint');
   if(el) el.style.display='none';
   updateFieldDrawFab();
+  fieldResumeGpsFollowAfterDrawing();
   scheduleRender();
 }
 
@@ -19262,7 +19369,10 @@ function renderPolylineObj(obj, sel) {
 function startPolygon() {
   S.polyActive = true;
   S.polyPts    = [];
+  S.polyPreviewX = NaN;
+  S.polyPreviewY = NaN;
   _fieldDrawTap.t = 0;
+  fieldSuspendGpsFollowForDrawing();
   if (!FIELD_MODE) {
     const ph = document.getElementById('poly-hint');
     if (ph) ph.style.display = 'block';
@@ -19292,6 +19402,7 @@ function cancelPolygon() {
   const ph = document.getElementById('poly-hint');
   if (ph) ph.style.display = 'none';
   updateFieldDrawFab();
+  fieldResumeGpsFollowAfterDrawing();
   scheduleRender();
 }
 
@@ -19581,6 +19692,10 @@ function onMouseDown(e) {
       }
     }
     S.plVerts.push({ x: pt.x, y: pt.y });
+    if (S.plVerts.length === 1) {
+      S.plPrevX = pt.x;
+      S.plPrevY = pt.y;
+    }
     updateFieldDrawFab();
     scheduleRender(); return;
   }
@@ -19589,6 +19704,7 @@ function onMouseDown(e) {
   if (S.tool === 'eraser') return;
 
   // Drag-draw tools
+  fieldSuspendGpsFollowForDrawing();
   S.drawing    = true;
   S.drawStartX = pt.x;
   S.drawStartY = pt.y;
@@ -19688,14 +19804,18 @@ function onMouseMove(e) {
   }
 
   if (S.polyActive) {
-    S.polyPreviewX = pt.x; S.polyPreviewY = pt.y;
+    if (S.polyPts.length >= 2) {
+      S.polyPreviewX = pt.x; S.polyPreviewY = pt.y;
+    }
     canvas.style.cursor = nearFirstVertex(pt.x, pt.y) ? 'cell' : 'crosshair';
     scheduleRender(); return;
   }
 
   // ── POLYLINE / SPLINE session preview ─────────────────────
   if (S.plSession) {
-    S.plPrevX = pt.x; S.plPrevY = pt.y;
+    if (S.plVerts.length >= 1) {
+      S.plPrevX = pt.x; S.plPrevY = pt.y;
+    }
     // Cursor hint: near first vertex = close
     if (S.plVerts.length >= 2) {
       const first = S.plVerts[0];
@@ -19805,7 +19925,9 @@ function onMouseUp(e) {
         }
       }
     }
-    S.activeId = null; scheduleRender();
+    S.activeId = null;
+    fieldResumeGpsFollowAfterDrawing();
+    scheduleRender();
   }
 }
 
@@ -19959,6 +20081,13 @@ function setTool(tool) {
   document.getElementById('btn-field-note-tool')?.classList.toggle('active', tool === 'field-note');
   document.getElementById('btn-field-info-tool')?.classList.toggle('active', tool === 'info');
   canvas.style.cursor = getCursor();
+  if (FIELD_MODE) {
+    if (isFieldDrawTool(tool) && tool !== 'select' && tool !== 'info' && tool !== 'field-note') {
+      fieldSuspendGpsFollowForDrawing();
+    } else if (tool === 'select') {
+      fieldResumeGpsFollowAfterDrawing();
+    }
+  }
   updateFieldDrawFab();
   updateActiveToolPanelLabels(tool);
   document.getElementById('freedraw-panel').style.display = tool==='freedraw'?'block':'none';
@@ -22198,6 +22327,7 @@ updateScaleInfo();
 // Init drag-drop (georef in planning mode; field hints for vectors)
 initDragDrop();
 applyFieldModeBoot();
+syncFieldStrokeWidthPickers(S.strokeWidth, false);
 initFieldImportInput();
 bindFieldPhotoFileInputs();
 // Open style sections
