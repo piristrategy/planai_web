@@ -1737,12 +1737,14 @@ body.field-mode .field-dock-btn{min-height:58px;}
   background:#e8f4fd;color:#1a3358;font-weight:700;font-size:13px;cursor:pointer;
 }
 #field-photo-voice-sheet{
-  position:absolute;inset:0;z-index:250;display:none;flex-direction:column;
-  padding:14px 12px;background:var(--panel-bg);
-  border-left:3px solid var(--accent);box-shadow:inset 0 0 0 1px var(--border);
+  position:fixed;top:0;right:0;bottom:0;z-index:1950;display:none;flex-direction:column;
+  width:var(--prop-w);max-width:min(100vw, 420px);box-sizing:border-box;
+  padding:16px 14px calc(16px + env(safe-area-inset-bottom));background:var(--panel-bg);
+  border-left:1px solid var(--border);
+  box-shadow:-6px 0 24px rgba(0,0,0,.15);
   overflow-y:auto;-webkit-overflow-scrolling:touch;
 }
-#field-photo-voice-sheet.open{display:flex;}
+body.field-mode #field-photo-voice-sheet.open{display:flex;}
 #field-photo-voice-sheet .fpvs-backdrop-label{
   font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;
 }

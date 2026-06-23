@@ -283,6 +283,7 @@ const FieldPermissions = (function () {
     document.getElementById('field-permissions-sheet')?.classList.add('open');
     document.getElementById('field-permissions-backdrop')?.classList.add('open');
     document.body.classList.add('field-permissions-open');
+    if (typeof window.fieldUiRaise === 'function') window.fieldUiRaise('field-permissions-sheet');
     checkAll().then(() => renderList());
   }
 

@@ -47,6 +47,38 @@ function syncFieldDockMetrics() {
   const h = Math.ceil(dock.getBoundingClientRect().height) || 56;
   document.documentElement.style.setProperty('--field-dock-total', h + 'px');
 }
+
+/** Side panels / tool sheets — last opened layer wins (z-index stack). */
+const FIELD_UI_Z_BASE = 1960;
+const FIELD_UI_Z_MODAL_BASE = 2980;
+let _fieldUiZSeq = 0;
+const FIELD_UI_LAYER_MAP = {
+  'field-note-popup': { panel: 'field-note-popup' },
+  'field-notes-panel': { panel: 'field-notes-panel', backdrop: 'field-notes-sheet-backdrop' },
+  'field-photo-sheet': { panel: 'field-photo-sheet', backdrop: 'field-photo-sheet-backdrop' },
+  'field-photo-voice-sheet': { panel: 'field-photo-voice-sheet' },
+  'field-photo-viewer': { panel: 'field-photo-viewer' },
+  'field-permissions-sheet': { panel: 'field-permissions-sheet', backdrop: 'field-permissions-backdrop' },
+  'field-import-sheet': { panel: 'field-import-sheet', backdrop: 'field-import-backdrop' },
+  'field-export-sheet': { panel: 'field-export-sheet', backdrop: 'field-export-backdrop' },
+  'field-report-viewer': { panel: 'field-report-viewer', backdrop: 'field-report-viewer-backdrop' },
+};
+function fieldUiRaise(layerId, opts) {
+  if (!layerId) return;
+  const def = FIELD_UI_LAYER_MAP[layerId];
+  if (!def) return;
+  _fieldUiZSeq += 2;
+  const base = opts?.modal ? FIELD_UI_Z_MODAL_BASE : FIELD_UI_Z_BASE;
+  const z = base + _fieldUiZSeq;
+  const panel = document.getElementById(def.panel);
+  if (panel) panel.style.zIndex = String(z);
+  if (def.backdrop) {
+    const bd = document.getElementById(def.backdrop);
+    if (bd) bd.style.zIndex = String(z - 1);
+  }
+}
+if (typeof window !== 'undefined') window.fieldUiRaise = fieldUiRaise;
+
 function setDeleteButtonVisible(show) {
   const btn = document.getElementById('btn-delete');
   if (!btn) return;
@@ -296,6 +328,9 @@ const PA_I18N = {
     'slope.nothingToSave': 'Önce eğim analizi çalıştırın', 'slope.running': 'Eğim hesaplanıyor…',
     'slope.minElev': 'Min. yükseklik', 'slope.maxElev': 'Maks. yükseklik', 'slope.avgSlope': 'Ort. eğim',
     'slope.maxSlope': 'Maks. eğim', 'slope.aspect': 'Baskın yön', 'slope.area': 'Analiz alanı',
+    'slope.p75Slope': 'Tipik eğim (P75)', 'slope.demNote': 'DEM arazi yüzeyi; teraslı yollar daha düşük görünebilir',
+    'slope.demNoteHybrid': 'DEM: Terrarium + Open-Meteo doğrulama (küçük alan)',
+    'slope.refining': 'Yükseklik doğrulanıyor…',
     'slope.needArea': 'Önce poligon veya daire seçin', 'slope.offline': 'DEM yüklenemedi — ağ gerekli',
     'tool.select': 'Seçme aracı', 'tool.info': 'Bilgi aracı', 'tool.point': 'Nokta', 'tool.line': 'Ölçüm', 'tool.polyline': 'Kırık ölçüm',
     'tool.polygon': 'Poligon', 'tool.circle': 'Eğim analizi', 'tool.text': 'Metin', 'tool.eraser': 'Silgi',
@@ -772,6 +807,9 @@ const PA_I18N = {
     'slope.nothingToSave': 'Run slope analysis first', 'slope.running': 'Computing slope…',
     'slope.minElev': 'Min elevation', 'slope.maxElev': 'Max elevation', 'slope.avgSlope': 'Avg slope',
     'slope.maxSlope': 'Max slope', 'slope.aspect': 'Dominant aspect', 'slope.area': 'Analysis area',
+    'slope.p75Slope': 'Typical slope (P75)', 'slope.demNote': 'DEM terrain surface; terraced paths may read lower',
+    'slope.demNoteHybrid': 'DEM: Terrarium + Open-Meteo check (small area)',
+    'slope.refining': 'Verifying elevation…',
     'slope.needArea': 'Select a polygon or circle first', 'slope.offline': 'DEM failed — network required',
     'tool.select': 'Select tool', 'tool.info': 'Info tool', 'tool.point': 'Point', 'tool.line': 'Measure', 'tool.polyline': 'Polyline measure',
     'tool.polygon': 'Polygon', 'tool.circle': 'Slope analysis', 'tool.text': 'Text', 'tool.eraser': 'Eraser',
@@ -1854,32 +1892,136 @@ function slopeColorRgb(deg) {
   return [100, 0, 0];
 }
 
-/** Slope (°) and aspect from DEM — horizontal spacing in meters (not pixel index). */
-function slopeDegAspectFromElevGrid(elevGrid, row, col, rows, cols, bb) {
+function bboxSpanMeters(bb) {
+  const lat = (bb.minLat + bb.maxLat) * 0.5;
+  const w = (bb.maxLon - bb.minLon) * 111320 * Math.cos(lat * Math.PI / 180);
+  const h = (bb.maxLat - bb.minLat) * 111320;
+  return Math.max(w, h, 1);
+}
+
+const TERRARIUM_MAX_ZOOM = 15;
+
+function slopeDemZoom(bb) {
+  const spanM = bboxSpanMeters(bb);
+  let z = 11;
+  if (spanM <= 400) z = 15;
+  else if (spanM <= 900) z = 15;
+  else if (spanM <= 1400) z = 14;
+  else if (spanM <= 4500) z = 13;
+  else if (spanM <= 14000) z = 12;
+  else z = 11;
+  return Math.min(z, TERRARIUM_MAX_ZOOM);
+}
+
+/** Ground meters per Terrarium pixel at latitude. */
+function demMetersPerPixel(z, lat) {
+  return (40075016.686 / Math.pow(2, z) / 256) * Math.cos(lat * Math.PI / 180);
+}
+
+function slopeNativeGridDims(bb, z) {
+  const latMid = (bb.minLat + bb.maxLat) * 0.5;
+  const mpd = demMetersPerPixel(z, latMid);
+  const spanM = bboxSpanMeters(bb);
+  const n = Math.ceil(spanM / Math.max(mpd, 0.5));
+  return Math.min(256, Math.max(48, n));
+}
+
+function tilesForSlopeBbox(bb, z, maxTiles) {
+  const tl = latLonToTileXY(bb.maxLat, bb.minLon, z);
+  const br = latLonToTileXY(bb.minLat, bb.maxLon, z);
+  const tiles = [];
+  for (let tx = tl.x; tx <= br.x; tx++) {
+    for (let ty = tl.y; ty <= br.y; ty++) {
+      tiles.push([z, tx, ty]);
+      if (tiles.length > maxTiles) return null;
+    }
+  }
+  return tiles;
+}
+
+function sampleElevAtLatLonNN(elevTiles, z, lat, lon) {
+  const n = Math.pow(2, z);
+  const x = (lon + 180) / 360 * n;
+  const latRad = lat * Math.PI / 180;
+  const y = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n;
+  const tx = Math.floor(x);
+  const ty = Math.floor(y);
+  const lx = Math.min(255, Math.max(0, Math.round((x - tx) * 256)));
+  const ly = Math.min(255, Math.max(0, Math.round((y - ty) * 256)));
+  return elevAtTilePixel(elevTiles, z, tx, ty, lx, ly);
+}
+
+function localElevRangeM(elevGrid, row, col, rows, cols, radius) {
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (let dr = -radius; dr <= radius; dr++) {
+    for (let dc = -radius; dc <= radius; dc++) {
+      const z = elevGridAt(elevGrid, row + dr, col + dc, rows, cols);
+      if (isNaN(z)) continue;
+      minZ = Math.min(minZ, z);
+      maxZ = Math.max(maxZ, z);
+    }
+  }
+  return isFinite(minZ) && isFinite(maxZ) ? maxZ - minZ : NaN;
+}
+
+function slopeCellMeters(bb, rows, cols, row, col) {
   const lat = bb.maxLat - (row / Math.max(1, rows - 1)) * (bb.maxLat - bb.minLat);
   const dLatDeg = (bb.maxLat - bb.minLat) / Math.max(1, rows - 1);
   const dLonDeg = (bb.maxLon - bb.minLon) / Math.max(1, cols - 1);
-  const dxM = dLonDeg * 111320 * Math.cos(lat * Math.PI / 180);
-  const dyM = dLatDeg * 111320;
+  return {
+    dxM: dLonDeg * 111320 * Math.cos(lat * Math.PI / 180),
+    dyM: dLatDeg * 111320,
+  };
+}
+
+/** Walk-style central gradient — stable on water and open terrain. */
+function slopeDegAspectFromElevGrid(elevGrid, row, col, rows, cols, bb, mpdX, mpdY) {
+  const lat = bb.maxLat - (row / Math.max(1, rows - 1)) * (bb.maxLat - bb.minLat);
+  const dLatDeg = (bb.maxLat - bb.minLat) / Math.max(1, rows - 1);
+  const dLonDeg = (bb.maxLon - bb.minLon) / Math.max(1, cols - 1);
+  const dxM = mpdX != null ? mpdX : dLonDeg * 111320 * Math.cos(lat * Math.PI / 180);
+  const dyM = mpdY != null ? mpdY : dLatDeg * 111320;
   const r1 = row > 0 ? row - 1 : row;
   const r2 = row < rows - 1 ? row + 1 : row;
   const c1 = col > 0 ? col - 1 : col;
   const c2 = col < cols - 1 ? col + 1 : col;
   const v = elevGrid[row * cols + col];
-  const vx1 = elevGrid[row * cols + c1], vx2 = elevGrid[row * cols + c2];
-  const vy1 = elevGrid[r1 * cols + col], vy2 = elevGrid[r2 * cols + col];
-  if (v == null || isNaN(v) || [vx1, vx2, vy1, vy2].some(x => x == null || isNaN(x))) return { deg: NaN, aspect: NaN };
+  const vx1 = elevGrid[row * cols + c1];
+  const vx2 = elevGrid[row * cols + c2];
+  const vy1 = elevGrid[r1 * cols + col];
+  const vy2 = elevGrid[r2 * cols + col];
+  if (v == null || isNaN(v) || [vx1, vx2, vy1, vy2].some(x => x == null || isNaN(x))) {
+    return { deg: NaN, aspect: NaN };
+  }
   const spanX = (c2 - c1) * dxM;
   const spanY = (r2 - r1) * dyM;
   const dzdx = spanX > 1e-6 ? (vx2 - vx1) / spanX : 0;
   const dzdy = spanY > 1e-6 ? (vy2 - vy1) / spanY : 0;
-  const deg = Math.atan(Math.sqrt(dzdx * dzdx + dzdy * dzdy)) * 180 / Math.PI;
+  let deg = Math.atan(Math.sqrt(dzdx * dzdx + dzdy * dzdy)) * 180 / Math.PI;
   const aspect = (Math.atan2(dzdy, dzdx) * 180 / Math.PI + 360) % 360;
+  const range3 = localElevRangeM(elevGrid, row, col, rows, cols, 1);
+  if (isFinite(range3) && range3 < 2.5) {
+    const span = Math.max(dxM, dyM, 1e-3);
+    deg = Math.min(deg, Math.atan(range3 / span) * 180 / Math.PI);
+  }
   return { deg, aspect };
 }
 
-function slopeDegFromElevGrid(elevGrid, row, col, rows, cols, bb) {
-  return slopeDegAspectFromElevGrid(elevGrid, row, col, rows, cols, bb).deg;
+function slopePercentile(sorted, p) {
+  if (!sorted.length) return null;
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.ceil(p * sorted.length) - 1));
+  return sorted[idx];
+}
+
+function elevGridAt(elevGrid, row, col, rows, cols) {
+  if (row < 0 || row >= rows || col < 0 || col >= cols) return NaN;
+  const v = elevGrid[row * cols + col];
+  return (v == null || isNaN(v)) ? NaN : v;
+}
+
+function slopeDegFromElevGrid(elevGrid, row, col, rows, cols, bb, mpdX, mpdY) {
+  return slopeDegAspectFromElevGrid(elevGrid, row, col, rows, cols, bb, mpdX, mpdY).deg;
 }
 
 function formatSlopeStatValue(v, suffix) {
@@ -2148,6 +2290,70 @@ async function fetchElevationsOpenMeteo(lats, lons) {
   }
 }
 
+const SLOPE_OPENMETEO_MAX_AREA_M2 = 120000;
+
+async function fillOpenMeteoElevGridFull(elevGrid, cols, rows, bb) {
+  const batch = 80;
+  const tasks = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      tasks.push({ row, col, i: row * cols + col });
+    }
+  }
+  for (let off = 0; off < tasks.length; off += batch) {
+    const chunk = tasks.slice(off, off + batch);
+    const lats = chunk.map(t => bb.maxLat - (t.row / Math.max(1, rows - 1)) * (bb.maxLat - bb.minLat));
+    const lons = chunk.map(t => bb.minLon + (t.col / Math.max(1, cols - 1)) * (bb.maxLon - bb.minLon));
+    const elev = await fetchElevationsOpenMeteo(lats, lons);
+    if (!elev) continue;
+    chunk.forEach((t, j) => {
+      const e = elev[j];
+      if (e != null && isFinite(e)) elevGrid[t.i] = e;
+    });
+  }
+  let ok = false;
+  for (let i = 0; i < elevGrid.length; i++) {
+    if (isFinite(elevGrid[i])) { ok = true; break; }
+  }
+  return ok;
+}
+
+function sampleElevFromLatLonGrid(elevGrid, cols, rows, bb, lat, lon) {
+  if (bb.maxLon <= bb.minLon || bb.maxLat <= bb.minLat) return NaN;
+  const colF = ((lon - bb.minLon) / (bb.maxLon - bb.minLon)) * (cols - 1);
+  const rowF = ((bb.maxLat - lat) / (bb.maxLat - bb.minLat)) * (rows - 1);
+  const c1 = Math.floor(colF);
+  const r1 = Math.floor(rowF);
+  const c2 = Math.min(cols - 1, c1 + 1);
+  const r2 = Math.min(rows - 1, r1 + 1);
+  const fx = colF - c1;
+  const fy = rowF - r1;
+  const e00 = elevGridAt(elevGrid, r1, c1, rows, cols);
+  const e10 = elevGridAt(elevGrid, r1, c2, rows, cols);
+  const e01 = elevGridAt(elevGrid, r2, c1, rows, cols);
+  const e11 = elevGridAt(elevGrid, r2, c2, rows, cols);
+  const corners = [e00, e10, e01, e11].filter(v => isFinite(v));
+  if (!corners.length) return NaN;
+  if (corners.length < 4) return corners.reduce((a, b) => a + b, 0) / corners.length;
+  return e00 * (1 - fx) * (1 - fy) + e10 * fx * (1 - fy) + e01 * (1 - fx) * fy + e11 * fx * fy;
+}
+
+async function refineElevGridOpenMeteo(elevGrid, cols, rows, bb) {
+  const omN = Math.min(32, Math.max(20, Math.round(Math.sqrt(cols * rows) * 0.45)));
+  const omGrid = new Float32Array(omN * omN);
+  omGrid.fill(NaN);
+  if (!await fillOpenMeteoElevGridFull(omGrid, omN, omN, bb)) return false;
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const lat = bb.maxLat - (row / Math.max(1, rows - 1)) * (bb.maxLat - bb.minLat);
+      const lon = bb.minLon + (col / Math.max(1, cols - 1)) * (bb.maxLon - bb.minLon);
+      const om = sampleElevFromLatLonGrid(omGrid, omN, omN, bb, lat, lon);
+      if (isFinite(om)) elevGrid[row * cols + col] = om;
+    }
+  }
+  return true;
+}
+
 async function fillElevGridFromOpenMeteo(elevGrid, cols, rows, bb) {
   const batch = 40;
   const tasks = [];
@@ -2160,8 +2366,8 @@ async function fillElevGridFromOpenMeteo(elevGrid, cols, rows, bb) {
   }
   for (let off = 0; off < tasks.length; off += batch) {
     const chunk = tasks.slice(off, off + batch);
-    const lats = chunk.map(t => bb.maxLat - (t.row / (rows - 1)) * (bb.maxLat - bb.minLat));
-    const lons = chunk.map(t => bb.minLon + (t.col / (cols - 1)) * (bb.maxLon - bb.minLon));
+    const lats = chunk.map(t => bb.maxLat - (t.row / Math.max(1, rows - 1)) * (bb.maxLat - bb.minLat));
+    const lons = chunk.map(t => bb.minLon + (t.col / Math.max(1, cols - 1)) * (bb.maxLon - bb.minLon));
     const elev = await fetchElevationsOpenMeteo(lats, lons);
     if (!elev) continue;
     chunk.forEach((t, j) => {
@@ -2169,11 +2375,32 @@ async function fillElevGridFromOpenMeteo(elevGrid, cols, rows, bb) {
       if (e != null && isFinite(e)) elevGrid[t.i] = e;
     });
   }
-  return elevGrid.some(v => isFinite(v));
+  for (let i = 0; i < elevGrid.length; i++) {
+    if (isFinite(elevGrid[i])) return true;
+  }
+  return false;
 }
 
 function terrariumTilesHaveData(elevTiles) {
   return Object.values(elevTiles).some(v => v && v.length);
+}
+
+async function fetchSlopeElevTiles(bb, zStart) {
+  let z = Math.min(zStart, TERRARIUM_MAX_ZOOM);
+  while (z >= 11) {
+    const tiles = tilesForSlopeBbox(bb, z, 64);
+    if (!tiles || !tiles.length) {
+      z--;
+      continue;
+    }
+    const elevTiles = {};
+    await Promise.all(tiles.map(async ([tz, tx, ty]) => {
+      elevTiles[tz + '/' + tx + '/' + ty] = await fetchTerrariumElevTile(tz, tx, ty);
+    }));
+    if (terrariumTilesHaveData(elevTiles)) return { elevTiles, z };
+    z--;
+  }
+  return null;
 }
 
 async function runLocalSlopeAnalysis(obj) {
@@ -2190,27 +2417,28 @@ async function runLocalSlopeAnalysis(obj) {
   showHint(t('slope.running'));
   try {
   const bb = bboxFromLatLonRing(ring);
-  const span = Math.max(bb.maxLat - bb.minLat, bb.maxLon - bb.minLon);
-  let z = 14;
-  if (span > 0.08) z = 11;
-  else if (span > 0.025) z = 12;
-  else if (span > 0.008) z = 13;
-  const tl = latLonToTileXY(bb.maxLat, bb.minLon, z);
-  const br = latLonToTileXY(bb.minLat, bb.maxLon, z);
-  const tiles = [];
-  for (let tx = tl.x; tx <= br.x; tx++) {
-    for (let ty = tl.y; ty <= br.y; ty++) {
-      tiles.push([z, tx, ty]);
-      if (tiles.length > 20) break;
-    }
-    if (tiles.length > 20) break;
+  const demPack = await fetchSlopeElevTiles(bb, slopeDemZoom(bb));
+  if (!demPack) {
+    const failStats = {
+      minElev: null, maxElev: null, avgSlope: null, p75Slope: null, maxSlope: null,
+      aspect: '—', areaM2: polygonAreaM2FromRing(ring), offline: true,
+    };
+    _slopeState.active = false;
+    _slopeState.objId = obj.id;
+    _slopeState.imageCanvas = null;
+    _slopeState.worldBounds = null;
+    _slopeState.clipWorld = null;
+    _slopeState.stats = failStats;
+    showSlopeResultsPanel(failStats);
+    showHint(t('slope.offline'));
+    return;
   }
-  const elevTiles = {};
-  await Promise.all(tiles.map(async ([tz, tx, ty]) => {
-    const elev = await fetchTerrariumElevTile(tz, tx, ty);
-    elevTiles[tz + '/' + tx + '/' + ty] = elev;
-  }));
-  const cols = 144, rows = 144;
+  const { elevTiles, z } = demPack;
+  const latMid = (bb.minLat + bb.maxLat) * 0.5;
+  const mpd = demMetersPerPixel(z, latMid);
+  const n = slopeNativeGridDims(bb, z);
+  const cols = n;
+  const rows = n;
   const wTL = latLonToWorld(bb.maxLat, bb.minLon);
   const wBR = latLonToWorld(bb.minLat, bb.maxLon);
   const worldBounds = { minX: wTL.x, minY: wTL.y, maxX: wBR.x, maxY: wBR.y, w: wBR.x - wTL.x, h: wBR.y - wTL.y };
@@ -2230,6 +2458,7 @@ async function runLocalSlopeAnalysis(obj) {
       if (e0 != null) elevGrid[row * cols + col] = e0;
     }
   }
+  const slopeSamples = [];
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const lat = bb.maxLat - (row / (rows - 1)) * (bb.maxLat - bb.minLat);
@@ -2243,12 +2472,13 @@ async function runLocalSlopeAnalysis(obj) {
       if (e0 == null || isNaN(e0)) { img.data[idx + 3] = 0; continue; }
       minElev = Math.min(minElev, e0);
       maxElev = Math.max(maxElev, e0);
-      const { deg, aspect: asp } = slopeDegAspectFromElevGrid(elevGrid, row, col, rows, cols, bb);
+      const { deg, aspect: asp } = slopeDegAspectFromElevGrid(elevGrid, row, col, rows, cols, bb, mpd, mpd);
       if (!isFinite(deg)) { img.data[idx + 3] = 0; continue; }
       const rgb = slopeColorRgb(deg);
       img.data[idx] = rgb[0]; img.data[idx + 1] = rgb[1]; img.data[idx + 2] = rgb[2];
       img.data[idx + 3] = 255;
       sumSlope += deg; maxSlope = Math.max(maxSlope, deg); nSlope++;
+      slopeSamples.push(deg);
       if (isFinite(asp)) aspectBins[Math.round(asp / 45) % 8]++;
     }
   }
@@ -2256,10 +2486,12 @@ async function runLocalSlopeAnalysis(obj) {
   let domAspect = 0;
   aspectBins.forEach((v, i) => { if (v > aspectBins[domAspect]) domAspect = i; });
   const areaM2 = polygonAreaM2FromRing(ring);
+  slopeSamples.sort((a, b) => a - b);
   const stats = {
     minElev: isFinite(minElev) ? minElev : null,
     maxElev: isFinite(maxElev) ? maxElev : null,
     avgSlope: nSlope ? sumSlope / nSlope : null,
+    p75Slope: nSlope ? slopePercentile(slopeSamples, 0.75) : null,
     maxSlope: nSlope ? maxSlope : null,
     aspect: nSlope ? aspectLabel(domAspect * 45) : '—',
     areaM2,
@@ -2279,7 +2511,7 @@ async function runLocalSlopeAnalysis(obj) {
   } catch (err) {
     console.warn('slope analysis failed', err);
     const failStats = {
-      minElev: null, maxElev: null, avgSlope: null, maxSlope: null,
+      minElev: null, maxElev: null, avgSlope: null, p75Slope: null, maxSlope: null,
       aspect: '—', areaM2: polygonAreaM2FromRing(ring), offline: true,
     };
     _slopeState.active = false;
@@ -2389,9 +2621,12 @@ function renderSlopeStatsPanel(stats) {
     t('slope.minElev') + ': ' + (stats.minElev != null ? Math.round(stats.minElev) + ' m' : '—') + '<br>' +
     t('slope.maxElev') + ': ' + (stats.maxElev != null ? Math.round(stats.maxElev) + ' m' : '—') + '<br>' +
     t('slope.avgSlope') + ': ' + formatSlopeStatValue(stats.avgSlope, '°') + '<br>' +
+    t('slope.p75Slope') + ': ' + formatSlopeStatValue(stats.p75Slope, '°') + '<br>' +
     t('slope.maxSlope') + ': ' + formatSlopeStatValue(stats.maxSlope, '°') + '<br>' +
     t('slope.aspect') + ': ' + escapeHtml(stats.aspect || '—') + '<br>' +
-    t('slope.area') + ': ' + formatAreaReport(stats.areaM2 || 0);
+    t('slope.area') + ': ' + formatAreaReport(stats.areaM2 || 0) +
+    '<p class="field-slope-dem-note" style="margin:8px 0 0;font-size:11px;opacity:.75;">' +
+    escapeHtml(t('slope.demNote')) + '</p>';
 }
 
 function renderSlopeOverlay() {
@@ -2570,9 +2805,6 @@ function clearGpsGuidance() {
   _gpsGuidanceBearingSmooth = null;
   _gpsGuidanceDistSmooth = null;
   hideFieldMapContextMenu();
-  ensureFieldLiveLocationFollow();
-  const g = getGpsDisplayFix();
-  if (g && fieldLiveLocationLocked()) setMapCenter(g.lat, g.lon);
   updateGpsHud();
   scheduleRender();
 }
@@ -3107,10 +3339,7 @@ function fieldSuspendGpsFollowForDrawing() {
 }
 
 function fieldResumeGpsFollowAfterDrawing() {
-  if (!fieldDrawingSessionActive() && fieldLiveLocationLocked()) {
-    _mapBrowseMode = false;
-    ensureFieldLiveLocationFollow();
-  }
+  /* Harita kullanıcı pan/zoom konumunda kalsın — canlı takip yalnızca 📍 ile */
 }
 
 function fieldLiveLocationLocked() {
@@ -3130,12 +3359,13 @@ function resumeLiveMapFollow() {
     startFieldGpsSession();
     return;
   }
-  ensureFieldLiveLocationFollow();
+  _gpsFollow = true;
+  document.getElementById('btn-gps-follow')?.classList.add('active');
+  document.getElementById('btn-map-locate')?.classList.add('active');
   const g = getGpsDisplayFix();
   if (g) {
     _gpsLastPanTs = 0;
-    setMapCenter(g.lat, g.lon);
-    scheduleRender();
+    zoomMapToFieldLiveLocation(g.lat, g.lon);
   }
   updateGpsHud();
 }
@@ -3222,17 +3452,12 @@ function ensureGpsMotionLoop() {
       updateGpsTrackHud();
     }
     if (_gpsFollow && _fieldGpsDisplay && !_mapBrowseMode && !fieldDrawingSessionActive()) {
-      const followA = (fieldLiveLocationLocked() && _gpsMoveState === GPS_MOVE.STATIONARY)
+      const followA = _gpsMoveState === GPS_MOVE.STATIONARY
         ? 1
         : (_gpsMoveState !== GPS_MOVE.STATIONARY ? gpsAdaptiveParams(_gpsMoveState).follow : 0);
       if (followA > 0) {
-        const dLat = _fieldGpsDisplay.lat - S.mapCenter.lat;
-        const dLon = _fieldGpsDisplay.lon - S.mapCenter.lon;
-        if (Math.abs(dLat) > 1e-8 || Math.abs(dLon) > 1e-8) {
-          S.mapCenter.lat += dLat * followA;
-          S.mapCenter.lon += dLon * followA;
-          moved = true;
-        }
+        panViewportToLatLon(_fieldGpsDisplay.lat, _fieldGpsDisplay.lon, followA);
+        moved = true;
       }
     }
     if (_gpsGuidanceActive && _gpsTarget) {
@@ -5209,7 +5434,7 @@ function fitMapToLatLonBounds(b) {
   if (Math.abs(maxLon - minLon) < 1e-8) { minLon -= 0.002; maxLon += 0.002; }
   const dLat = (maxLat - minLat) * pad, dLon = (maxLon - minLon) * pad;
   minLat -= dLat; maxLat += dLat; minLon -= dLon; maxLon += dLon;
-  setMapCenter((minLat + maxLat) / 2, (minLon + maxLon) / 2);
+  S.mapCenter = { lat: (minLat + maxLat) / 2, lon: (minLon + maxLon) / 2 };
   const tl = latLonToWorld(maxLat, minLon);
   const br = latLonToWorld(minLat, maxLon);
   const ww = Math.max(20, Math.abs(br.x - tl.x));
@@ -5862,7 +6087,7 @@ function collectDxfPlanarPoints(entities) {
 function buildDxfCoordContext(entities) {
   const pts = collectDxfPlanarPoints(entities);
   if (!pts.length) {
-    return { mode: 'local', cx: 0, cy: 0, anchorLat: S.mapCenter.lat, anchorLon: S.mapCenter.lon };
+    return { mode: 'local', cx: 0, cy: 0, anchorLat: getGeoAnchor().lat, anchorLon: getGeoAnchor().lon };
   }
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   pts.forEach(p => {
@@ -5881,8 +6106,8 @@ function buildDxfCoordContext(entities) {
   return {
     mode: 'local',
     cx, cy,
-    anchorLat: S.mapCenter.lat,
-    anchorLon: S.mapCenter.lon,
+    anchorLat: getGeoAnchor().lat,
+    anchorLon: getGeoAnchor().lon,
     minX, maxX, minY, maxY,
   };
 }
@@ -7940,6 +8165,7 @@ function showFieldImportSheet() {
   document.getElementById('field-import-backdrop')?.classList.add('open');
   document.getElementById('field-import-sheet')?.classList.add('open');
   document.body.classList.add('field-import-open');
+  fieldUiRaise('field-import-sheet', { modal: true });
 }
 
 function closeFieldImportSheet() {
@@ -8036,12 +8262,14 @@ function serializeProjectSnapshot() {
     updatedAt: new Date().toISOString(),
     mapState: {
       center: { ...S.mapCenter },
+      geoAnchor: { ...getGeoAnchor() },
       basemap: S.basemap,
       tx: S.tx, ty: S.ty, scale: S.scale,
       showGrid: S.showGrid, snapGrid: S.snapGrid,
     },
     map: {
       center: { ...S.mapCenter },
+      geoAnchor: { ...getGeoAnchor() },
       basemap: S.basemap,
       tx: S.tx, ty: S.ty, scale: S.scale,
       showGrid: S.showGrid, snapGrid: S.snapGrid,
@@ -8070,6 +8298,8 @@ function applyProjectSnapshot(snap) {
   FIELD_PROJECT.name = snap.name || 'Gezi';
   FIELD_PROJECT.createdAt = snap.createdAt || snap.updatedAt || new Date().toISOString();
   const mapRef = snap.mapState || snap.map;
+  S.geoAnchor = mapRef?.geoAnchor ? { ...mapRef.geoAnchor }
+    : (mapRef?.center ? { ...mapRef.center } : (S.geoAnchor || S.mapCenter));
   S.mapCenter = mapRef?.center ? { ...mapRef.center } : S.mapCenter;
   S.basemap = mapRef?.basemap || 'satellite';
   if (FIELD_MODE && S.basemap !== 'satellite') S.basemap = 'satellite';
@@ -9657,6 +9887,7 @@ function showFieldExportSheet() {
   document.getElementById('field-export-backdrop')?.classList.add('open');
   document.getElementById('field-export-sheet')?.classList.add('open');
   document.body.classList.add('field-export-open');
+  fieldUiRaise('field-export-sheet', { modal: true });
 }
 
 async function offerFieldExport(opts) {
@@ -10607,7 +10838,13 @@ function closeFieldReportViewer() {
   const frame = document.getElementById('field-report-viewer-frame');
   const embed = document.getElementById('field-report-viewer-embed');
   const pdfPane = document.getElementById('field-report-viewer-pdf');
-  if (frame) { frame.removeAttribute('src'); frame.style.display = ''; }
+  if (frame) {
+    try { frame.contentWindow?.stop?.(); } catch (_) {}
+    frame.removeAttribute('src');
+    frame.removeAttribute('srcdoc');
+    frame.src = 'about:blank';
+    frame.style.display = '';
+  }
   if (embed) { embed.removeAttribute('src'); embed.style.display = 'none'; }
   if (pdfPane) { pdfPane.innerHTML = ''; pdfPane.classList.remove('open'); pdfPane.style.display = 'none'; }
   if (_fieldReportViewerUrl) {
@@ -10690,6 +10927,8 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
       const opened = window.open(url, '_blank');
       if (!opened) showHint(PA_LANG === 'tr' ? 'PDF açılamadı — Paylaş ile gönderin' : 'Could not open PDF — use Share');
       closeFieldReportViewer();
+    } else {
+      fieldUiRaise('field-report-viewer', { modal: true });
     }
     return;
   }
@@ -10715,6 +10954,7 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
     document.getElementById('field-report-viewer-backdrop')?.classList.add('open');
     document.getElementById('field-report-viewer')?.classList.add('open');
     document.body.classList.add('field-report-viewer-open');
+    fieldUiRaise('field-report-viewer', { modal: true });
     return;
   }
   const url = URL.createObjectURL(blob);
@@ -10724,19 +10964,23 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
   document.getElementById('field-report-viewer-backdrop')?.classList.add('open');
   document.getElementById('field-report-viewer')?.classList.add('open');
   document.body.classList.add('field-report-viewer-open');
+  fieldUiRaise('field-report-viewer', { modal: true });
 }
 
 async function shareFieldReportViewer() {
   const p = _fieldReportViewerPending;
   if (!p?.blob) return;
-  await offerFieldExport({
+  const exportOpts = {
     blob: p.blob,
     filename: p.filename,
     mimeType: p.mimeType,
     previewHtml: p.previewHtml || null,
     pdfBlob: p.kind === 'pdf' ? p.blob : null,
     kind: p.kind || 'file',
-  });
+  };
+  _fieldExportReturnToSheet = false;
+  closeFieldReportViewer();
+  await offerFieldExport(exportOpts);
 }
 
 async function openSavedProjectReport(rptId, kind) {
@@ -12035,8 +12279,7 @@ function updateGpsHud() {
     primaryBtn.classList.add('stop');
   }
   document.getElementById('btn-gps-follow')?.classList.toggle('active', _gpsFollow);
-  const liveLocateOn = _fieldGpsOn && (fieldLiveLocationLocked() ? _gpsFollow : (_gpsFollow || !!_fieldGpsFix));
-  document.getElementById('btn-map-locate')?.classList.toggle('active', liveLocateOn);
+  document.getElementById('btn-map-locate')?.classList.toggle('active', !!_gpsFollow);
   updateGpsTrackHud();
   updateGpsTestPanel();
 }
@@ -12080,13 +12323,8 @@ function onGpsPosition(pos) {
       accuracy: gpsSmoothDisplayAccuracy(acc),
       heading: _fieldGpsFix.heading, speed: _fieldGpsFix.speed, ts: _fieldGpsFix.ts, moveState: GPS_MOVE.WALKING };
     _gpsStationaryAnchor = { lat: _fieldGpsFix.lat, lon: _fieldGpsFix.lon };
-    if (fieldLiveLocationLocked()) {
-      ensureFieldLiveLocationFollow();
-      setMapCenter(_fieldGpsFix.lat, _fieldGpsFix.lon);
-    }
   }
   updateGpsMovementState(_fieldGpsFix);
-  if (fieldLiveLocationLocked()) ensureFieldLiveLocationFollow();
   ensureGpsMotionLoop();
   updateGpsHud();
   gpsTrackOnPosition(pos);
@@ -12168,7 +12406,6 @@ function ensureFieldGpsSessionActive(silent) {
   if (!_fieldGpsOn) {
     if (!startGpsWatch()) return false;
     startGpsCompassIfAllowed();
-    _gpsFollow = true;
     collapseGpsFieldHud();
     resetGpsHudInactivityTimer();
     started = true;
@@ -12189,7 +12426,6 @@ function ensureFieldGpsSessionActive(silent) {
 /** After hub / project open: request location permission, then keep GPS + follow on. */
 async function activateFieldLocationSession(silent) {
   if (!FIELD_MODE || !FIELD_PROJECT.id) return false;
-  _mapBrowseMode = false;
   if (typeof FieldPermissions !== 'undefined') {
     const ok = await FieldPermissions.request('location', {
       hintDenied: silent ? undefined : t('gps.err.denied'),
@@ -12197,12 +12433,7 @@ async function activateFieldLocationSession(silent) {
     if (!ok && FieldPermissions.isNative()) return false;
   }
   const started = ensureFieldGpsSessionActive(!!silent);
-  if (started || _fieldGpsOn) {
-    ensureFieldLiveLocationFollow();
-    const g = getGpsDisplayFix();
-    if (g) setMapCenter(g.lat, g.lon);
-    updateGpsHud();
-  }
+  if (started || _fieldGpsOn) updateGpsHud();
   return started || _fieldGpsOn;
 }
 
@@ -12220,8 +12451,6 @@ function startFieldGpsSession() {
         if (!ok && FieldPermissions.isNative()) return;
       }
       ensureFieldGpsSessionActive(false);
-      const g = getGpsDisplayFix();
-      if (g) setMapCenter(g.lat, g.lon);
     })();
   });
 }
@@ -12262,19 +12491,15 @@ function toggleGpsFollow() {
     startFieldGpsSession();
     return;
   }
-  if (fieldLiveLocationLocked()) {
-    resumeLiveMapFollow();
+  if (_gpsFollow && !_mapBrowseMode) {
+    pauseLiveMapFollow();
     updateGpsHud();
-    showHint(t('gps.followOn'));
+    showHint(t('gps.followOff'));
     return;
   }
-  _gpsFollow = !_gpsFollow;
-  if (_gpsFollow) {
-    const g = getGpsDisplayFix();
-    if (g) setMapCenter(g.lat, g.lon);
-  }
+  resumeLiveMapFollow();
   updateGpsHud();
-  showHint(_gpsFollow ? t('gps.followOn') : t('gps.followOff'));
+  showHint(t('gps.followOn'));
 }
 
 function centerMapToGps() {
@@ -12285,42 +12510,28 @@ function centerMapToGps() {
     else showHint(t('gps.hint.openFirst'));
     return;
   }
-  setMapCenter(g.lat, g.lon);
-  scheduleRender();
+  zoomMapToFieldLiveLocation(g.lat, g.lon);
   showHint(t('gps.hint.centered'));
 }
 
 function mapControlLocate() {
-  const btn = document.getElementById('btn-map-locate');
+  touchGpsHudActivity();
   if (!_fieldGpsOn) {
     startFieldGpsSession();
-    btn?.classList.add('active');
     showHint(t('gps.hint.liveOn'));
     return;
   }
-  if (fieldLiveLocationLocked()) {
-    resumeLiveMapFollow();
-    showHint(t('gps.hint.liveOn'));
+  const g = getGpsDisplayFix();
+  if (!g) {
+    showHint(t('gps.hint.pending'));
     return;
   }
-  if (_fieldGpsFix) {
-    _gpsFollow = !_gpsFollow;
-    updateGpsHud();
-    btn?.classList.toggle('active', _gpsFollow);
-    if (_gpsFollow) {
-      _gpsLastPanTs = 0;
-      setMapCenter(_fieldGpsFix.lat, _fieldGpsFix.lon);
-      showHint(t('gps.followOn'));
-    } else {
-      centerMapToGps();
-    }
-    scheduleRender();
-    return;
-  }
-  showHint(t('gps.hint.pending'));
+  resumeLiveMapFollow();
+  showHint(t('gps.hint.centered'));
 }
 
 function mapZoomStep(factor) {
+  if (FIELD_MODE) pauseLiveMapFollow();
   const r = canvas.getBoundingClientRect();
   const mx = r.width / 2;
   const my = r.height / 2;
@@ -12338,10 +12549,11 @@ function worldToClient(wx, wy) {
   return { x: r.left + S.tx + wx * S.scale, y: r.top + S.ty + wy * S.scale };
 }
 
-function accuracyWorldRadius(lat, accuracyM) {
+function accuracyWorldRadius(lat, accuracyM, lon) {
   if (!accuracyM || accuracyM <= 0) return 8 / S.scale;
-  const lon2 = S.mapCenter.lon + (accuracyM / (111320 * Math.cos(lat * Math.PI / 180)));
-  const w0 = latLonToWorld(lat, S.mapCenter.lon);
+  const refLon = (lon != null && isFinite(lon)) ? lon : getGeoAnchor().lon;
+  const lon2 = refLon + (accuracyM / (111320 * Math.cos(lat * Math.PI / 180)));
+  const w0 = latLonToWorld(lat, refLon);
   const w1 = latLonToWorld(lat, lon2);
   return Math.max(4 / S.scale, Math.hypot(w1.x - w0.x, w1.y - w0.y));
 }
@@ -12594,6 +12806,7 @@ function openNoteInfoSheet() {
   if (pop.parentElement !== document.body) document.body.appendChild(pop);
   pop.classList.add('open');
   document.body.classList.add('field-note-info-open');
+  fieldUiRaise('field-note-popup');
 }
 
 function closeNotePopup() {
@@ -12793,6 +13006,7 @@ function buildFieldNotesList() {
 
 function openFieldNotesSheet() {
   document.getElementById('field-notes-panel')?.classList.add('open');
+  fieldUiRaise('field-notes-panel');
 }
 
 function closeFieldNotesSheet() {
@@ -13421,8 +13635,7 @@ function playGpsTrackReplay(objId) {
     _gpsTrackReplay.u = u;
     _gpsTrackReplay.pos = lerpAlongTrackVerts(verts, u);
     if (_gpsTrackReplay.pos) {
-      S.mapCenter.lat += (_gpsTrackReplay.pos.lat - S.mapCenter.lat) * 0.11;
-      S.mapCenter.lon += (_gpsTrackReplay.pos.lon - S.mapCenter.lon) * 0.11;
+      panViewportToLatLon(_gpsTrackReplay.pos.lat, _gpsTrackReplay.pos.lon, 0.11);
     }
     scheduleRender();
     if (u < 1) _gpsTrackReplay.raf = requestAnimationFrame(tick);
@@ -13735,6 +13948,7 @@ function openFieldPermissionsPanel() {
 function openFieldPhotoSheet() {
   document.getElementById('field-photo-sheet')?.classList.add('open');
   document.body.classList.add('field-photo-sheet-open');
+  fieldUiRaise('field-photo-sheet');
 }
 
 function closeFieldPhotoSheet() {
@@ -13863,11 +14077,11 @@ function ensureRightPanelVisible() {
 async function openFieldPhotoVoiceSheet(objId) {
   const obj = S.objects.find(o => o.id === objId);
   if (!obj || obj.type !== 'field_photo') return;
-  ensureRightPanelVisible();
   normalizeFieldPhotoObject(obj);
   _fieldCtxPhotoId = objId;
   S.selectedIds = [objId];
   const sheet = document.getElementById('field-photo-voice-sheet');
+  if (sheet && sheet.parentElement !== document.body) document.body.appendChild(sheet);
   const thumbEl = document.getElementById('fpvs-thumb');
   const titleEl = document.getElementById('fpvs-title');
   if (titleEl) titleEl.textContent = obj.title || 'Fotoğraf';
@@ -13887,6 +14101,7 @@ async function openFieldPhotoVoiceSheet(objId) {
   if (fpvsDesc) fpvsDesc.value = descText;
   if (panelDesc) panelDesc.value = descText;
   sheet?.classList.add('open');
+  fieldUiRaise('field-photo-voice-sheet');
   closeFieldPhotoSheet();
   const b = { minLat: obj.lat, maxLat: obj.lat, minLon: obj.lon, maxLon: obj.lon, ok: true };
   fitMapToLatLonBounds(b);
@@ -13955,6 +14170,7 @@ async function openFieldPhotoEarthViewer(id) {
   ov._blobUrl = URL.createObjectURL(row.data);
   img.src = ov._blobUrl;
   ov.classList.add('open');
+  fieldUiRaise('field-photo-viewer');
   closeNotePopup();
   const b = { minLat: obj.lat, maxLat: obj.lat, minLon: obj.lon, maxLon: obj.lon, ok: true };
   fitMapToLatLonBounds(b);
@@ -14879,12 +15095,13 @@ function fieldTapVertexTool() {
 }
 
 function fieldTapVertexPointer(pointerType) {
-  return pointerType === 'touch' || pointerType === 'pen';
+  return pointerType === 'touch' || pointerType === 'pen' || pointerType === 'mouse';
 }
 
 function fieldSuppressGhostMouse(e) {
   if (!FIELD_MODE) return false;
   if (S.drawing || S.panning || S.polyActive || S.plSession) return false;
+  if (fieldTapVertexTool()) return false;
   const pt = (e && e.pointerType) || S._activePointerType;
   if (pt && pt !== 'mouse') return false;
   return _fieldLastPointerAt > 0 && (Date.now() - _fieldLastPointerAt) < FIELD_GHOST_MOUSE_MS;
@@ -14944,6 +15161,7 @@ function fieldNavigationPointer(pointerType) {
   if (fieldStylusDrawMode() && pointerType === 'pen') return false;
   if (fieldActiveDrawTool()) return false;
   if (pointerType === 'touch') return true;
+  if (pointerType === 'mouse' && S.tool === 'select' && !S.drawing && !S.polyActive && !S.plSession) return true;
   if (FIELD_INTERACTION === 'finger' && pointerType !== 'pen') return true;
   if (FIELD_INTERACTION === 'pen' && pointerType === 'touch') return true;
   return false;
@@ -15659,6 +15877,7 @@ function fieldPointerDown(e) {
   _fieldPointers.set(e.pointerId, { x: e.clientX, y: e.clientY, type: e.pointerType });
   if (_fieldPointers.size === 2) {
     if (_fieldTouch?.drawVertex) _fieldTouch = null;
+    pauseLiveMapFollow();
     const pts = [..._fieldPointers.values()];
     _pinchDist0 = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
     _pinchScale0 = S.scale;
@@ -15779,8 +15998,9 @@ function fieldPointerUp(e, wp) {
   clearTimeout(_fieldMapLongPressTimer);
   if (_fieldTouch && _fieldTouch.id === e.pointerId) {
     if (_fieldTouch.drawVertex) {
-      const tap = !_fieldTouch.moved && !_fieldTouch.longPressed && (Date.now() - _fieldTouch.t0) < 480;
-      if (tap && !tryFieldDrawDoubleTap(wp)) fieldAddDrawVertex(wp);
+      if (!_fieldTouch.longPressed && !_fieldTouch.panning && (Date.now() - _fieldTouch.t0) < 600) {
+        if (!tryFieldDrawDoubleTap(wp)) fieldAddDrawVertex(wp);
+      }
       _fieldTouch = null;
       return true;
     }
@@ -15935,6 +16155,7 @@ const S = {
   basemap:     'none',  // 'none' | 'osm' | 'satellite' | 'topo'
   showPafta:   false,
   mapCenter:   { lat: 39.93, lon: 32.85 },  // Ankara default
+  geoAnchor:   { lat: 39.93, lon: 32.85 },  // fixed origin for world↔lat/lon (drawings)
 
   // History
   history: [[]],
@@ -18243,16 +18464,22 @@ let _snapX = 0, _snapY = 0;  // snap indicator coords (world space)
 // ═══════════════════════════════════════════════════════════════
 
 // ── Canvas world ↔ geographic conversions ─────────────────────
+function getGeoAnchor() {
+  const a = S.geoAnchor || S.mapCenter;
+  return (a && isFinite(a.lat) && isFinite(a.lon)) ? a : { lat: 39.93, lon: 32.85 };
+}
 function worldToLatLon(wx, wy) {
+  const ac = getGeoAnchor();
   const mpp = pxToMeters(1);
   const dlat = -wy * mpp / 111320;
-  const dlon = wx * mpp / (111320 * Math.cos(S.mapCenter.lat * Math.PI / 180));
-  return { lat: S.mapCenter.lat + dlat, lon: S.mapCenter.lon + dlon };
+  const dlon = wx * mpp / (111320 * Math.cos(ac.lat * Math.PI / 180));
+  return { lat: ac.lat + dlat, lon: ac.lon + dlon };
 }
 function latLonToWorld(lat, lon) {
+  const ac = getGeoAnchor();
   const mpp = pxToMeters(1);
-  const wy = -(lat - S.mapCenter.lat) * 111320 / mpp;
-  const wx = (lon - S.mapCenter.lon) * 111320 * Math.cos(S.mapCenter.lat * Math.PI / 180) / mpp;
+  const wy = -(lat - ac.lat) * 111320 / mpp;
+  const wx = (lon - ac.lon) * 111320 * Math.cos(ac.lat * Math.PI / 180) / mpp;
   return { x: wx, y: wy };
 }
 
@@ -18526,8 +18753,48 @@ function togglePaftaGrid() {
   scheduleRender();
 }
 
-// ── Set map center (called from pafta parser or georef) ───────
-function setMapCenter(lat, lon, opts) {
+/** Pan viewport so a lat/lon stays under the map view center (does not move geo anchor). */
+/** UI zoom label is Math.round(S.scale * 100) + '%' — 0.8 → 80%. */
+const FIELD_LOCATE_TARGET_SCALE = 0.8;
+
+function zoomMapToFieldLiveLocation(lat, lon) {
+  if (lat == null || lon == null || !isFinite(lat) || !isFinite(lon)) return;
+  const targetScale = FIELD_LOCATE_TARGET_SCALE;
+  const w = latLonToWorld(lat, lon);
+  const topBar = getTopBarH();
+  const dock = FIELD_MODE ? getFieldDockH() : 0;
+  const viewH = Math.max(100, CH - topBar - dock - (FIELD_MODE ? 24 : 0));
+  const cx = CW / 2;
+  const cy = FIELD_MODE ? topBar + viewH / 2 : CH / 2;
+  S.scale = targetScale;
+  S.tx = cx - w.x * S.scale;
+  S.ty = cy - w.y * S.scale;
+  _basemapZoomState = { z: -1, ideal: -1 };
+  scheduleRender();
+}
+
+function panViewportToLatLon(lat, lon, alpha) {
+  if (lat == null || lon == null || !isFinite(lat) || !isFinite(lon)) return;
+  const w = latLonToWorld(lat, lon);
+  const topBar = getTopBarH();
+  const dock = FIELD_MODE ? getFieldDockH() : 0;
+  const viewH = Math.max(100, CH - topBar - dock - (FIELD_MODE ? 24 : 0));
+  const cx = CW / 2;
+  const cy = FIELD_MODE ? topBar + viewH / 2 : CH / 2;
+  const targetTx = cx - w.x * S.scale;
+  const targetTy = cy - w.y * S.scale;
+  const a = alpha >= 1 ? 1 : Math.max(0, Math.min(1, alpha));
+  if (a >= 1) {
+    S.tx = targetTx;
+    S.ty = targetTy;
+  } else if (a > 0) {
+    S.tx += (targetTx - S.tx) * a;
+    S.ty += (targetTy - S.ty) * a;
+  }
+}
+
+// ── Set geographic anchor (project load / georef — moves coordinate origin) ──
+function setGeoAnchor(lat, lon, opts) {
   if (!opts?.force && fieldDrawingSessionActive()) return;
   const georefSnaps = [];
   S.objects.forEach(o => {
@@ -18542,14 +18809,28 @@ function setMapCenter(lat, lon, opts) {
     }
   });
 
+  S.geoAnchor = { lat, lon };
   S.mapCenter = { lat, lon };
-  S.tx = CW / 2;
-  S.ty = CH / 2;
+  panViewportToLatLon(lat, lon, 1);
 
   georefSnaps.forEach(({ o, b }) => {
     o.corners = cornersFromWgs84Bounds(b);
   });
   scheduleRender();
+}
+
+/** Pan viewport to lat/lon — drawings stay geographically fixed (Field mode). */
+function navigateToLatLon(lat, lon, opts) {
+  if (!opts?.force && fieldDrawingSessionActive()) return;
+  S.mapCenter = { lat, lon };
+  panViewportToLatLon(lat, lon, 1);
+  scheduleRender();
+}
+
+// ── Set map center (called from pafta parser or georef) ───────
+function setMapCenter(lat, lon, opts) {
+  if (!FIELD_MODE || opts?.reanchor) setGeoAnchor(lat, lon, opts);
+  else navigateToLatLon(lat, lon, opts);
 }
 
 function renderGrid() {
@@ -18853,7 +19134,7 @@ function render(coordOpts) {
     ctx.translate(S.tx, S.ty);
     ctx.scale(S.scale, S.scale);
     const w = latLonToWorld(gpsDraw.lat, gpsDraw.lon);
-    const accR = accuracyWorldRadius(gpsDraw.lat, gpsDraw.accuracy);
+    const accR = accuracyWorldRadius(gpsDraw.lat, gpsDraw.accuracy, gpsDraw.lon);
     const lowConf = gpsDraw.moveState === GPS_MOVE.LOW || _gpsMoveState === GPS_MOVE.LOW;
     const statLock = gpsDraw.moveState === GPS_MOVE.STATIONARY || _gpsMoveState === GPS_MOVE.STATIONARY;
     ctx.fillStyle = lowConf ? 'rgba(230,126,34,0.12)' : 'rgba(26,115,232,0.14)';
@@ -19453,7 +19734,17 @@ function _pe(e) {
   };
 }
 canvas.addEventListener('pointerdown', e => {
-  if (e.pointerType === 'mouse') return;
+  if (e.pointerType === 'mouse') {
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    S._activePointerType = 'mouse';
+    if (fieldPointerDown(e)) return;
+    if (FIELD_MODE && fieldTapVertexTool() && fieldDrawingAllowed('mouse')) {
+      onMouseDown({ ..._pe(e), pointerType: 'mouse', button: 0, buttons: 1 });
+      return;
+    }
+    onMouseDown(_pe(e));
+    return;
+  }
   _fieldLastPointerAt = Date.now();
   try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
   S._activePointerType = e.pointerType;
@@ -19466,13 +19757,27 @@ canvas.addEventListener('pointerdown', e => {
   onMouseDown(pe);
 });
 canvas.addEventListener('pointermove', e => {
-  if (e.pointerType === 'mouse') return;
+  if (e.pointerType === 'mouse') {
+    if (fieldPointerMove(e)) return;
+    onMouseMove(_pe(e));
+    return;
+  }
   if (fieldPointerMove(e)) return;
   if (FIELD_MODE && _fieldTouch) return;
   onMouseMove(_pe(e));
 });
 canvas.addEventListener('pointerup', e => {
-  if (e.pointerType === 'mouse') return;
+  if (e.pointerType === 'mouse') {
+    const pe = { ..._pe(e), pointerType: 'mouse', button: 0, buttons: 0 };
+    const wp = clientToWorld(pe.clientX, pe.clientY);
+    if (fieldPointerUp(e, wp)) {
+      try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      return;
+    }
+    onMouseUp(pe);
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    return;
+  }
   const pe = _pe(e);
   const wp = clientToWorld(pe.clientX, pe.clientY);
   if (fieldPointerUp(e, wp)) {
@@ -19493,6 +19798,7 @@ canvas.addEventListener('pointercancel', e => {
 
 function onMouseDown(e) {
   if (fieldSuppressGhostMouse(e)) return;
+  if (FIELD_MODE && fieldTapVertexTool() && (e.pointerType || 'mouse') === 'mouse') return;
   e.preventDefault();
   S._activePointerType = e.pointerType || 'mouse';
   // Layout mode intercept (planning only)
@@ -19513,6 +19819,7 @@ function onMouseDown(e) {
       startFieldNotePlacement();
       return;
     }
+    if (S._activePointerType === 'touch' || S._activePointerType === 'pen') return;
   }
 
   // Close text editor if clicking outside it
@@ -19528,7 +19835,7 @@ function onMouseDown(e) {
   if (e.button === 1 || (e.button === 2 && LAYOUT.mode === 'off') || (e.button === 0 && e.altKey)) {
     S.panning = true; S.panLastX = e.clientX; S.panLastY = e.clientY;
     RenderCoordinator.beginInteraction('pan');
-    if (e.button === 2 && FIELD_MODE) disableGpsFollowFromPan();
+    disableGpsFollowFromPan();
     canvas.style.cursor = 'grabbing'; return;
   }
   if (e.button !== 0) return;
@@ -19874,6 +20181,7 @@ function onMouseMove(e) {
 
 function onMouseUp(e) {
   if (fieldSuppressGhostMouse(e)) return;
+  if (FIELD_MODE && fieldTapVertexTool() && (e.pointerType || 'mouse') === 'mouse') return;
   if (S.panning) {
     S.panning = false;
     canvas.style.cursor = getCursor();
@@ -19985,6 +20293,7 @@ function onDblClick(e) {
 
 function onWheel(e) {
   e.preventDefault();
+  if (FIELD_MODE) pauseLiveMapFollow();
   const r = canvas.getBoundingClientRect();
   RenderCoordinator.beginInteraction(e.shiftKey ? 'pan' : 'zoom');
   // Zoom with wheel (no ctrl needed), pan with shift+wheel

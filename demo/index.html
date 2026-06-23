@@ -1224,24 +1224,6 @@
       <div style="font-size:9px;font-weight:700;color:#3d5060;letter-spacing:.8px;margin-bottom:8px;text-transform:uppercase;font-family:var(--mono);">Shortcuts</div>
       <div id="shortcuts-list"></div>
     </div>
-
-    <div id="field-photo-voice-sheet">
-      <div class="fpvs-backdrop-label" data-i18n="photo.voiceSheetLabel">Sesli saha notu</div>
-      <img id="fpvs-thumb" class="fpvs-thumb" alt="" />
-      <div class="fpvs-title" id="fpvs-title" data-i18n="ctx.photo">Fotoğraf</div>
-      <div class="fpvs-hint" data-i18n="photo.voiceSheetHint">İsteğe bağlı ses kaydı. Saha paneli üzerinde açılır.</div>
-      <div class="field-dictate-bar" style="padding:0 0 6px;">
-        <button type="button" class="field-dictate-btn" onclick="toggleFieldDictation('field-fpvs-desc','dict-status-fpvs')">🎤</button>
-        <span class="field-dictate-status" id="dict-status-fpvs" data-i18n="dictation.btn">Dikte</span>
-      </div>
-      <textarea id="field-fpvs-desc" rows="3" data-i18n-placeholder="photo.placeholder" placeholder="Saha gözlemi…"></textarea>
-      <div class="fpvs-voice-status" id="fpvs-voice-status" data-i18n="photo.noVoice">Ses kaydı yok</div>
-      <button type="button" class="fpvs-record" id="fpvs-record-btn" data-i18n="photo.voiceSheetRecord" onclick="toggleFieldVoiceRecordFromSheet()">🎤 Sesli Not Kaydet</button>
-      <div class="fpvs-actions">
-        <button type="button" class="fpvs-skip" data-i18n="photo.skip" onclick="closeFieldPhotoVoiceSheet(true)">Atla</button>
-        <button type="button" class="fpvs-done" data-i18n="photo.done" onclick="closeFieldPhotoVoiceSheet(false)">Tamam</button>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -1315,6 +1297,23 @@
   <button type="button" class="fps-btn primary" data-i18n="photo.openCamera" onclick="fieldPhotoCaptureCamera()">📷 Kamerayı Aç</button>
   <button type="button" class="fps-btn secondary" data-i18n="photo.fromGallery" onclick="fieldPhotoCaptureGallery()">🖼 Galeriden Seç</button>
   <button type="button" class="fps-btn secondary" data-i18n="photo.cancelSheet" onclick="closeFieldPhotoSheet()">İptal</button>
+</div>
+<div id="field-photo-voice-sheet">
+  <div class="fpvs-backdrop-label" data-i18n="photo.voiceSheetLabel">Sesli saha notu</div>
+  <img id="fpvs-thumb" class="fpvs-thumb" alt="" />
+  <div class="fpvs-title" id="fpvs-title" data-i18n="ctx.photo">Fotoğraf</div>
+  <div class="fpvs-hint" data-i18n="photo.voiceSheetHint">İsteğe bağlı ses kaydı. Saha paneli üzerinde açılır.</div>
+  <div class="field-dictate-bar" style="padding:0 0 6px;">
+    <button type="button" class="field-dictate-btn" onclick="toggleFieldDictation('field-fpvs-desc','dict-status-fpvs')">🎤</button>
+    <span class="field-dictate-status" id="dict-status-fpvs" data-i18n="dictation.btn">Dikte</span>
+  </div>
+  <textarea id="field-fpvs-desc" rows="3" data-i18n-placeholder="photo.placeholder" placeholder="Saha gözlemi…"></textarea>
+  <div class="fpvs-voice-status" id="fpvs-voice-status" data-i18n="photo.noVoice">Ses kaydı yok</div>
+  <button type="button" class="fpvs-record" id="fpvs-record-btn" data-i18n="photo.voiceSheetRecord" onclick="toggleFieldVoiceRecordFromSheet()">🎤 Sesli Not Kaydet</button>
+  <div class="fpvs-actions">
+    <button type="button" class="fpvs-skip" data-i18n="photo.skip" onclick="closeFieldPhotoVoiceSheet(true)">Atla</button>
+    <button type="button" class="fpvs-done" data-i18n="photo.done" onclick="closeFieldPhotoVoiceSheet(false)">Tamam</button>
+  </div>
 </div>
 <div id="field-camera-overlay" aria-hidden="true">
   <video id="field-camera-video" playsinline autoplay muted></video>
@@ -1425,8 +1424,8 @@
 <script src="js/branding/PlanAIBranding.js?v=1.1.50"></script>
 <script src="js/share/FieldFileBridge.js?v=1.1.52"></script>
 <script src="js/replay/FieldReplayAssets.js?v=1.1.72"></script>
-<script src="js/replay/FieldReplaySafariRoute.js?v=1.0.0"></script>
-<script src="js/replay/FieldCinematicReport.js?v=1.3.4"></script>
+<script src="js/replay/FieldReplaySafariRoute.js?v=1.1.1"></script>
+<script src="js/replay/FieldCinematicReport.js?v=1.3.5"></script>
 <script>
 (function () {
   var paths = [
@@ -1459,6 +1458,6 @@ window.pdfjsLib = pdfjs;
 <script src="js/security/FieldAccessGate.js?v=1.4.0"></script>
 <script src="js/security/FieldDbCrypto.js?v=1.2.2"></script>
 <script src="js/ui/LegacyClickBridge.js?v=1.2.0"></script>
-<script src="js/app.js?v=1.1.7"></script>
+<script src="js/app.js?v=1.1.22"></script>
 </body>
 </html>
