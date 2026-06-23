@@ -10936,28 +10936,30 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
   const isHtml = viewKind === 'interactive' || viewKind === 'html' ||
     (blob.type && String(blob.type).indexOf('html') >= 0);
   if (isHtml) {
-    let html = '';
-    try { html = await blob.text(); } catch (_) {}
-    if (html && typeof FieldSafeReplay !== 'undefined' && FieldSafeReplay.ensureMobileViewableReplayHtml) {
-      html = FieldSafeReplay.ensureMobileViewableReplayHtml(html);
-    }
-    if (html && typeof FieldReplaySafariRoute !== 'undefined' && FieldReplaySafariRoute.inject) {
-      html = FieldReplaySafariRoute.inject(html);
-    }
+    let viewerBlob = blob;
+    try {
+      const html = await blob.text();
+      if (html && !html.includes('id="planai-safari-route-fix"')) {
+        let patched = html;
+        if (typeof FieldSafeReplay !== 'undefined' && FieldSafeReplay.ensureMobileViewableReplayHtml) {
+          patched = FieldSafeReplay.ensureMobileViewableReplayHtml(patched);
+        }
+        if (typeof FieldReplaySafariRoute !== 'undefined' && FieldReplaySafariRoute.inject) {
+          patched = FieldReplaySafariRoute.inject(patched);
+        }
+        viewerBlob = new Blob([patched], { type: 'text/html;charset=utf-8' });
+      }
+    } catch (_) {}
     if (embed) { embed.removeAttribute('src'); embed.style.display = 'none'; }
     if (frame) {
       frame.style.display = 'block';
       frame.removeAttribute('srcdoc');
-      if (html) {
-        if (_fieldReportViewerUrl) {
-          try { URL.revokeObjectURL(_fieldReportViewerUrl); } catch (_) {}
-        }
-        _fieldReportViewerUrl = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
-        frame.src = _fieldReportViewerUrl;
-      } else {
-        frame.removeAttribute('src');
-        frame.src = URL.createObjectURL(blob);
+      if (_fieldReportViewerUrl) {
+        try { URL.revokeObjectURL(_fieldReportViewerUrl); } catch (_) {}
       }
+      _fieldReportViewerUrl = URL.createObjectURL(viewerBlob);
+      frame.removeAttribute('src');
+      frame.src = _fieldReportViewerUrl;
     }
     document.getElementById('field-report-viewer-backdrop')?.classList.add('open');
     document.getElementById('field-report-viewer')?.classList.add('open');
