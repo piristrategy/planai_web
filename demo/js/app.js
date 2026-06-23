@@ -2146,7 +2146,7 @@ async function fetchElevationsOpenMeteo(lats, lons) {
 }
 
 async function fillElevGridFromOpenMeteo(elevGrid, cols, rows, bb) {
-  const batch = 80;
+  const batch = 40;
   const tasks = [];
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
@@ -2184,27 +2184,7 @@ async function runLocalSlopeAnalysis(obj) {
   showHint(t('slope.running'));
   try {
   const bb = bboxFromLatLonRing(ring);
-  const span = Math.max(bb.maxLat - bb.minLat, bb.maxLon - bb.minLon);
-  let z = 14;
-  if (span > 0.08) z = 11;
-  else if (span > 0.025) z = 12;
-  else if (span > 0.008) z = 13;
-  const tl = latLonToTileXY(bb.maxLat, bb.minLon, z);
-  const br = latLonToTileXY(bb.minLat, bb.maxLon, z);
-  const tiles = [];
-  for (let tx = tl.x; tx <= br.x; tx++) {
-    for (let ty = tl.y; ty <= br.y; ty++) {
-      tiles.push([z, tx, ty]);
-      if (tiles.length > 20) break;
-    }
-    if (tiles.length > 20) break;
-  }
-  const elevTiles = {};
-  await Promise.all(tiles.map(async ([tz, tx, ty]) => {
-    const elev = await fetchTerrariumElevTile(tz, tx, ty);
-    elevTiles[tz + '/' + tx + '/' + ty] = elev;
-  }));
-  const cols = 144, rows = 144;
+  const cols = 72, rows = 72;
   const wTL = latLonToWorld(bb.maxLat, bb.minLon);
   const wBR = latLonToWorld(bb.minLat, bb.maxLon);
   const worldBounds = { minX: wTL.x, minY: wTL.y, maxX: wBR.x, maxY: wBR.y, w: wBR.x - wTL.x, h: wBR.y - wTL.y };
@@ -2216,20 +2196,46 @@ async function runLocalSlopeAnalysis(obj) {
   const aspectBins = new Array(8).fill(0);
   const elevGrid = new Float32Array(cols * rows);
   elevGrid.fill(NaN);
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const lat = bb.maxLat - (row / (rows - 1)) * (bb.maxLat - bb.minLat);
-      const lon = bb.minLon + (col / (cols - 1)) * (bb.maxLon - bb.minLon);
-      const e0 = sampleElevAtLatLon(elevTiles, z, lat, lon);
-      if (e0 != null) elevGrid[row * cols + col] = e0;
+  let openMeteoOk = false;
+  if (navigator.onLine) {
+    openMeteoOk = await fillElevGridFromOpenMeteo(elevGrid, cols, rows, bb);
+  }
+  const span = Math.max(bb.maxLat - bb.minLat, bb.maxLon - bb.minLon);
+  let z = 14;
+  if (span > 0.08) z = 11;
+  else if (span > 0.025) z = 12;
+  else if (span > 0.008) z = 13;
+  const elevTiles = {};
+  if (navigator.onLine) {
+    const tl = latLonToTileXY(bb.maxLat, bb.minLon, z);
+    const br = latLonToTileXY(bb.minLat, bb.maxLon, z);
+    const tiles = [];
+    for (let tx = tl.x; tx <= br.x; tx++) {
+      for (let ty = tl.y; ty <= br.y; ty++) {
+        tiles.push([z, tx, ty]);
+        if (tiles.length > 20) break;
+      }
+      if (tiles.length > 20) break;
+    }
+    await Promise.all(tiles.map(async ([tz, tx, ty]) => {
+      const elev = await fetchTerrariumElevTile(tz, tx, ty);
+      elevTiles[tz + '/' + tx + '/' + ty] = elev;
+    }));
+    if (terrariumTilesHaveData(elevTiles)) {
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const lat = bb.maxLat - (row / (rows - 1)) * (bb.maxLat - bb.minLat);
+          const lon = bb.minLon + (col / (cols - 1)) * (bb.maxLon - bb.minLon);
+          const e0 = sampleElevAtLatLon(elevTiles, z, lat, lon);
+          if (e0 != null && isFinite(e0)) elevGrid[row * cols + col] = e0;
+        }
+      }
     }
   }
-  if (!terrariumTilesHaveData(elevTiles)) {
-    await fillElevGridFromOpenMeteo(elevGrid, cols, rows, bb);
-  } else {
+  if (!openMeteoOk) {
     let missing = 0;
     for (let i = 0; i < elevGrid.length; i++) if (isNaN(elevGrid[i])) missing++;
-    if (missing > elevGrid.length * 0.35) {
+    if (missing > elevGrid.length * 0.2 && navigator.onLine) {
       await fillElevGridFromOpenMeteo(elevGrid, cols, rows, bb);
     }
   }
@@ -2259,28 +2265,40 @@ async function runLocalSlopeAnalysis(obj) {
   let domAspect = 0;
   aspectBins.forEach((v, i) => { if (v > aspectBins[domAspect]) domAspect = i; });
   const areaM2 = polygonAreaM2FromRing(ring);
-  if (!nSlope) {
-    showHint(t('slope.offline'));
-    return;
-  }
   const stats = {
     minElev: isFinite(minElev) ? minElev : null,
     maxElev: isFinite(maxElev) ? maxElev : null,
-    avgSlope: sumSlope / nSlope,
-    maxSlope: maxSlope,
-    aspect: aspectLabel(domAspect * 45),
+    avgSlope: nSlope ? sumSlope / nSlope : null,
+    maxSlope: nSlope ? maxSlope : null,
+    aspect: nSlope ? aspectLabel(domAspect * 45) : '—',
     areaM2,
+    offline: !nSlope,
   };
-  _slopeState.active = true;
+  if (!nSlope) showHint(t('slope.offline'));
+  _slopeState.active = !!nSlope;
   _slopeState.objId = obj.id;
-  _slopeState.imageCanvas = cv;
-  _slopeState.worldBounds = worldBounds;
-  _slopeState.clipWorld = ringToWorldClip(ring);
+  _slopeState.imageCanvas = nSlope ? cv : null;
+  _slopeState.worldBounds = nSlope ? worldBounds : null;
+  _slopeState.clipWorld = nSlope ? ringToWorldClip(ring) : null;
   _slopeState.stats = stats;
   showSlopeResultsPanel(stats);
   updateSlopeSaveButtonUi();
   scheduleRender();
   scheduleProjectSave();
+  } catch (err) {
+    console.warn('slope analysis failed', err);
+    const failStats = {
+      minElev: null, maxElev: null, avgSlope: null, maxSlope: null,
+      aspect: '—', areaM2: polygonAreaM2FromRing(ring), offline: true,
+    };
+    _slopeState.active = false;
+    _slopeState.objId = obj.id;
+    _slopeState.imageCanvas = null;
+    _slopeState.worldBounds = null;
+    _slopeState.clipWorld = null;
+    _slopeState.stats = failStats;
+    showSlopeResultsPanel(failStats);
+    showHint(t('slope.offline'));
   } finally {
     _slopeRunning = false;
   }
@@ -2343,7 +2361,10 @@ function showSlopeResultsPanel(stats) {
   ['field-right-default', 'field-right-object', 'field-right-note', 'field-right-photo', 'field-right-feature']
     .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
   const sp = document.getElementById('field-right-slope');
-  if (sp) sp.style.display = 'block';
+  if (sp) sp.style.setProperty('display', 'block', 'important');
+  if (fieldCoarseTouchUi()) ensureRightPanelVisible();
+  const rp = document.getElementById('right-panel');
+  if (rp) rp.classList.add('field-has-selection');
   renderSlopeStatsPanel(stats);
   refreshSlopeLegends();
   updateSlopeSaveButtonUi();
@@ -2352,8 +2373,12 @@ function showSlopeResultsPanel(stats) {
 function renderSlopeStatsPanel(stats) {
   const el = document.getElementById('field-slope-stats');
   if (!el || !stats) return;
+  const offlineNote = stats.offline
+    ? '<div style="color:#c0392b;font-weight:700;margin:6px 0 8px;">' + escapeHtml(t('slope.offline')) + '</div>'
+    : '';
   el.innerHTML =
     '<b>' + escapeHtml(t('slope.title')) + '</b>' +
+    offlineNote +
     t('slope.minElev') + ': ' + (stats.minElev != null ? Math.round(stats.minElev) + ' m' : '—') + '<br>' +
     t('slope.maxElev') + ': ' + (stats.maxElev != null ? Math.round(stats.maxElev) + ' m' : '—') + '<br>' +
     t('slope.avgSlope') + ': ' + formatSlopeStatValue(stats.avgSlope, '°') + '<br>' +
@@ -14377,27 +14402,16 @@ function startFieldWebDictation(ta, statusId, silentFail) {
       return;
     }
     const iosWeb = fieldIsAppleTouchWeb();
-    const tabletUi = fieldCoarseTouchUi();
-    if ((iosWeb || tabletUi) && !silentFail) showHint(t('dictation.iosHint'), 7000);
+    const touchUi = fieldCoarseTouchUi();
+    const listenUntilStop = touchUi;
+    if ((iosWeb || touchUi) && !silentFail) showHint(t('dictation.iosHint'), 7000);
     const sessionGen = ++_fieldDictationGen;
-    const sessionStart = Date.now();
-    const sessionMaxMs = tabletUi ? 90000 : 45000;
-
     let settled = false;
     let gotSpeech = false;
     const finish = ok => {
       if (settled) return;
       settled = true;
       resolve(!!ok);
-    };
-    const cleanup = (doneMsg) => {
-      if (sessionGen !== _fieldDictationGen) return;
-      endFieldDictationSession(ta);
-      _fieldWebDictation = null;
-      if (_fieldDictationTargetId === ta.id) {
-        setFieldDictationUi(statusId, false, doneMsg || '');
-        _fieldDictationTargetId = null;
-      }
     };
     const pickTranscript = r => {
       let best = '';
@@ -14407,14 +14421,20 @@ function startFieldWebDictation(ta, statusId, silentFail) {
       }
       return best;
     };
+    const restartRec = (rec, delayMs) => {
+      setTimeout(() => {
+        if (sessionGen !== _fieldDictationGen || _fieldDictationTargetId !== ta.id || settled) return;
+        try { rec.start(); } catch (_) { finish(gotSpeech); }
+      }, delayMs);
+    };
     const runRecognition = () => {
       if (sessionGen !== _fieldDictationGen) { finish(false); return; }
       prepareFieldDictationTarget(ta);
       const rec = new SR();
       rec.lang = fieldDictationLang();
       rec.interimResults = true;
-      rec.maxAlternatives = tabletUi ? 3 : 1;
-      rec.continuous = tabletUi ? true : !iosWeb;
+      rec.maxAlternatives = touchUi ? 3 : 1;
+      rec.continuous = touchUi ? !iosWeb : true;
       _fieldWebDictation = rec;
       rec.onresult = ev => {
         if (sessionGen !== _fieldDictationGen) return;
@@ -14427,68 +14447,58 @@ function startFieldWebDictation(ta, statusId, silentFail) {
         }
       };
       rec.onerror = ev => {
-        if (sessionGen !== _fieldDictationGen) { finish(false); return; }
-        if (ev.error === 'aborted') { cleanup(''); finish(false); return; }
-        if (ev.error === 'no-speech' && gotSpeech) { try { rec.stop(); } catch (_) {} return; }
-        if (tabletUi && (ev.error === 'no-speech' || ev.error === 'network') && (Date.now() - sessionStart) < sessionMaxMs) {
-          setTimeout(() => {
-            if (sessionGen !== _fieldDictationGen || _fieldDictationTargetId !== ta.id || settled) return;
-            try { rec.start(); } catch (_) {}
-          }, iosWeb ? 220 : 120);
+        if (sessionGen !== _fieldDictationGen) return;
+        if (ev.error === 'aborted') return;
+        if (ev.error === 'not-allowed') {
+          if (!silentFail) showHint(t('dictation.micDenied'));
+          endFieldDictationSession(ta);
+          _fieldWebDictation = null;
+          _fieldDictationTargetId = null;
+          setFieldDictationUi(statusId, false, '');
+          finish(false);
           return;
         }
-        if (!silentFail) {
-          if (ev.error === 'not-allowed') showHint(t('dictation.micDenied'));
-          else if (ev.error === 'no-speech' && iosWeb) showHint(t('dictation.iosHint'), 7000);
-          else if (ev.error !== 'no-speech') showHint(t('dictation.fail'));
+        if (ev.error === 'no-speech' || ev.error === 'network' || ev.error === 'audio-capture') {
+          if (listenUntilStop && _fieldDictationTargetId === ta.id) {
+            restartRec(rec, iosWeb ? 280 : 160);
+          }
+          return;
         }
-        cleanup('');
-        finish(false);
+        if (!silentFail) showHint(t('dictation.fail'));
       };
       rec.onend = () => {
-        if (sessionGen !== _fieldDictationGen || _fieldWebDictation !== rec || _fieldDictationTargetId !== ta.id || settled) return;
-        const keepListening = _fieldDictationTargetId === ta.id && (Date.now() - sessionStart) < sessionMaxMs;
-        if (tabletUi && keepListening) {
-          setTimeout(() => {
-            if (sessionGen !== _fieldDictationGen || _fieldDictationTargetId !== ta.id || settled) return;
-            try { rec.start(); } catch (_) {
-              cleanup(gotSpeech ? t('dictation.done') : '');
-              if (gotSpeech) showHint(t('dictation.done'));
-              finish(gotSpeech);
-            }
-          }, iosWeb ? 180 : 90);
+        if (sessionGen !== _fieldDictationGen || _fieldWebDictation !== rec) return;
+        if (_fieldDictationTargetId !== ta.id) {
+          endFieldDictationSession(ta);
+          finish(gotSpeech);
           return;
         }
-        if (gotSpeech) {
-          cleanup(t('dictation.done'));
-          showHint(t('dictation.done'));
-          finish(true);
+        if (listenUntilStop) {
+          restartRec(rec, iosWeb ? 220 : 120);
           return;
         }
-        if (!tabletUi) {
-          setTimeout(() => {
-            if (sessionGen !== _fieldDictationGen || _fieldWebDictation !== rec || _fieldDictationTargetId !== ta.id || settled) return;
-            try { rec.start(); } catch (_) { cleanup(''); finish(false); }
-          }, 120);
+        if (!gotSpeech) {
+          restartRec(rec, 140);
           return;
         }
-        cleanup('');
-        finish(false);
+        endFieldDictationSession(ta);
+        _fieldWebDictation = null;
+        setFieldDictationUi(statusId, false, t('dictation.done'));
+        _fieldDictationTargetId = null;
+        showHint(t('dictation.done'));
+        finish(true);
       };
       try {
         rec.start();
       } catch (_) {
         if (!silentFail) showHint(iosWeb ? t('dictation.iosHint') : t('dictation.fail'), 7000);
-        cleanup('');
+        endFieldDictationSession(ta);
+        _fieldWebDictation = null;
+        _fieldDictationTargetId = null;
+        setFieldDictationUi(statusId, false, '');
         finish(false);
       }
     };
-
-    if (iosWeb) {
-      ensureFieldDictationMicPermission().catch(() => {});
-      runRecognition();
-      return;
-    }
     ensureFieldDictationMicPermission().then(micOk => {
       if (!micOk) {
         endFieldDictationSession(ta);
@@ -14854,6 +14864,8 @@ function fieldAddDrawVertex(wp) {
     if (!S.polyActive) startPolygon();
     if (nearFirstVertex(pt.x, pt.y)) { finishPolygon(); return; }
     S.polyPts.push(pt.x, pt.y);
+    S.polyPreviewX = pt.x;
+    S.polyPreviewY = pt.y;
     updateFieldDrawFab();
     scheduleRender();
     return;
@@ -15392,6 +15404,10 @@ function applyFieldDrawStyle() {
 
 function updateFieldPanelForTool(t) {
   if (!FIELD_MODE) return;
+  if (_slopeState.stats) {
+    showSlopeResultsPanel(_slopeState.stats);
+    return;
+  }
   document.body.classList.remove('field-tool-select', 'field-tool-draw');
   const rp = document.getElementById('right-panel');
   const objP = document.getElementById('field-right-object');
@@ -15474,6 +15490,12 @@ function setFieldPanelChrome() {
 
 function updateFieldRightPanel(obj) {
   if (!FIELD_MODE) return;
+  if (_slopeState.stats) {
+    showSlopeResultsPanel(_slopeState.stats);
+    updateFieldCtxProject();
+    setFieldPanelChrome();
+    return;
+  }
   const rp = document.getElementById('right-panel');
   const def = document.getElementById('field-right-default');
   const objP = document.getElementById('field-right-object');
@@ -15482,7 +15504,7 @@ function updateFieldRightPanel(obj) {
   const slopeP = document.getElementById('field-right-slope');
   if (!rp) return;
   if (!_fieldInfoObjId && featP) featP.style.display = 'none';
-  if (!_slopeState.active && slopeP) slopeP.style.display = 'none';
+  if (!_slopeState.stats && slopeP) slopeP.style.display = 'none';
   updateFieldCtxProject();
   setFieldPanelChrome();
   const photoP = document.getElementById('field-right-photo');
@@ -18112,56 +18134,55 @@ function renderObj(obj, sel) {
 // IN-PROGRESS POLYGON PREVIEW
 // ─────────────────────────────────────────────────────────────
 function renderPolyPreview() {
-  if (!S.polyActive || S.polyPts.length < 2 || !isFinite(S.polyPreviewX) || !isFinite(S.polyPreviewY)) return;
+  if (!S.polyActive || S.polyPts.length < 2) return;
+  const hasPreview = isFinite(S.polyPreviewX) && isFinite(S.polyPreviewY);
   ctx.save();
-  ctx.globalAlpha = 0.7;
+  ctx.globalAlpha = 0.85;
   ctx.strokeStyle = S.color;
-  ctx.lineWidth   = S.strokeWidth;
-  ctx.setLineDash([4, 3]);
+  ctx.lineWidth   = Math.max(S.strokeWidth || 10, 2 / S.scale);
+  ctx.setLineDash([6 / S.scale, 4 / S.scale]);
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-  // Draw existing edges
   ctx.beginPath();
   ctx.moveTo(S.polyPts[0], S.polyPts[1]);
   for (let i = 2; i < S.polyPts.length; i += 2) {
     ctx.lineTo(S.polyPts[i], S.polyPts[i+1]);
   }
-  // Preview edge to cursor
-  ctx.lineTo(S.polyPreviewX, S.polyPreviewY);
+  if (hasPreview) ctx.lineTo(S.polyPreviewX, S.polyPreviewY);
   ctx.stroke();
 
-  // Closing guide line (from cursor back to start)
-  if (S.polyPts.length >= 4) {
-    ctx.globalAlpha = 0.25;
+  if (hasPreview && S.polyPts.length >= 4) {
+    ctx.globalAlpha = 0.3;
     ctx.beginPath();
     ctx.moveTo(S.polyPreviewX, S.polyPreviewY);
     ctx.lineTo(S.polyPts[0], S.polyPts[1]);
     ctx.stroke();
   }
 
-  // Vertex dots
   ctx.setLineDash([]);
   for (let i = 0; i < S.polyPts.length; i += 2) {
     ctx.save();
     const isFirst = i === 0;
     ctx.fillStyle   = isFirst ? S.color : 'rgba(255,255,255,0.9)';
     ctx.strokeStyle = isFirst ? '#fff' : S.color;
-    ctx.lineWidth   = 1.5;
+    ctx.lineWidth   = Math.max(1.5 / S.scale, 1.5);
     ctx.globalAlpha = 1;
     ctx.beginPath();
-    ctx.arc(S.polyPts[i], S.polyPts[i+1], isFirst ? 6 : 4, 0, Math.PI*2);
+    ctx.arc(S.polyPts[i], S.polyPts[i+1], Math.max(isFirst ? 6 : 4, 5 / S.scale), 0, Math.PI*2);
     ctx.fill(); ctx.stroke();
     ctx.restore();
   }
-  const previewVerts = [];
-  for (let i = 0; i < S.polyPts.length; i += 2) previewVerts.push({ x: S.polyPts[i], y: S.polyPts[i + 1] });
-  previewVerts.push({ x: S.polyPreviewX, y: S.polyPreviewY });
-  renderSegmentMeasureLabels(previewVerts, false);
-  if (S.polyPts.length >= 6) {
-    const areaPts = [];
-    for (let i = 0; i < S.polyPts.length; i += 2) areaPts.push(S.polyPts[i], S.polyPts[i + 1]);
-    areaPts.push(S.polyPreviewX, S.polyPreviewY);
-    renderClosedAreaLabel(areaPts);
+  if (hasPreview) {
+    const previewVerts = [];
+    for (let i = 0; i < S.polyPts.length; i += 2) previewVerts.push({ x: S.polyPts[i], y: S.polyPts[i + 1] });
+    previewVerts.push({ x: S.polyPreviewX, y: S.polyPreviewY });
+    renderSegmentMeasureLabels(previewVerts, false);
+    if (S.polyPts.length >= 6) {
+      const areaPts = [];
+      for (let i = 0; i < S.polyPts.length; i += 2) areaPts.push(S.polyPts[i], S.polyPts[i + 1]);
+      areaPts.push(S.polyPreviewX, S.polyPreviewY);
+      renderClosedAreaLabel(areaPts);
+    }
   }
   ctx.restore();
 }
@@ -19677,6 +19698,8 @@ function onMouseDown(e) {
     if (!S.polyActive) startPolygon();
     if (nearFirstVertex(pt.x, pt.y)) { finishPolygon(); return; }
     S.polyPts.push(pt.x, pt.y);
+    S.polyPreviewX = pt.x;
+    S.polyPreviewY = pt.y;
     updateFieldDrawFab();
     scheduleRender(); return;
   }
@@ -19804,9 +19827,8 @@ function onMouseMove(e) {
   }
 
   if (S.polyActive) {
-    if (S.polyPts.length >= 2) {
-      S.polyPreviewX = pt.x; S.polyPreviewY = pt.y;
-    }
+    S.polyPreviewX = pt.x;
+    S.polyPreviewY = pt.y;
     canvas.style.cursor = nearFirstVertex(pt.x, pt.y) ? 'cell' : 'crosshair';
     scheduleRender(); return;
   }
