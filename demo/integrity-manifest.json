@@ -1,10 +1,10 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-06-18T07:18:27.141Z",
+  "generatedAt": "2026-06-23T11:30:47.484Z",
   "modules": [
     {
       "path": "js/app.js",
-      "sha256": "695976fcad5371e9d36b008f9ca18b2f7aa743663507a6fe02880da71dd3b32a"
+      "sha256": "9f1d13a6a430bca83f3e826e10a2414c4ab3159e5af8174f9beef7ae0417a585"
     },
     {
       "path": "js/spatial/SpatialSecurity.js",
@@ -16,7 +16,7 @@
     },
     {
       "path": "js/security/SecurityOrchestrator.js",
-      "sha256": "1f9756e77faaa143021e0dd73e5915aad51c39561e3bb20b7b83c043fb025f10"
+      "sha256": "fbbea8798c18ece3f7f5aa218f7f8f8609c9654fdf9cb6937fb6fd9c1e20b671"
     },
     {
       "path": "js/import/ImportSandbox.js",

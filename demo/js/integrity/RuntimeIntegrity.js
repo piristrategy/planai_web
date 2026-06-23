@@ -5,7 +5,7 @@
  */
 const RuntimeIntegrity = (function () {
   const PRODUCTION = document.body?.classList?.contains('walk-production') || false;
-  const MANIFEST_URL = 'integrity-manifest.json';
+  const MANIFEST_URL = new URL('integrity-manifest.json', document.baseURI || location.href).href;
   let _failed = false;
   let _checked = false;
   let _mismatchCount = 0;
@@ -19,7 +19,8 @@ const RuntimeIntegrity = (function () {
   async function verifyModule(path, expected) {
     if (!expected || !PRODUCTION) return true;
     try {
-      const url = path.startsWith('http') ? path : new URL(path, location.href).href;
+      const base = document.baseURI || location.href;
+      const url = path.startsWith('http') ? path : new URL(path, base).href;
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) return false;
       const buf = await res.arrayBuffer();

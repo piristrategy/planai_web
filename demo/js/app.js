@@ -1809,6 +1809,7 @@ function updateFieldAnalysisActions(obj) {
 // ═══ Local slope (Terrarium DEM — same math as PlanAI slopedem) ═
 const _demTileCache = {};
 const _slopeState = { active: false, objId: null, imageCanvas: null, worldBounds: null, clipWorld: null, stats: null };
+let _slopeRunning = false;
 let _slopeAnalysisReport = null;
 
 const SLOPE_LEGEND_STOPS = [
@@ -1965,13 +1966,43 @@ function terrariumElevFromImage(img) {
   const c = document.createElement('canvas');
   c.width = c.height = 256;
   const cx = c.getContext('2d');
-  cx.drawImage(img, 0, 0);
-  const px = cx.getImageData(0, 0, 256, 256).data;
-  const elev = new Float32Array(256 * 256);
-  for (let i = 0; i < 256 * 256; i++) {
-    elev[i] = terrariumElev(px[i * 4], px[i * 4 + 1], px[i * 4 + 2]);
+  try {
+    cx.drawImage(img, 0, 0, 256, 256);
+    const px = cx.getImageData(0, 0, 256, 256).data;
+    const elev = new Float32Array(256 * 256);
+    for (let i = 0; i < 256 * 256; i++) {
+      elev[i] = terrariumElev(px[i * 4], px[i * 4 + 1], px[i * 4 + 2]);
+    }
+    return elev;
+  } catch (_) {
+    return null;
   }
-  return elev;
+}
+
+async function loadTerrariumTileBitmap(url) {
+  try {
+    const res = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'force-cache' });
+    if (res.ok) {
+      const blob = await res.blob();
+      if (typeof createImageBitmap === 'function') {
+        try { return await createImageBitmap(blob); } catch (_) {}
+      }
+      return await new Promise(resolve => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = URL.createObjectURL(blob);
+      });
+    }
+  } catch (_) {}
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
 }
 
 function fetchTerrariumElevTile(z, tx, ty) {
@@ -1988,15 +2019,11 @@ function fetchTerrariumElevTile(z, tx, ty) {
     let elev = null;
     try {
       const url = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/' + z + '/' + tx + '/' + ty + '.png';
-      elev = await new Promise(resolve => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-          try { resolve(terrariumElevFromImage(img)); } catch (_) { resolve(null); }
-        };
-        img.onerror = () => resolve(null);
-        img.src = url;
-      });
+      const bitmap = await loadTerrariumTileBitmap(url);
+      if (bitmap) {
+        try { elev = terrariumElevFromImage(bitmap); } catch (_) { elev = null; }
+        if (bitmap.close) try { bitmap.close(); } catch (_) {}
+      }
     } finally {
       if (typeof SpatialSecurity !== 'undefined') SpatialSecurity.releaseDemSlot();
     }
@@ -2104,12 +2131,15 @@ function aspectLabel(deg) {
 }
 
 async function runLocalSlopeAnalysis(obj) {
+  if (_slopeRunning) return;
   const ring = analysisRegionLatLonRing(obj);
   if (!ring || ring.length < 3) {
     showHint(t('slope.needArea'));
     return;
   }
+  _slopeRunning = true;
   showHint(t('slope.running'));
+  try {
   const bb = bboxFromLatLonRing(ring);
   const span = Math.max(bb.maxLat - bb.minLat, bb.maxLon - bb.minLon);
   let z = 14;
@@ -2127,10 +2157,10 @@ async function runLocalSlopeAnalysis(obj) {
     if (tiles.length > 20) break;
   }
   const elevTiles = {};
-  for (const [tz, tx, ty] of tiles) {
+  await Promise.all(tiles.map(async ([tz, tx, ty]) => {
     const elev = await fetchTerrariumElevTile(tz, tx, ty);
     elevTiles[tz + '/' + tx + '/' + ty] = elev;
-  }
+  }));
   const cols = 144, rows = 144;
   const wTL = latLonToWorld(bb.maxLat, bb.minLon);
   const wBR = latLonToWorld(bb.minLat, bb.maxLon);
@@ -2177,11 +2207,15 @@ async function runLocalSlopeAnalysis(obj) {
   let domAspect = 0;
   aspectBins.forEach((v, i) => { if (v > aspectBins[domAspect]) domAspect = i; });
   const areaM2 = polygonAreaM2FromRing(ring);
+  if (!nSlope) {
+    showHint(t('slope.offline'));
+    return;
+  }
   const stats = {
     minElev: isFinite(minElev) ? minElev : null,
     maxElev: isFinite(maxElev) ? maxElev : null,
-    avgSlope: nSlope ? sumSlope / nSlope : null,
-    maxSlope: nSlope ? maxSlope : null,
+    avgSlope: sumSlope / nSlope,
+    maxSlope: maxSlope,
     aspect: aspectLabel(domAspect * 45),
     areaM2,
   };
@@ -2195,6 +2229,9 @@ async function runLocalSlopeAnalysis(obj) {
   updateSlopeSaveButtonUi();
   scheduleRender();
   scheduleProjectSave();
+  } finally {
+    _slopeRunning = false;
+  }
 }
 
 function polygonAreaM2FromRing(ring) {
@@ -12347,6 +12384,8 @@ function getObservationCluster(lat, lon, radiusM) {
   return { photos, notes };
 }
 
+let _observationPopupGen = 0;
+
 function revokeObservationPopupImages() {
   document.querySelectorAll('#fnp-body .fnp-photo-img').forEach(img => {
     if (img._blobUrl) {
@@ -12373,19 +12412,21 @@ function fieldPhotoNoteText(photo) {
   return '';
 }
 
-async function loadPhotoIntoObservationPopup(photo) {
+async function loadPhotoIntoObservationPopup(photo, gen) {
   const img = document.querySelector('#fnp-body .fnp-photo-img[data-photo-id="' + photo.id + '"]');
   if (!img) return;
   const row = await getPhotoBlobRecord(photo.photoId, 'thumb');
+  if (gen != null && gen !== _observationPopupGen) return;
   const blob = row?.data || (await getPhotoBlobRecord(photo.photoId, 'full'))?.data;
+  if (gen != null && gen !== _observationPopupGen) return;
   if (!blob) {
-    img.alt = 'Fotoğraf yüklenemedi';
+    img.alt = PA_LANG === 'tr' ? 'Fotoğraf yüklenemedi' : 'Photo failed to load';
     return;
   }
   if (img._blobUrl) URL.revokeObjectURL(img._blobUrl);
   img._blobUrl = URL.createObjectURL(blob);
   img.src = img._blobUrl;
-  img.title = 'Büyütmek için tıklayın';
+  img.title = PA_LANG === 'tr' ? 'Büyütmek için tıklayın' : 'Tap to enlarge';
   img.onclick = e => { e.stopPropagation(); openFieldPhotoEarthViewer(photo.id); };
 }
 
@@ -12431,6 +12472,7 @@ function openNoteInfoSheet() {
 }
 
 function closeNotePopup() {
+  _observationPopupGen++;
   revokeObservationPopupImages();
   const pop = document.getElementById('field-note-popup');
   if (pop) pop.classList.remove('open');
@@ -12445,6 +12487,7 @@ function showNotePopup(note) {
 
 async function showFieldObservationPopup(primary) {
   if (!primary || primary.lat == null || primary.lon == null) return;
+  const gen = ++_observationPopupGen;
   if (primary.type === 'field_note') normalizeFieldNoteObject(primary);
   if (primary.type === 'field_photo') normalizeFieldPhotoObject(primary);
 
@@ -12569,7 +12612,7 @@ async function showFieldObservationPopup(primary) {
   });
 
   await Promise.all(photos.flatMap(p => [
-    loadPhotoIntoObservationPopup(p),
+    loadPhotoIntoObservationPopup(p, gen),
     loadPhotoVoiceIntoObservationPopup(p),
   ]));
 }
@@ -13376,6 +13419,11 @@ async function getPhotoBlobRecord(photoId, kind) {
   const db = await openProjectDb();
   let row = await idbGet(db, 'blobs', projectBlobKey(photoId, kind));
   if (!row && kind === 'full') row = await idbGet(db, 'blobs', legacyPhotoBlobKey(photoId));
+  if (row?.data) {
+    const mime = row.mime || (kind === 'audio' ? 'audio/webm' : 'image/jpeg');
+    const blob = ensureBlobWithMime(row.data, mime);
+    if (blob) row = { ...row, data: blob, mime };
+  }
   return row;
 }
 
@@ -13838,12 +13886,14 @@ async function loadFieldPhotoPreview(obj) {
   const imgEl = document.getElementById('field-photo-preview');
   if (!imgEl) return;
   if (_fieldPhotoPreviewUrl) URL.revokeObjectURL(_fieldPhotoPreviewUrl);
+  _fieldPhotoPreviewUrl = null;
   const row = await getPhotoBlobRecord(obj.photoId, 'full');
-  if (!row?.data) {
+  const blob = row?.data || (await getPhotoBlobRecord(obj.photoId, 'thumb'))?.data;
+  if (!blob) {
     imgEl.removeAttribute('src');
     return;
   }
-  _fieldPhotoPreviewUrl = URL.createObjectURL(row.data);
+  _fieldPhotoPreviewUrl = URL.createObjectURL(blob);
   imgEl.src = _fieldPhotoPreviewUrl;
 }
 
@@ -14004,6 +14054,8 @@ function fieldDictationErrorHint(msg) {
 let _fieldWebDictation = null;
 let _fieldDictationTargetId = null;
 let _fieldDictateBusy = false;
+let _fieldDictationGen = 0;
+let _fieldDictationLastToggle = 0;
 let _fieldDictationBase = '';
 let _fieldDictationCommitted = '';
 let _fieldDictationInterim = '';
@@ -14141,6 +14193,7 @@ async function removeFieldDictationPartialListener() {
 }
 
 function stopFieldWebDictation() {
+  _fieldDictationGen++;
   if (_fieldWebDictation) {
     try { _fieldWebDictation.stop(); } catch (_) {}
     try { _fieldWebDictation.abort(); } catch (_) {}
@@ -14159,6 +14212,9 @@ function prepareFieldDictationTarget(textarea) {
 }
 
 async function toggleFieldDictation(textareaId, statusId) {
+  const now = Date.now();
+  if (now - _fieldDictationLastToggle < 280) return;
+  _fieldDictationLastToggle = now;
   const ta = document.getElementById(textareaId);
   if (!ta) return;
   if (_fieldDictationTargetId === textareaId && (_fieldWebDictation || _fieldDictateBusy)) {
@@ -14249,6 +14305,7 @@ function startFieldWebDictation(ta, statusId, silentFail) {
     }
     const iosWeb = fieldIsAppleTouchWeb();
     if (iosWeb && !silentFail) showHint(t('dictation.iosHint'), 7000);
+    const sessionGen = ++_fieldDictationGen;
 
     let settled = false;
     let gotSpeech = false;
@@ -14258,6 +14315,7 @@ function startFieldWebDictation(ta, statusId, silentFail) {
       resolve(!!ok);
     };
     const cleanup = (doneMsg) => {
+      if (sessionGen !== _fieldDictationGen) return;
       endFieldDictationSession(ta);
       _fieldWebDictation = null;
       if (_fieldDictationTargetId === ta.id) {
@@ -14266,6 +14324,7 @@ function startFieldWebDictation(ta, statusId, silentFail) {
       }
     };
     const runRecognition = () => {
+      if (sessionGen !== _fieldDictationGen) { finish(false); return; }
       prepareFieldDictationTarget(ta);
       const rec = new SR();
       rec.lang = fieldDictationLang();
@@ -14274,6 +14333,7 @@ function startFieldWebDictation(ta, statusId, silentFail) {
       rec.continuous = !iosWeb;
       _fieldWebDictation = rec;
       rec.onresult = ev => {
+        if (sessionGen !== _fieldDictationGen) return;
         for (let i = ev.resultIndex; i < ev.results.length; i++) {
           const r = ev.results[i];
           const text = r[0]?.transcript || '';
@@ -14283,6 +14343,7 @@ function startFieldWebDictation(ta, statusId, silentFail) {
         }
       };
       rec.onerror = ev => {
+        if (sessionGen !== _fieldDictationGen) { finish(false); return; }
         if (ev.error === 'aborted') { cleanup(''); finish(false); return; }
         if (ev.error === 'no-speech' && gotSpeech) { try { rec.stop(); } catch (_) {} return; }
         if (!silentFail) {
@@ -14294,7 +14355,7 @@ function startFieldWebDictation(ta, statusId, silentFail) {
         finish(false);
       };
       rec.onend = () => {
-        if (_fieldWebDictation !== rec || _fieldDictationTargetId !== ta.id || settled) return;
+        if (sessionGen !== _fieldDictationGen || _fieldWebDictation !== rec || _fieldDictationTargetId !== ta.id || settled) return;
         if (iosWeb) {
           cleanup(gotSpeech ? t('dictation.done') : '');
           if (gotSpeech) showHint(t('dictation.done'));
@@ -14307,12 +14368,15 @@ function startFieldWebDictation(ta, statusId, silentFail) {
           finish(true);
           return;
         }
-        try {
-          rec.start();
-        } catch (_) {
-          cleanup('');
-          finish(false);
-        }
+        setTimeout(() => {
+          if (sessionGen !== _fieldDictationGen || _fieldWebDictation !== rec || _fieldDictationTargetId !== ta.id || settled) return;
+          try {
+            rec.start();
+          } catch (_) {
+            cleanup('');
+            finish(false);
+          }
+        }, 120);
       };
       try {
         rec.start();
