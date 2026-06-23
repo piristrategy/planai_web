@@ -15144,8 +15144,11 @@ function fieldStylusDrawMode() {
 
 function fieldDrawingAllowed(pointerType) {
   if (!FIELD_MODE) return true;
+  if (S.tool === 'select' || S.tool === 'info') {
+    return pointerType === 'pen' || pointerType === 'mouse' || pointerType === 'touch';
+  }
   if (fieldStylusDrawMode() && pointerType === 'pen') {
-    if (S.tool === 'select' || S.tool === 'info' || S.tool === 'field-note') return false;
+    if (S.tool === 'field-note') return false;
     return true;
   }
   if (fieldActiveDrawTool()) {
@@ -16036,6 +16039,11 @@ function fieldTapSelect(wp, e) {
     return;
   }
   if (S.polyActive || S.plSession) return;
+  if (S.tool === 'info') {
+    fieldInfoToolPick(wp);
+    return;
+  }
+  if (S.tool !== 'select') return;
   if (_gpsTrackReplay.pos) {
     const w = latLonToWorld(_gpsTrackReplay.pos.lat, _gpsTrackReplay.pos.lon);
     if (Math.hypot(wp.x - w.x, wp.y - w.y) < 24 / S.scale) {
