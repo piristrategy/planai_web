@@ -14897,8 +14897,12 @@ function fieldTapVertexPointer(pointerType) {
   return pointerType === 'touch' || pointerType === 'pen';
 }
 
-function fieldSuppressGhostMouse() {
-  return FIELD_MODE && _fieldLastPointerAt > 0 && (Date.now() - _fieldLastPointerAt) < FIELD_GHOST_MOUSE_MS;
+function fieldSuppressGhostMouse(e) {
+  if (!FIELD_MODE) return false;
+  if (S.drawing || S.panning || S.polyActive || S.plSession) return false;
+  const pt = e && (e.pointerType || S._activePointerType);
+  if (pt && pt !== 'mouse') return false;
+  return _fieldLastPointerAt > 0 && (Date.now() - _fieldLastPointerAt) < FIELD_GHOST_MOUSE_MS;
 }
 
 function fieldAddDrawVertex(wp) {
@@ -19483,10 +19487,7 @@ canvas.addEventListener('pointerdown', e => {
   _fieldLastPointerAt = Date.now();
   try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
   S._activePointerType = e.pointerType;
-  if (fieldPointerDown(e)) {
-    try { e.preventDefault(); } catch (_) {}
-    return;
-  }
+  if (fieldPointerDown(e)) return;
   const pe = _pe(e);
   if (FIELD_MODE && fieldNavigationPointer(e.pointerType) && !fieldDrawingAllowed(e.pointerType)) {
     const wp = clientToWorld(pe.clientX, pe.clientY);
@@ -19514,9 +19515,6 @@ canvas.addEventListener('pointerup', e => {
 });
 canvas.addEventListener('pointercancel', e => {
   if (e.pointerType === 'mouse') return;
-  if (_fieldTouch && _fieldTouch.id === e.pointerId && S.drawing) {
-    onMouseUp(_pe(e));
-  }
   _fieldPointers.delete(e.pointerId);
   _fieldTouch = null;
   S.panning = false;
@@ -19741,8 +19739,7 @@ function onMouseDown(e) {
   // ERASER
   if (S.tool === 'eraser') return;
 
-  // Drag-draw tools
-  fieldSuspendGpsFollowForDrawing();
+  // Drag-draw tools (walk: touch → onMouseDown/Move/Up, no GPS suspend on press)
   S.drawing    = true;
   S.drawStartX = pt.x;
   S.drawStartY = pt.y;
@@ -19960,12 +19957,13 @@ function onMouseUp(e) {
         S.selectedIds = [obj.id];
         updateSelPanel(obj);
         if (FIELD_MODE && obj.type === 'circle' && obj.r >= 8) {
-          scheduleCircleSlopeAnalysis(obj);
+          updateFieldAnalysisActions(obj);
+          showHint(t('hint.slopeAfterCircle'));
+          runLocalSlopeAnalysis(obj).catch(() => showHint(t('slope.offline')));
         }
       }
     }
     S.activeId = null;
-    fieldResumeGpsFollowAfterDrawing();
     scheduleRender();
   }
 }
@@ -20120,13 +20118,6 @@ function setTool(tool) {
   document.getElementById('btn-field-note-tool')?.classList.toggle('active', tool === 'field-note');
   document.getElementById('btn-field-info-tool')?.classList.toggle('active', tool === 'info');
   canvas.style.cursor = getCursor();
-  if (FIELD_MODE) {
-    if (isFieldDrawTool(tool) && tool !== 'select' && tool !== 'info' && tool !== 'field-note') {
-      fieldSuspendGpsFollowForDrawing();
-    } else if (tool === 'select') {
-      fieldResumeGpsFollowAfterDrawing();
-    }
-  }
   updateFieldDrawFab();
   updateActiveToolPanelLabels(tool);
   document.getElementById('freedraw-panel').style.display = tool==='freedraw'?'block':'none';
