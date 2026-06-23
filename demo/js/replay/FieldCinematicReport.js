@@ -145,11 +145,8 @@
 
   function finishReplayHtml(html) {
     if (!html) return html;
-    if (global.FieldSafeReplay?.ensureMobileViewableReplayHtml) {
-      html = global.FieldSafeReplay.ensureMobileViewableReplayHtml(html);
-    }
-    if (global.FieldReplaySafariRoute?.inject) {
-      html = global.FieldReplaySafariRoute.inject(html);
+    if (global.FieldSafeReplay?.stripExternalFonts) {
+      html = global.FieldSafeReplay.stripExternalFonts(html);
     }
     return html;
   }

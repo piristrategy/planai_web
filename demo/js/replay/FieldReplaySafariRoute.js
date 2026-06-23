@@ -302,45 +302,29 @@
     'transform:translateX(-50%)!important;margin-left:0!important;}',
   ].join('');
 
-  function inject(html) {
+  function stripReplayPatches(html) {
     if (!html || typeof html !== 'string') return html;
-    if (!html.includes('window.__PLANAI_REPORT__')) return html;
-    let out = html;
-    if (!out.includes('id="planai-safari-route-fix"')) {
-      out = out.replace(/<script id="planai-safari-route-fix">[\s\S]*?<\/script>/g, '');
-      out = out.replace(/<script id="planai-replay-controls-fix">[\s\S]*?<\/script>/g, '');
-      const routeTag = '<script id="planai-safari-route-fix">' + MAP_OVERLAY_BOOT + '<\/script>';
-      const ctrlTag = '<script id="planai-replay-controls-fix">' + CONTROLS_BOOT + '<\/script>';
-      if (out.includes('</body>')) out = out.replace('</body>', routeTag + ctrlTag + '</body>');
-      else out += routeTag + ctrlTag;
-    } else {
-      out = out.replace(
-        /<script id="planai-safari-route-fix">[\s\S]*?<\/script>/,
-        '<script id="planai-safari-route-fix">' + MAP_OVERLAY_BOOT + '<\/script>',
-      );
-    }
-    if (!out.includes('id="planai-replay-controls-fix"')) {
-      const ctrlTag = '<script id="planai-replay-controls-fix">' + CONTROLS_BOOT + '<\/script>';
-      if (out.includes('</body>')) out = out.replace('</body>', ctrlTag + '</body>');
-      else out += ctrlTag;
-    } else {
-      out = out.replace(
-        /<script id="planai-replay-controls-fix">[\s\S]*?<\/script>/,
-        '<script id="planai-replay-controls-fix">' + CONTROLS_BOOT + '<\/script>',
-      );
-    }
-    if (!out.includes('id="planai-replay-ui-fix"')) {
-      const style = '<style id="planai-replay-ui-fix">' + REPLAY_UI_CSS + '</style>';
-      if (out.includes('</head>')) out = out.replace('</head>', style + '</head>');
-      else out = style + out;
-    } else {
-      out = out.replace(
-        /<style id="planai-replay-ui-fix">[\s\S]*?<\/style>/,
-        '<style id="planai-replay-ui-fix">' + REPLAY_UI_CSS + '</style>',
-      );
-    }
-    return out;
+    return html
+      .replace(/<script id="planai-safari-route-fix">[\s\S]*?<\/script>/gi, '')
+      .replace(/<script id="planai-replay-controls-fix">[\s\S]*?<\/script>/gi, '')
+      .replace(/<style id="planai-replay-ui-fix">[\s\S]*?<\/style>/gi, '')
+      .replace(/<script id="planai-replay-gate">[\s\S]*?<\/script>/gi, '')
+      .replace(/<script id="planai-replay-safe">[\s\S]*?<\/script>/gi, '')
+      .replace(/<script id="planai-replay-watchdog">[\s\S]*?<\/script>/gi, '')
+      .replace(/<style id="planai-psr-fallback">[\s\S]*?<\/style>/gi, '')
+      .replace(/<div id="psr-app"[^>]*>\s*<\/div>/gi, '');
   }
 
-  global.FieldReplaySafariRoute = { inject, MAP_OVERLAY_BOOT, CONTROLS_BOOT, ROUTE_BOOT: MAP_OVERLAY_BOOT };
+  /** @deprecated Export uses stripReplayPatches — runtime inject breaks cinematic replay */
+  function inject(html) {
+    return stripReplayPatches(html);
+  }
+
+  global.FieldReplaySafariRoute = {
+    inject,
+    stripReplayPatches,
+    MAP_OVERLAY_BOOT,
+    CONTROLS_BOOT,
+    ROUTE_BOOT: MAP_OVERLAY_BOOT,
+  };
 })(typeof window !== 'undefined' ? window : globalThis);

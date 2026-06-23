@@ -10938,16 +10938,15 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
   if (isHtml) {
     let viewerBlob = blob;
     try {
-      const html = await blob.text();
-      if (html && !html.includes('id="planai-safari-route-fix"')) {
-        let patched = html;
-        if (typeof FieldSafeReplay !== 'undefined' && FieldSafeReplay.ensureMobileViewableReplayHtml) {
-          patched = FieldSafeReplay.ensureMobileViewableReplayHtml(patched);
+      let html = await blob.text();
+      if (html && html.includes('window.__PLANAI_REPORT__')) {
+        if (typeof FieldReplaySafariRoute !== 'undefined' && FieldReplaySafariRoute.stripReplayPatches) {
+          html = FieldReplaySafariRoute.stripReplayPatches(html);
         }
-        if (typeof FieldReplaySafariRoute !== 'undefined' && FieldReplaySafariRoute.inject) {
-          patched = FieldReplaySafariRoute.inject(patched);
+        if (typeof FieldSafeReplay !== 'undefined' && FieldSafeReplay.stripExternalFonts) {
+          html = FieldSafeReplay.stripExternalFonts(html);
         }
-        viewerBlob = new Blob([patched], { type: 'text/html;charset=utf-8' });
+        viewerBlob = new Blob([html], { type: 'text/html;charset=utf-8' });
       }
     } catch (_) {}
     if (embed) { embed.removeAttribute('src'); embed.style.display = 'none'; }
