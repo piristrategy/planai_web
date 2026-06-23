@@ -2190,7 +2190,27 @@ async function runLocalSlopeAnalysis(obj) {
   showHint(t('slope.running'));
   try {
   const bb = bboxFromLatLonRing(ring);
-  const cols = 72, rows = 72;
+  const span = Math.max(bb.maxLat - bb.minLat, bb.maxLon - bb.minLon);
+  let z = 14;
+  if (span > 0.08) z = 11;
+  else if (span > 0.025) z = 12;
+  else if (span > 0.008) z = 13;
+  const tl = latLonToTileXY(bb.maxLat, bb.minLon, z);
+  const br = latLonToTileXY(bb.minLat, bb.maxLon, z);
+  const tiles = [];
+  for (let tx = tl.x; tx <= br.x; tx++) {
+    for (let ty = tl.y; ty <= br.y; ty++) {
+      tiles.push([z, tx, ty]);
+      if (tiles.length > 20) break;
+    }
+    if (tiles.length > 20) break;
+  }
+  const elevTiles = {};
+  await Promise.all(tiles.map(async ([tz, tx, ty]) => {
+    const elev = await fetchTerrariumElevTile(tz, tx, ty);
+    elevTiles[tz + '/' + tx + '/' + ty] = elev;
+  }));
+  const cols = 144, rows = 144;
   const wTL = latLonToWorld(bb.maxLat, bb.minLon);
   const wBR = latLonToWorld(bb.minLat, bb.maxLon);
   const worldBounds = { minX: wTL.x, minY: wTL.y, maxX: wBR.x, maxY: wBR.y, w: wBR.x - wTL.x, h: wBR.y - wTL.y };
@@ -2202,47 +2222,12 @@ async function runLocalSlopeAnalysis(obj) {
   const aspectBins = new Array(8).fill(0);
   const elevGrid = new Float32Array(cols * rows);
   elevGrid.fill(NaN);
-  let openMeteoOk = false;
-  if (navigator.onLine) {
-    openMeteoOk = await fillElevGridFromOpenMeteo(elevGrid, cols, rows, bb);
-  }
-  const span = Math.max(bb.maxLat - bb.minLat, bb.maxLon - bb.minLon);
-  let z = 14;
-  if (span > 0.08) z = 11;
-  else if (span > 0.025) z = 12;
-  else if (span > 0.008) z = 13;
-  const elevTiles = {};
-  if (navigator.onLine) {
-    const tl = latLonToTileXY(bb.maxLat, bb.minLon, z);
-    const br = latLonToTileXY(bb.minLat, bb.maxLon, z);
-    const tiles = [];
-    for (let tx = tl.x; tx <= br.x; tx++) {
-      for (let ty = tl.y; ty <= br.y; ty++) {
-        tiles.push([z, tx, ty]);
-        if (tiles.length > 20) break;
-      }
-      if (tiles.length > 20) break;
-    }
-    await Promise.all(tiles.map(async ([tz, tx, ty]) => {
-      const elev = await fetchTerrariumElevTile(tz, tx, ty);
-      elevTiles[tz + '/' + tx + '/' + ty] = elev;
-    }));
-    if (terrariumTilesHaveData(elevTiles)) {
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          const lat = bb.maxLat - (row / (rows - 1)) * (bb.maxLat - bb.minLat);
-          const lon = bb.minLon + (col / (cols - 1)) * (bb.maxLon - bb.minLon);
-          const e0 = sampleElevAtLatLon(elevTiles, z, lat, lon);
-          if (e0 != null && isFinite(e0)) elevGrid[row * cols + col] = e0;
-        }
-      }
-    }
-  }
-  if (!openMeteoOk) {
-    let missing = 0;
-    for (let i = 0; i < elevGrid.length; i++) if (isNaN(elevGrid[i])) missing++;
-    if (missing > elevGrid.length * 0.2 && navigator.onLine) {
-      await fillElevGridFromOpenMeteo(elevGrid, cols, rows, bb);
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const lat = bb.maxLat - (row / (rows - 1)) * (bb.maxLat - bb.minLat);
+      const lon = bb.minLon + (col / (cols - 1)) * (bb.maxLon - bb.minLon);
+      const e0 = sampleElevAtLatLon(elevTiles, z, lat, lon);
+      if (e0 != null) elevGrid[row * cols + col] = e0;
     }
   }
   for (let row = 0; row < rows; row++) {
