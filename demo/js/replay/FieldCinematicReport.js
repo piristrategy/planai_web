@@ -126,13 +126,13 @@
     const title = escapeAttr((prepared.projectName || 'PlanAI Field') + ' — Inspection Replay');
     html = html.replace(/<title>[^<]*<\/title>/, '<title>' + title + '</title>');
     html = html.replace(/<html lang="[^"]*">/, '<html lang="' + (prepared.lang || 'en') + '">');
-    return html;
+    return finishReplayHtml(html);
   }
 
   function buildFromAssets(prepared, safePayload) {
     const assets = global.FieldReplayAssets;
     if (!assets?.js) return null;
-    return '<!DOCTYPE html><html lang="' + (prepared.lang || 'en') + '"><head><meta charset="UTF-8"/>' +
+    const html = '<!DOCTYPE html><html lang="' + (prepared.lang || 'en') + '"><head><meta charset="UTF-8"/>' +
       '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>' +
       '<title>' + escapeAttr((prepared.projectName || 'PlanAI Field') + ' — Inspection Replay') + '</title>' +
       '<style>' + assets.css + '</style></head><body>' +
@@ -140,6 +140,18 @@
       '<script>window.__PLANAI_REPORT__=' + safePayload + ';<\/script>' +
       '<script type="module">' + assets.js + '<\/script>' +
       '</body></html>';
+    return finishReplayHtml(html);
+  }
+
+  function finishReplayHtml(html) {
+    if (!html) return html;
+    if (global.FieldSafeReplay?.ensureMobileViewableReplayHtml) {
+      html = global.FieldSafeReplay.ensureMobileViewableReplayHtml(html);
+    }
+    if (global.FieldReplaySafariRoute?.inject) {
+      html = global.FieldReplaySafariRoute.inject(html);
+    }
+    return html;
   }
 
   function buildReplayHtml(payload) {

@@ -10714,6 +10714,12 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
   if (isHtml) {
     let html = '';
     try { html = await blob.text(); } catch (_) {}
+    if (html && typeof FieldSafeReplay !== 'undefined' && FieldSafeReplay.ensureMobileViewableReplayHtml) {
+      html = FieldSafeReplay.ensureMobileViewableReplayHtml(html);
+    }
+    if (html && typeof FieldReplaySafariRoute !== 'undefined' && FieldReplaySafariRoute.inject) {
+      html = FieldReplaySafariRoute.inject(html);
+    }
     if (embed) { embed.removeAttribute('src'); embed.style.display = 'none'; }
     if (frame) {
       frame.style.display = 'block';
@@ -14871,18 +14877,8 @@ function setFieldInteractionMode(mode, fromStylus) {
 function fieldActiveDrawTool() {
   if (!isFieldDrawTool(S.tool) || S.tool === 'select' || S.tool === 'field-note') return false;
   if (S.polyActive || S.plSession) return true;
-  if (S.drawing) return true;
-  if (FIELD_MODE && S.tool === 'circle') return true;
   if (S.selectedIds.length && S.tool === 'circle') return false;
   return true;
-}
-
-function fieldIsDragDrawPointerTool(pointerType) {
-  if (!FIELD_MODE) return false;
-  const dragTools = new Set(['circle', 'zone', 'arrow', 'freedraw', 'analysis']);
-  if (!dragTools.has(S.tool)) return false;
-  if (pointerType === 'touch' || pointerType === 'pen') return true;
-  return fieldDrawingAllowed(pointerType || 'mouse');
 }
 
 function fieldScheduleDrawDragRender() {
@@ -15693,21 +15689,6 @@ function fieldPointerDown(e) {
     clearTimeout(_fieldMapLongPressTimer);
     return true;
   }
-  if (fieldIsDragDrawPointerTool(e.pointerType)) {
-    if (S.drawing) return true;
-    try { e.preventDefault(); } catch (_) {}
-    _fieldTouch = {
-      id: e.pointerId,
-      x0: e.clientX, y0: e.clientY,
-      t0: Date.now(),
-      moved: false, panning: false, longPressed: false,
-      lastX: e.clientX, lastY: e.clientY,
-      drawDrag: true,
-    };
-    clearTimeout(_fieldMapLongPressTimer);
-    onMouseDown(_pe(e));
-    return true;
-  }
   if (fieldNavigationPointer(e.pointerType)) {
     if (S.tool === 'select' && !S.polyActive && !S.plSession) {
       const wp = clientToWorld(e.clientX, e.clientY);
@@ -15776,14 +15757,6 @@ function fieldPointerMove(e) {
     return true;
   }
   if (_fieldTouch && _fieldTouch.id === e.pointerId) {
-    if (_fieldTouch.drawDrag) {
-      _fieldTouch.moved = true;
-      _fieldTouch.lastX = e.clientX;
-      _fieldTouch.lastY = e.clientY;
-      _fieldPointers.set(e.pointerId, { x: e.clientX, y: e.clientY, type: e.pointerType });
-      onMouseMove(_pe(e));
-      return true;
-    }
     if (_fieldTouch.drawVertex) {
       const dx = e.clientX - _fieldTouch.x0;
       const dy = e.clientY - _fieldTouch.y0;
@@ -15831,11 +15804,6 @@ function fieldPointerUp(e, wp) {
   }
   clearTimeout(_fieldMapLongPressTimer);
   if (_fieldTouch && _fieldTouch.id === e.pointerId) {
-    if (_fieldTouch.drawDrag) {
-      onMouseUp(_pe(e));
-      _fieldTouch = null;
-      return true;
-    }
     if (_fieldTouch.drawVertex) {
       const tap = !_fieldTouch.moved && !_fieldTouch.longPressed && (Date.now() - _fieldTouch.t0) < 480;
       if (tap && !tryFieldDrawDoubleTap(wp)) fieldAddDrawVertex(wp);
@@ -19546,9 +19514,8 @@ canvas.addEventListener('pointerup', e => {
 });
 canvas.addEventListener('pointercancel', e => {
   if (e.pointerType === 'mouse') return;
-  if (_fieldTouch?.drawDrag && _fieldTouch.id === e.pointerId) {
+  if (_fieldTouch && _fieldTouch.id === e.pointerId && S.drawing) {
     onMouseUp(_pe(e));
-    _fieldTouch = null;
   }
   _fieldPointers.delete(e.pointerId);
   _fieldTouch = null;
