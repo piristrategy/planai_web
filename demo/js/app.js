@@ -14900,7 +14900,7 @@ function fieldTapVertexPointer(pointerType) {
 function fieldSuppressGhostMouse(e) {
   if (!FIELD_MODE) return false;
   if (S.drawing || S.panning || S.polyActive || S.plSession) return false;
-  const pt = e && (e.pointerType || S._activePointerType);
+  const pt = (e && e.pointerType) || S._activePointerType;
   if (pt && pt !== 'mouse') return false;
   return _fieldLastPointerAt > 0 && (Date.now() - _fieldLastPointerAt) < FIELD_GHOST_MOUSE_MS;
 }
@@ -15700,22 +15700,7 @@ function fieldPointerDown(e) {
         const o = S.objects[i];
         if (!isObjectSelectableInField(o)) continue;
         const p = unrotateForHit(o, wp.x, wp.y);
-        if (hitTest(o, p.x, p.y)) {
-          if (o.type === 'field_photo' || o.type === 'field_note') {
-            e.preventDefault?.();
-            _fieldTouch = {
-              id: e.pointerId,
-              x0: e.clientX, y0: e.clientY,
-              t0: Date.now(),
-              moved: false, panning: false, longPressed: false,
-              lastX: e.clientX, lastY: e.clientY,
-              tapObjId: o.id,
-            };
-            clearTimeout(_fieldMapLongPressTimer);
-            return true;
-          }
-          return false;
-        }
+        if (hitTest(o, p.x, p.y)) return false;
       }
     }
     _fieldTouch = {
@@ -19522,7 +19507,7 @@ canvas.addEventListener('pointercancel', e => {
 });
 
 function onMouseDown(e) {
-  if (fieldSuppressGhostMouse()) return;
+  if (fieldSuppressGhostMouse(e)) return;
   e.preventDefault();
   S._activePointerType = e.pointerType || 'mouse';
   // Layout mode intercept (planning only)
@@ -19761,7 +19746,7 @@ function onMouseDown(e) {
 }
 
 function onMouseMove(e) {
-  if (fieldSuppressGhostMouse()) return;
+  if (fieldSuppressGhostMouse(e)) return;
   const r = canvas.getBoundingClientRect();
   // Layout mode intercept
   if (!fieldOff('layout') && LAYOUT.mode !== 'off' && layoutMouseMove(e.clientX - r.left, e.clientY - r.top)) return;
@@ -19899,15 +19884,11 @@ function onMouseMove(e) {
     }
   }
 
-  if (S.drawing && (S.tool === 'circle' || S.tool === 'zone' || S.tool === 'arrow' || S.tool === 'freedraw' || S.tool === 'analysis')) {
-    fieldScheduleDrawDragRender();
-  } else {
-    scheduleRender();
-  }
+  scheduleRender();
 }
 
 function onMouseUp(e) {
-  if (fieldSuppressGhostMouse()) return;
+  if (fieldSuppressGhostMouse(e)) return;
   if (S.panning) {
     S.panning = false;
     canvas.style.cursor = getCursor();
