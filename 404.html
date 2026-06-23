@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yönlendiriliyor…</title>
+<script>
+(function () {
+  var path = location.pathname.replace(/\/+$/, '') || '/';
+  if (path === '/demo') {
+    location.replace('/demo/');
+  }
+})();
+</script>
+</head>
+<body>
+<p><a href="/">Ana sayfa</a> · <a href="/demo/">PlanAI Field demo</a></p>
+</body>
+</html>

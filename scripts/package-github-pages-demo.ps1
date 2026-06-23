@@ -88,7 +88,7 @@ $indexPath = Join-Path $(if ($InPlace) { $SourceRoot } else { $OutputDir }) 'ind
 if (Test-Path $indexPath) {
   $html = Get-Content $indexPath -Raw
   if ($html -notmatch '<base href="/demo/">') {
-    $html = $html -replace '(<meta charset="UTF-8">)', '$1`n<base href="/demo/">'
+    $html = $html -replace '(<meta charset="UTF-8">)', "`$1`n<base href=`"/demo/`">"
     Set-Content -Path $indexPath -Value $html -NoNewline
   }
   $preload = @'

@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">`n<base href="/demo/">
+<meta charset="UTF-8">
+<base href="/demo/">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21,7 +22,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="css/app.css?v=1.0.3">
+<link rel="stylesheet" href="css/app.css?v=1.0.5">
 <script src="libs/jszip.min.js"></script>
 <script src="libs/exif.min.js"></script>
 <script src="libs/proj4.js"></script>
@@ -295,8 +296,8 @@
       </div>
       <span id="field-mode-label" class="field-top-stat top-pri-low">Parmak</span>
       <div id="field-lang-switch" class="top-pri-high" data-i18n-title="lang.title" title="Dil">
-        <button type="button" id="btn-lang-tr" onclick="setAppLanguage('tr')">TR</button>
-        <button type="button" id="btn-lang-en" class="active" onclick="setAppLanguage('en')">EN</button>
+        <button type="button" id="btn-lang-tr" class="active" onclick="setAppLanguage('tr')">TR</button>
+        <button type="button" id="btn-lang-en" onclick="setAppLanguage('en')">EN</button>
       </div>
       <span id="gps-status-pill" class="gps-status-pill off top-pri-high" onclick="toggleGpsHudExpand()" title="GPS durumu">GPS</span>
       <span id="field-offline-pill" class="field-offline-pill top-pri-med" style="display:none;" data-i18n="offline.badge">Çevrimdışı</span>
@@ -563,8 +564,8 @@
               <span id="field-journey-hub-brand-text" class="field-journey-hub-brand">PlanAI Field</span>
             </div>
             <div id="field-journey-hub-lang" class="field-journey-hub-lang" data-i18n-title="lang.title" title="Dil">
-              <button type="button" id="btn-hub-lang-tr" onclick="setAppLanguage('tr')">TR</button>
-              <button type="button" id="btn-hub-lang-en" class="active" onclick="setAppLanguage('en')">EN</button>
+              <button type="button" id="btn-hub-lang-tr" class="active" onclick="setAppLanguage('tr')">TR</button>
+              <button type="button" id="btn-hub-lang-en" onclick="setAppLanguage('en')">EN</button>
             </div>
           </div>
           <p class="fjh-tagline" data-i18n="hub.tagline">GPS Tracking • Photos • Voice Notes • Reports</p>
@@ -1457,6 +1458,6 @@ window.pdfjsLib = pdfjs;
 <script src="js/security/FieldAccessGate.js?v=1.4.0"></script>
 <script src="js/security/FieldDbCrypto.js?v=1.2.2"></script>
 <script src="js/ui/LegacyClickBridge.js?v=1.2.0"></script>
-<script src="js/app.js?v=1.0.5"></script>
+<script src="js/app.js?v=1.0.9"></script>
 </body>
 </html>

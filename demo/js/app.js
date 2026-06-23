@@ -69,6 +69,7 @@ let _fieldGpsOn = false;
 let _fieldGpsFix = null; // { lat, lon, accuracy, heading, ts }
 let _gpsWatchId = null;
 let _gpsFollow = false;
+let _mapBrowseMode = false;
 let _gpsLastPanTs = 0;
 let _gpsStatus = 'off'; // off | searching | connected | weak | denied | unavailable
 let _gpsFirstFixTimer = null;
@@ -272,7 +273,16 @@ const REPORT_TEMPLATE_ID = 'field-saha-v1';
 const INTERACTIVE_REPORT_TEMPLATE_ID = 'field-interactive-v1';
 
 // ═══ i18n (lightweight, no reload) ═══════════════════════════
-let PA_LANG = 'en';
+function loadStoredAppLanguage() {
+  try {
+    const saved = localStorage.getItem('planai_field_lang');
+    if (saved === 'en' || saved === 'tr') return saved;
+  } catch (_) {}
+  const nav = (navigator.language || navigator.userLanguage || '').toLowerCase();
+  if (nav.startsWith('tr')) return 'tr';
+  return 'tr';
+}
+let PA_LANG = loadStoredAppLanguage();
 const PA_I18N = {
   tr: {
     'panel.title': 'Saha Paneli', 'panel.project': 'Gezi', 'panel.projects': 'Geziler',
@@ -565,6 +575,7 @@ const PA_I18N = {
     'dictation.micDenied': 'Mikrofon izni verilmedi — tekrar deneyin',
     'dictation.noEngine': 'Bu cihazda ses tanıma motoru yok',
     'dictation.noEngineHint': 'Metin/el yazısı kullanın veya fotoğrafta «Sesli not kaydet» ile ses dosyası ekleyin',
+    'dictation.iosHint': 'Safari: 🎤 ile Türkçe konuşun; olmazsa klavyedeki mikrofonu kullanın',
     'dictation.live': 'Canlı',
     'perm.title': 'Uygulama İzinleri',
     'perm.intro': 'GPS, kamera, mikrofon ve galeri erişimi için izinleri buradan yönetin.',
@@ -682,6 +693,7 @@ const PA_I18N = {
     'gps.hint.followOn': 'GPS ve harita takibi açıldı', 'gps.hint.noFix': 'Konum henüz alınamadı — bekleyin',
     'gps.hint.openFirst': 'Önce GPS\'i açın', 'gps.hint.centered': 'Merkeze gidildi',
     'gps.hint.liveOn': 'Canlı konum açıldı', 'gps.hint.pending': 'Konum bekleniyor…',
+    'gps.hint.searchPinned': 'Seçilen konumda — canlı konuma dönmek için 📍 düğmesine dokunun',
     'autosave.err': 'Kayıt hatası', 'autosave.failed': 'Kayıt başarısız',
     'draw.widthLabel': 'Kalınlık',
     'draw.size': 'Boyut',
@@ -1154,6 +1166,7 @@ const PA_I18N = {
     'dictation.micDenied': 'Microphone not allowed — try again',
     'dictation.noEngine': 'Speech recognition is not available on this device',
     'dictation.noEngineHint': 'Use text/handwriting, or attach audio via photo «Record voice note»',
+    'dictation.iosHint': 'Safari: tap 🎤 and speak Turkish; or use the keyboard microphone',
     'dictation.live': 'Live',
     'perm.title': 'App permissions',
     'perm.intro': 'Manage GPS, camera, microphone and gallery access here.',
@@ -1272,6 +1285,7 @@ const PA_I18N = {
     'gps.hint.followOn': 'GPS and map follow enabled', 'gps.hint.noFix': 'No fix yet — wait',
     'gps.hint.openFirst': 'Turn on GPS first', 'gps.hint.centered': 'Centered on GPS',
     'gps.hint.liveOn': 'Live location on', 'gps.hint.pending': 'Waiting for location…',
+    'gps.hint.searchPinned': 'Pinned to search result — tap 📍 to return to live GPS',
     'autosave.err': 'Save error', 'autosave.failed': 'Save failed',
     'draw.widthLabel': 'Width',
     'draw.size': 'Size',
@@ -1600,6 +1614,7 @@ function applyFieldI18n() {
 }
 function setAppLanguage(lang) {
   PA_LANG = lang === 'en' ? 'en' : 'tr';
+  try { localStorage.setItem('planai_field_lang', PA_LANG); } catch (_) {}
   document.documentElement.lang = PA_LANG;
   document.getElementById('btn-lang-tr')?.classList.toggle('active', PA_LANG === 'tr');
   document.getElementById('btn-lang-en')?.classList.toggle('active', PA_LANG === 'en');
@@ -2961,15 +2976,43 @@ function fieldLiveLocationLocked() {
   return FIELD_MODE && !!FIELD_PROJECT.id;
 }
 
+function pauseLiveMapFollow() {
+  _mapBrowseMode = true;
+  _gpsFollow = false;
+  document.getElementById('btn-gps-follow')?.classList.remove('active');
+  document.getElementById('btn-map-locate')?.classList.remove('active');
+}
+
+function resumeLiveMapFollow() {
+  _mapBrowseMode = false;
+  if (!_fieldGpsOn) {
+    startFieldGpsSession();
+    return;
+  }
+  ensureFieldLiveLocationFollow();
+  const g = getGpsDisplayFix();
+  if (g) {
+    _gpsLastPanTs = 0;
+    setMapCenter(g.lat, g.lon);
+    scheduleRender();
+  }
+  updateGpsHud();
+}
+
 function ensureFieldLiveLocationFollow() {
   if (!fieldLiveLocationLocked()) return;
+  if (_mapBrowseMode || _gpsGuidanceActive) return;
   _gpsFollow = true;
   document.getElementById('btn-gps-follow')?.classList.add('active');
   document.getElementById('btn-map-locate')?.classList.add('active');
 }
 
 function disableGpsFollowFromPan() {
-  if (fieldLiveLocationLocked()) return;
+  if (!_gpsFollow && _mapBrowseMode) return;
+  if (fieldLiveLocationLocked()) {
+    pauseLiveMapFollow();
+    return;
+  }
   if (!_gpsFollow) return;
   _gpsFollow = false;
   document.getElementById('btn-gps-follow')?.classList.remove('active');
@@ -11984,6 +12027,7 @@ function ensureFieldGpsSessionActive(silent) {
 /** After hub / project open: request location permission, then keep GPS + follow on. */
 async function activateFieldLocationSession(silent) {
   if (!FIELD_MODE || !FIELD_PROJECT.id) return false;
+  _mapBrowseMode = false;
   if (typeof FieldPermissions !== 'undefined') {
     const ok = await FieldPermissions.request('location', {
       hintDenied: silent ? undefined : t('gps.err.denied'),
@@ -12057,9 +12101,7 @@ function toggleGpsFollow() {
     return;
   }
   if (fieldLiveLocationLocked()) {
-    ensureFieldLiveLocationFollow();
-    const g = getGpsDisplayFix();
-    if (g) setMapCenter(g.lat, g.lon);
+    resumeLiveMapFollow();
     updateGpsHud();
     showHint(t('gps.followOn'));
     return;
@@ -12095,17 +12137,8 @@ function mapControlLocate() {
     return;
   }
   if (fieldLiveLocationLocked()) {
-    ensureFieldLiveLocationFollow();
-    const g = getGpsDisplayFix();
-    if (g) {
-      _gpsLastPanTs = 0;
-      setMapCenter(g.lat, g.lon);
-      scheduleRender();
-      showHint(t('gps.hint.liveOn'));
-    } else {
-      showHint(t('gps.hint.pending'));
-    }
-    updateGpsHud();
+    resumeLiveMapFollow();
+    showHint(t('gps.hint.liveOn'));
     return;
   }
   if (_fieldGpsFix) {
@@ -12392,6 +12425,7 @@ async function loadPhotoVoiceIntoObservationPopup(photo) {
 function openNoteInfoSheet() {
   const pop = document.getElementById('field-note-popup');
   if (!pop) return;
+  if (pop.parentElement !== document.body) document.body.appendChild(pop);
   pop.classList.add('open');
   document.body.classList.add('field-note-info-open');
 }
@@ -12447,60 +12481,79 @@ async function showFieldObservationPopup(primary) {
   }
 
   let html = '';
+  const photos = cluster.photos.slice();
+  const notes = cluster.notes.slice();
+  if (primary.type === 'field_photo') {
+    photos.sort((a, b) => (a.id === primary.id ? -1 : b.id === primary.id ? 1 : 0));
+  } else if (primary.type === 'field_note') {
+    notes.sort((a, b) => (a.id === primary.id ? -1 : b.id === primary.id ? 1 : 0));
+  }
 
-  if (cluster.photos.length) {
-    html += '<div class="fnp-section-title">' + (PA_LANG === 'tr' ? 'Fotoğraflar' : 'Photos') + '</div>';
-    cluster.photos.forEach(photo => {
+  const buildPhotosHtml = () => {
+    if (!photos.length) return '';
+    let block = '<div class="fnp-section-title">' + (PA_LANG === 'tr' ? 'Fotoğraflar' : 'Photos') + '</div>';
+    photos.forEach(photo => {
       normalizeFieldPhotoObject(photo);
-      html += '<div class="fnp-photo-block">';
-      html += '<div class="fnp-photo-lbl">📷 ' + escapeHtml(photo.title || 'Fotoğraf') + '</div>';
-      html += '<div class="fnp-photo-img-wrap"><img class="fnp-photo-img" data-photo-id="' + photo.id + '" alt=""/></div>';
+      const primaryCls = photo.id === primary.id ? ' fnp-primary' : '';
+      block += '<div class="fnp-photo-block' + primaryCls + '">';
+      block += '<div class="fnp-photo-lbl">📷 ' + escapeHtml(photo.title || 'Fotoğraf') + '</div>';
+      block += '<div class="fnp-photo-img-wrap"><img class="fnp-photo-img" data-photo-id="' + photo.id + '" alt=""/></div>';
       const noteText = fieldPhotoNoteText(photo);
-      html += '<div class="fnp-photo-desc-label">' + (PA_LANG === 'tr' ? 'Not' : 'Note') + '</div>';
+      block += '<div class="fnp-photo-desc-label">' + (PA_LANG === 'tr' ? 'Not' : 'Note') + '</div>';
       if (noteText) {
-        html += '<div class="fnp-photo-desc">' + escapeHtml(noteText).replace(/\n/g, '<br>') + '</div>';
+        block += '<div class="fnp-photo-desc">' + escapeHtml(noteText).replace(/\n/g, '<br>') + '</div>';
       } else {
-        html += '<div class="fnp-photo-desc fnp-photo-desc-empty">' +
+        block += '<div class="fnp-photo-desc fnp-photo-desc-empty">' +
           (PA_LANG === 'tr' ? 'Foto notu yok' : 'No photo note') + '</div>';
       }
       if (photo.hasVoice) {
-        html += '<div class="fnp-photo-voice-wrap">';
-        html += '<div class="fnp-photo-voice-lbl">🎤 ' +
+        block += '<div class="fnp-photo-voice-wrap">';
+        block += '<div class="fnp-photo-voice-lbl">🎤 ' +
           (PA_LANG === 'tr' ? 'Sesli not' : 'Voice note') +
           (photo.voiceDuration ? ' · ' + Math.round(photo.voiceDuration) + ' sn' : '') + '</div>';
-        html += '<audio class="fnp-photo-audio" controls preload="metadata" data-photo-id="' + photo.id + '"></audio>';
-        html += '</div>';
+        block += '<audio class="fnp-photo-audio" controls preload="metadata" playsinline data-photo-id="' + photo.id + '"></audio>';
+        block += '</div>';
       }
-      html += '<div class="fnp-meta">' + (photo.timestamp || '').slice(0, 16).replace('T', ' ') + '</div>';
-      html += '</div>';
+      block += '<div class="fnp-meta">' + (photo.timestamp || '').slice(0, 16).replace('T', ' ') + '</div>';
+      block += '</div>';
     });
-  }
+    return block;
+  };
 
-  if (cluster.notes.length) {
-    html += '<div class="fnp-notes-section"><div class="fnp-section-title">' +
+  const buildNotesHtml = () => {
+    if (!notes.length) return '';
+    let block = '<div class="fnp-notes-section"><div class="fnp-section-title">' +
       (PA_LANG === 'tr' ? 'Notlar' : 'Notes') + '</div>';
-    cluster.notes.forEach(n => {
+    notes.forEach(n => {
       normalizeFieldNoteObject(n);
-      html += '<div class="fnp-note-item">';
-      html += '<div class="fnp-note-lbl">#' + (n.noteNum || '?') + '</div>';
+      const primaryCls = n.id === primary.id ? ' fnp-primary' : '';
+      block += '<div class="fnp-note-item' + primaryCls + '">';
+      block += '<div class="fnp-note-lbl">#' + (n.noteNum || '?') + '</div>';
       const txt = getNoteText(n);
-      if (txt) html += '<div>' + escapeHtml(txt).replace(/\n/g, '<br>') + '</div>';
+      if (txt) block += '<div>' + escapeHtml(txt).replace(/\n/g, '<br>') + '</div>';
       else if (!noteHasHandwriting(n)) {
-        html += '<div style="color:var(--muted);">' + (PA_LANG === 'tr' ? 'Boş not' : 'Empty note') + '</div>';
+        block += '<div style="color:var(--muted);">' + (PA_LANG === 'tr' ? 'Boş not' : 'Empty note') + '</div>';
       }
       if (noteHasHandwriting(n) && n.handwritingData.snapshot) {
-        html += '<img class="fnp-hand" src="' + n.handwritingData.snapshot + '" alt="El yazısı"/>';
+        block += '<img class="fnp-hand" src="' + n.handwritingData.snapshot + '" alt="El yazısı"/>';
       } else if (noteHasHandwriting(n)) {
-        html += '<div style="color:var(--muted);margin-top:4px;">✏️ ' +
+        block += '<div style="color:var(--muted);margin-top:4px;">✏️ ' +
           (PA_LANG === 'tr' ? 'El yazısı eki' : 'Handwriting') + '</div>';
       }
-      html += '<div class="fnp-meta">' + (n.timestamp || n.createdAt || '').slice(0, 16).replace('T', ' ') + '</div>';
-      html += '</div>';
+      block += '<div class="fnp-meta">' + (n.timestamp || n.createdAt || '').slice(0, 16).replace('T', ' ') + '</div>';
+      block += '</div>';
     });
-    html += '</div>';
+    block += '</div>';
+    return block;
+  };
+
+  if (primary.type === 'field_note') {
+    html += buildNotesHtml() + buildPhotosHtml();
+  } else {
+    html += buildPhotosHtml() + buildNotesHtml();
   }
 
-  if (!cluster.photos.length && !cluster.notes.length) {
+  if (!photos.length && !notes.length) {
     html = '<div style="color:var(--muted);">' + (PA_LANG === 'tr' ? 'İçerik yok' : 'No content') + '</div>';
   }
 
@@ -12510,8 +12563,12 @@ async function showFieldObservationPopup(primary) {
   updateFieldRightPanel(primary);
   buildLayerPanel();
   scheduleRender();
+  requestAnimationFrame(() => {
+    const prim = body.querySelector('.fnp-primary');
+    if (prim) prim.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
 
-  await Promise.all(cluster.photos.flatMap(p => [
+  await Promise.all(photos.flatMap(p => [
     loadPhotoIntoObservationPopup(p),
     loadPhotoVoiceIntoObservationPopup(p),
   ]));
@@ -13960,7 +14017,48 @@ function getPlanAIDictationPlugin() {
 }
 
 function fieldDictationLang() {
-  return PA_LANG === 'en' ? 'en-US' : 'tr-TR';
+  // Speech language is independent of UI — field notes are Turkish even in EN mode
+  return 'tr-TR';
+}
+
+function fieldIsAppleTouchWeb() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /iPad|iPhone|iPod/i.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function fieldTouchHitSlop() {
+  if (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches) return 1.85;
+  return 1;
+}
+
+function fieldCoarseTouchUi() {
+  return fieldIsAppleTouchWeb() ||
+    (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches);
+}
+
+function fieldOpenObservationFromTap(obj) {
+  if (!obj) {
+    S.selectedIds = [];
+    setDeleteButtonVisible(false);
+    updateSelPanel(null);
+    closeNotePopup();
+    buildLayerPanel();
+    scheduleRender();
+    return;
+  }
+  S.selectedIds = [obj.id];
+  setDeleteButtonVisible(true);
+  updateSelPanel(obj);
+  updateFieldAnalysisActions(obj);
+  if (obj.type === 'field_note' || obj.type === 'field_photo') {
+    if (fieldCoarseTouchUi()) ensureRightPanelVisible();
+    showFieldObservationPopup(obj);
+  } else {
+    closeNotePopup();
+  }
+  scheduleRender();
 }
 
 function setFieldDictationUi(statusId, listening, msg) {
@@ -14050,6 +14148,16 @@ function stopFieldWebDictation() {
   }
 }
 
+function prepareFieldDictationTarget(textarea) {
+  if (!textarea) return;
+  try {
+    textarea.removeAttribute('readonly');
+    textarea.focus({ preventScroll: true });
+    const len = textarea.value?.length || 0;
+    textarea.setSelectionRange(len, len);
+  } catch (_) {}
+}
+
 async function toggleFieldDictation(textareaId, statusId) {
   const ta = document.getElementById(textareaId);
   if (!ta) return;
@@ -14067,6 +14175,7 @@ async function toggleFieldDictation(textareaId, statusId) {
   setFieldDictationUi(statusId, true, t('dictation.listening'));
 
   beginFieldDictationSession(ta);
+  prepareFieldDictationTarget(ta);
 
   if (isCapacitorNative()) {
     const plugin = getPlanAIDictationPlugin();
@@ -14120,6 +14229,10 @@ async function toggleFieldDictation(textareaId, statusId) {
       return;
     }
   }
+  if (fieldIsAppleTouchWeb()) {
+    startFieldWebDictation(ta, statusId);
+    return;
+  }
   await startFieldWebDictation(ta, statusId);
 }
 
@@ -14134,6 +14247,9 @@ function startFieldWebDictation(ta, statusId, silentFail) {
       resolve(false);
       return;
     }
+    const iosWeb = fieldIsAppleTouchWeb();
+    if (iosWeb && !silentFail) showHint(t('dictation.iosHint'), 7000);
+
     let settled = false;
     let gotSpeech = false;
     const finish = ok => {
@@ -14149,33 +14265,42 @@ function startFieldWebDictation(ta, statusId, silentFail) {
         _fieldDictationTargetId = null;
       }
     };
-    const rec = new SR();
-    rec.lang = fieldDictationLang();
-    rec.interimResults = true;
-    rec.maxAlternatives = 1;
-    rec.continuous = true;
-    _fieldWebDictation = rec;
-    rec.onresult = ev => {
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        const r = ev.results[i];
-        const text = r[0]?.transcript || '';
-        if (!text) continue;
-        gotSpeech = true;
-        updateFieldDictationLive(ta, statusId, text, r.isFinal);
-      }
-    };
-    rec.onerror = ev => {
-      if (ev.error === 'aborted') { cleanup(''); finish(false); return; }
-      if (ev.error === 'no-speech' && gotSpeech) { try { rec.stop(); } catch (_) {} return; }
-      if (!silentFail) {
-        if (ev.error === 'not-allowed') showHint(t('dictation.micDenied'));
-        else if (ev.error !== 'no-speech') showHint(t('dictation.fail'));
-      }
-      cleanup('');
-      finish(false);
-    };
-    rec.onend = () => {
-      if (_fieldWebDictation === rec && _fieldDictationTargetId === ta.id && !settled) {
+    const runRecognition = () => {
+      prepareFieldDictationTarget(ta);
+      const rec = new SR();
+      rec.lang = fieldDictationLang();
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
+      rec.continuous = !iosWeb;
+      _fieldWebDictation = rec;
+      rec.onresult = ev => {
+        for (let i = ev.resultIndex; i < ev.results.length; i++) {
+          const r = ev.results[i];
+          const text = r[0]?.transcript || '';
+          if (!text) continue;
+          gotSpeech = true;
+          updateFieldDictationLive(ta, statusId, text, r.isFinal);
+        }
+      };
+      rec.onerror = ev => {
+        if (ev.error === 'aborted') { cleanup(''); finish(false); return; }
+        if (ev.error === 'no-speech' && gotSpeech) { try { rec.stop(); } catch (_) {} return; }
+        if (!silentFail) {
+          if (ev.error === 'not-allowed') showHint(t('dictation.micDenied'));
+          else if (ev.error === 'no-speech' && iosWeb) showHint(t('dictation.iosHint'), 7000);
+          else if (ev.error !== 'no-speech') showHint(t('dictation.fail'));
+        }
+        cleanup('');
+        finish(false);
+      };
+      rec.onend = () => {
+        if (_fieldWebDictation !== rec || _fieldDictationTargetId !== ta.id || settled) return;
+        if (iosWeb) {
+          cleanup(gotSpeech ? t('dictation.done') : '');
+          if (gotSpeech) showHint(t('dictation.done'));
+          finish(gotSpeech);
+          return;
+        }
         if (gotSpeech) {
           cleanup(t('dictation.done'));
           showHint(t('dictation.done'));
@@ -14184,20 +14309,35 @@ function startFieldWebDictation(ta, statusId, silentFail) {
         }
         try {
           rec.start();
-          return;
-        } catch (_) {}
+        } catch (_) {
+          cleanup('');
+          finish(false);
+        }
+      };
+      try {
+        rec.start();
+      } catch (_) {
+        if (!silentFail) showHint(iosWeb ? t('dictation.iosHint') : t('dictation.fail'), 7000);
+        cleanup('');
+        finish(false);
       }
-      cleanup(gotSpeech ? t('dictation.done') : '');
-      if (gotSpeech) showHint(t('dictation.done'));
-      finish(gotSpeech);
     };
-    try {
-      rec.start();
-    } catch (_) {
-      if (!silentFail) showHint(t('dictation.fail'));
-      cleanup('');
-      finish(false);
+
+    if (iosWeb) {
+      ensureFieldDictationMicPermission().catch(() => {});
+      runRecognition();
+      return;
     }
+    ensureFieldDictationMicPermission().then(micOk => {
+      if (!micOk) {
+        endFieldDictationSession(ta);
+        setFieldDictationUi(statusId, false, '');
+        _fieldDictationTargetId = null;
+        finish(false);
+        return;
+      }
+      runRecognition();
+    });
   });
 }
 
@@ -14523,8 +14663,16 @@ function setFieldInteractionMode(mode, fromStylus) {
 function fieldActiveDrawTool() {
   if (!isFieldDrawTool(S.tool) || S.tool === 'select' || S.tool === 'field-note') return false;
   if (S.polyActive || S.plSession) return true;
+  if (S.drawing) return true;
+  if (FIELD_MODE && S.tool === 'circle') return true;
   if (S.selectedIds.length && S.tool === 'circle') return false;
   return true;
+}
+
+function fieldIsDragDrawPointerTool(pointerType) {
+  if (!FIELD_MODE || !fieldDrawingAllowed(pointerType)) return false;
+  return S.tool === 'circle' || S.tool === 'zone' || S.tool === 'arrow' ||
+    S.tool === 'freedraw' || S.tool === 'analysis';
 }
 
 function fieldTapVertexTool() {
@@ -15311,6 +15459,20 @@ function fieldPointerDown(e) {
     clearTimeout(_fieldMapLongPressTimer);
     return true;
   }
+  if (fieldIsDragDrawPointerTool(e.pointerType)) {
+    try { e.preventDefault(); } catch (_) {}
+    _fieldTouch = {
+      id: e.pointerId,
+      x0: e.clientX, y0: e.clientY,
+      t0: Date.now(),
+      moved: false, panning: false, longPressed: false,
+      lastX: e.clientX, lastY: e.clientY,
+      drawDrag: true,
+    };
+    clearTimeout(_fieldMapLongPressTimer);
+    onMouseDown(_pe(e));
+    return true;
+  }
   if (fieldNavigationPointer(e.pointerType)) {
     if (S.tool === 'select' && !S.polyActive && !S.plSession) {
       const wp = clientToWorld(e.clientX, e.clientY);
@@ -15318,7 +15480,22 @@ function fieldPointerDown(e) {
         const o = S.objects[i];
         if (!isObjectSelectableInField(o)) continue;
         const p = unrotateForHit(o, wp.x, wp.y);
-        if (hitTest(o, p.x, p.y)) return false;
+        if (hitTest(o, p.x, p.y)) {
+          if (o.type === 'field_photo' || o.type === 'field_note') {
+            e.preventDefault?.();
+            _fieldTouch = {
+              id: e.pointerId,
+              x0: e.clientX, y0: e.clientY,
+              t0: Date.now(),
+              moved: false, panning: false, longPressed: false,
+              lastX: e.clientX, lastY: e.clientY,
+              tapObjId: o.id,
+            };
+            clearTimeout(_fieldMapLongPressTimer);
+            return true;
+          }
+          return false;
+        }
       }
     }
     _fieldTouch = {
@@ -15364,6 +15541,14 @@ function fieldPointerMove(e) {
     return true;
   }
   if (_fieldTouch && _fieldTouch.id === e.pointerId) {
+    if (_fieldTouch.drawDrag) {
+      _fieldTouch.moved = true;
+      _fieldTouch.lastX = e.clientX;
+      _fieldTouch.lastY = e.clientY;
+      _fieldPointers.set(e.pointerId, { x: e.clientX, y: e.clientY, type: e.pointerType });
+      onMouseMove(_pe(e));
+      return true;
+    }
     if (_fieldTouch.drawVertex) {
       const dx = e.clientX - _fieldTouch.x0;
       const dy = e.clientY - _fieldTouch.y0;
@@ -15377,7 +15562,8 @@ function fieldPointerMove(e) {
     if (_fieldTouch.pinMode) return true;
     const dx = e.clientX - _fieldTouch.x0;
     const dy = e.clientY - _fieldTouch.y0;
-    if (!_fieldTouch.moved && Math.hypot(dx, dy) > 10) {
+    const moveTol = _fieldTouch.tapObjId ? 24 : 10;
+    if (!_fieldTouch.moved && Math.hypot(dx, dy) > moveTol) {
       clearTimeout(_fieldMapLongPressTimer);
       _fieldTouch.moved = true;
       _fieldTouch.panning = true;
@@ -15410,6 +15596,11 @@ function fieldPointerUp(e, wp) {
   }
   clearTimeout(_fieldMapLongPressTimer);
   if (_fieldTouch && _fieldTouch.id === e.pointerId) {
+    if (_fieldTouch.drawDrag) {
+      onMouseUp(_pe(e));
+      _fieldTouch = null;
+      return true;
+    }
     if (_fieldTouch.drawVertex) {
       const tap = !_fieldTouch.moved && !_fieldTouch.longPressed && (Date.now() - _fieldTouch.t0) < 480;
       if (tap && !tryFieldDrawDoubleTap(wp)) fieldAddDrawVertex(wp);
@@ -15427,6 +15618,12 @@ function fieldPointerUp(e, wp) {
       canvas.style.cursor = getCursor();
       RenderCoordinator.endInteraction();
     } else if (tap) {
+      if (_fieldTouch.tapObjId) {
+        const obj = S.objects.find(o => o.id === _fieldTouch.tapObjId);
+        fieldOpenObservationFromTap(obj || null);
+        _fieldTouch = null;
+        return true;
+      }
       if (tryFieldDrawDoubleTap(wp)) { _fieldTouch = null; return true; }
       fieldTapSelect(wp, e);
     }
@@ -15456,17 +15653,9 @@ function fieldTapSelect(wp, e) {
     const p = unrotateForHit(o, wp.x, wp.y);
     if (hitTest(o, p.x, p.y)) { found = o.id; break; }
   }
-  S.selectedIds = found ? [found] : [];
-  setDeleteButtonVisible(S.selectedIds.length > 0);
   const selObj = found ? S.objects.find(o => o.id === found) : null;
-  updateSelPanel(selObj);
-  if (selObj?.type === 'field_note' || selObj?.type === 'field_photo') {
-    showFieldObservationPopup(selObj);
-  } else {
-    closeNotePopup();
-  }
+  fieldOpenObservationFromTap(selObj);
   if (!found) buildLayerPanel();
-  scheduleRender();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -18661,11 +18850,13 @@ function hitTest(obj, wx, wy) {
   if (obj.type === 'field_note') {
     const w = latLonToWorld(obj.lat, obj.lon);
     const headY = w.y - 22 / S.scale;
-    return Math.hypot(wx - w.x, wy - headY) <= Math.max(14, 20) / S.scale;
+    const pad = fieldTouchHitSlop();
+    return Math.hypot(wx - w.x, wy - headY) <= Math.max(14, 20 * pad) / S.scale;
   }
   if (obj.type === 'field_photo') {
     const w = latLonToWorld(obj.lat, obj.lon);
-    const s = 1 / S.scale;
+    const pad = fieldTouchHitSlop();
+    const s = (1 / S.scale) * pad;
     const tw = 36 * s;
     const th = 28 * s;
     const tx = w.x - tw / 2;
@@ -19080,7 +19271,10 @@ canvas.addEventListener('pointerdown', e => {
   _fieldLastPointerAt = Date.now();
   try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
   S._activePointerType = e.pointerType;
-  if (fieldPointerDown(e)) return;
+  if (fieldPointerDown(e)) {
+    try { e.preventDefault(); } catch (_) {}
+    return;
+  }
   const pe = _pe(e);
   if (FIELD_MODE && fieldNavigationPointer(e.pointerType) && !fieldDrawingAllowed(e.pointerType)) {
     const wp = clientToWorld(pe.clientX, pe.clientY);
@@ -19108,6 +19302,10 @@ canvas.addEventListener('pointerup', e => {
 });
 canvas.addEventListener('pointercancel', e => {
   if (e.pointerType === 'mouse') return;
+  if (_fieldTouch?.drawDrag && _fieldTouch.id === e.pointerId) {
+    onMouseUp(_pe(e));
+    _fieldTouch = null;
+  }
   _fieldPointers.delete(e.pointerId);
   _fieldTouch = null;
   S.panning = false;
@@ -19529,14 +19727,14 @@ function onMouseUp(e) {
       const tooSmall =
         (obj.type==='line'||obj.type==='arrow') && Math.hypot(obj.points[2]-obj.points[0],obj.points[3]-obj.points[1])<3 ||
         obj.type==='zone' && Math.abs(obj.points[2]-obj.points[0])<4 ||
-        obj.type==='circle' && obj.r < 3 ||
+        obj.type==='circle' && obj.r < Math.max(3, 8 / S.scale) ||
         obj.type==='freedraw' && obj.points.length<4;
       if (tooSmall) S.objects = S.objects.filter(o => o.id !== S.activeId);
       else {
         pushHistory();
         S.selectedIds = [obj.id];
         updateSelPanel(obj);
-        if (FIELD_MODE && obj.type === 'circle' && obj.r >= 8) {
+        if (FIELD_MODE && obj.type === 'circle' && obj.r >= Math.max(8, 12 / S.scale)) {
           updateFieldAnalysisActions(obj);
           showHint(t('hint.slopeAfterCircle'));
           runLocalSlopeAnalysis(obj).catch(() => showHint(t('slope.offline')));
@@ -21848,10 +22046,14 @@ async function searchLocation() {
       div.className = 'loc-item';
       div.innerHTML = `${item.display_name.split(',').slice(0,3).join(', ')}<small>${parseFloat(item.lat).toFixed(4)}°N, ${parseFloat(item.lon).toFixed(4)}°E</small>`;
       div.onclick = () => {
-        setMapCenter(parseFloat(item.lat), parseFloat(item.lon));
+        const lat = parseFloat(item.lat);
+        const lon = parseFloat(item.lon);
+        pauseLiveMapFollow();
+        setMapCenter(lat, lon);
         if (S.basemap === 'none') { S.basemap='osm'; document.getElementById('btn-osm').classList.add('active'); }
         hideLocResults();
-        showHint(`📍 ${item.display_name.split(',')[0]}`);
+        showHint(`📍 ${item.display_name.split(',')[0]}`, 3200);
+        showHint(t('gps.hint.searchPinned'), 6000);
       };
       resultsEl.appendChild(div);
     });
