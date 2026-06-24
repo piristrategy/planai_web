@@ -142,7 +142,28 @@
     return html.replace(/<script([^>]*)\s+type=["']module["']/gi, '<script$1');
   }
 
-  function finishReplayHtml(html) {
+  function collectEmbeddedPayload(html) {
+    if (!html || typeof html !== 'string') return '';
+    const chunkRe = /<script[^>]*\sid=["']planai-cinematic-chunk-(\d+)["'][^>]*>([\s\S]*?)<\/script>/gi;
+    const chunks = [];
+    let m;
+    while ((m = chunkRe.exec(html)) !== null) {
+      chunks[+m[1]] = m[2];
+    }
+    if (chunks.length) return chunks.join('');
+    const single = html.match(/<script[^>]*\sid=["']planai-cinematic-payload["'][^>]*>([\s\S]*?)<\/script>/i);
+    return single ? single[1] : '';
+  }
+
+  /** Strip offline launcher shell — used for in-app preview of saved/shared exports. */
+  function unwrapOfflineLauncher(html) {
+    if (!html || typeof html !== 'string') return html;
+    if (!html.includes('id="planai-offline-launcher"')) return html;
+    const inner = collectEmbeddedPayload(html);
+    return inner && inner.length > 500 ? inner : html;
+  }
+
+  function finishReplayHtml(html, opts) {
     if (!html) return html;
     if (global.FieldSafeReplay?.stripMobileFallback) {
       html = global.FieldSafeReplay.stripMobileFallback(html);
@@ -155,7 +176,10 @@
     if (global.FieldReplaySafariRoute?.injectRouteFix) {
       html = global.FieldReplaySafariRoute.injectRouteFix(html);
     }
-    return wrapOfflineFileLauncher(html);
+    if (opts && opts.forShare) {
+      return wrapOfflineFileLauncher(html);
+    }
+    return html;
   }
 
   function coordLon(v) {
@@ -254,7 +278,7 @@
     return null;
   }
 
-  function buildFromTemplate(prepared, safePayload) {
+  function buildFromTemplate(prepared, safePayload, opts) {
     const tpl = loadTemplateSync();
     if (!tpl) return null;
     let html = tpl;
@@ -274,10 +298,10 @@
     const title = escapeAttr((prepared.projectName || 'PlanAI Field') + ' — Inspection Replay');
     html = html.replace(/<title>[^<]*<\/title>/, '<title>' + title + '</title>');
     html = html.replace(/<html lang="[^"]*">/, '<html lang="' + (prepared.lang || 'en') + '">');
-    return finishReplayHtml(html);
+    return finishReplayHtml(html, opts);
   }
 
-  function buildFromAssets(prepared, safePayload) {
+  function buildFromAssets(prepared, safePayload, opts) {
     const assets = global.FieldReplayAssets;
     if (!assets?.js) return null;
     const html = '<!DOCTYPE html><html lang="' + (prepared.lang || 'en') + '"><head><meta charset="UTF-8"/>' +
@@ -288,7 +312,7 @@
       '<script>window.__PLANAI_REPORT__=' + safePayload + ';<\/script>' +
       '<script>' + assets.js + '<\/script>' +
       '</body></html>';
-    return finishReplayHtml(html);
+    return finishReplayHtml(html, opts);
   }
 
   function exposeReplayMapInHtml(html) {
@@ -302,7 +326,7 @@
     );
   }
 
-  function buildReplayHtml(payload) {
+  function buildReplayHtml(payload, opts) {
     const tpl = loadTemplateSync();
     let prepared = prepareReplayPayload(payload);
     prepared = mergeTemplateShellFields(prepared, tpl);
@@ -310,14 +334,18 @@
       ? ExportSafety.safeJsonInHtml(prepared)
       : JSON.stringify(prepared).replace(/</g, '\\u003c');
 
-    const fromTemplate = buildFromTemplate(prepared, safePayload);
+    const fromTemplate = buildFromTemplate(prepared, safePayload, opts);
     if (fromTemplate) return fromTemplate;
 
-    const fromAssets = buildFromAssets(prepared, safePayload);
+    const fromAssets = buildFromAssets(prepared, safePayload, opts);
     if (fromAssets) return fromAssets;
 
     console.warn('[FieldReplay] No template or assets — check interaktif/ reference and FieldReplayAssets.js');
     return null;
+  }
+
+  function wrapForOfflineShare(html) {
+    return wrapOfflineFileLauncher(html);
   }
 
   function escapeAttr(s) {
@@ -329,5 +357,7 @@
     prepareReplayPayload,
     preloadReplayTemplate,
     exposeReplayMapInHtml,
+    unwrapOfflineLauncher,
+    wrapForOfflineShare,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

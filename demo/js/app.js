@@ -10096,6 +10096,37 @@ function showFieldExportSheet() {
   fieldUiRaise('field-export-sheet', { modal: true });
 }
 
+function unwrapInteractiveHtmlForPreview(html) {
+  if (!html || typeof html !== 'string') return html;
+  if (typeof FieldCinematicReport !== 'undefined' && FieldCinematicReport.unwrapOfflineLauncher) {
+    return FieldCinematicReport.unwrapOfflineLauncher(html);
+  }
+  return html;
+}
+
+function wrapInteractiveHtmlForShare(html) {
+  if (!html || typeof html !== 'string') return html;
+  if (!html.includes('window.__PLANAI_REPORT__')) return html;
+  if (typeof FieldCinematicReport !== 'undefined' && FieldCinematicReport.wrapForOfflineShare) {
+    return FieldCinematicReport.wrapForOfflineShare(html);
+  }
+  return html;
+}
+
+async function resolveInteractiveShareBlob(p) {
+  if (!p?.blob) return null;
+  const isInteractive = p.kind === 'interactive' ||
+    (p.mimeType && String(p.mimeType).indexOf('html') >= 0);
+  if (!isInteractive) return p.blob;
+  let html = p.previewHtml;
+  if (!html) {
+    try { html = await p.blob.text(); } catch (_) { return p.blob; }
+  }
+  if (!html || !html.includes('window.__PLANAI_REPORT__')) return p.blob;
+  const wrapped = wrapInteractiveHtmlForShare(unwrapInteractiveHtmlForPreview(html));
+  return new Blob([wrapped], { type: p.mimeType || 'text/html;charset=utf-8' });
+}
+
 async function offerFieldExport(opts) {
   hideReportProgress();
   closeFieldExportSheet();
@@ -10151,7 +10182,8 @@ function blobToBase64Data(blob) {
 
 async function shareReportPreviewHtml(html, filename, title) {
   if (!html) return false;
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const shareHtml = wrapInteractiveHtmlForShare(unwrapInteractiveHtmlForPreview(html));
+  const blob = new Blob([shareHtml], { type: 'text/html;charset=utf-8' });
   const name = filename || safeProjectExportFilename('_interaktif.html');
   if (_fieldExportPending?.objectUrl) {
     try { URL.revokeObjectURL(_fieldExportPending.objectUrl); } catch (_) {}
@@ -10160,7 +10192,7 @@ async function shareReportPreviewHtml(html, filename, title) {
     blob,
     filename: name,
     mimeType: 'text/html;charset=utf-8',
-    previewHtml: html,
+    previewHtml: unwrapInteractiveHtmlForPreview(html),
     pdfBlob: null,
     kind: 'interactive',
     objectUrl: URL.createObjectURL(blob),
@@ -10175,7 +10207,8 @@ async function shareReportPreviewHtml(html, filename, title) {
 }
 
 function downloadReportPreviewHtml(html, filename) {
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const shareHtml = wrapInteractiveHtmlForShare(unwrapInteractiveHtmlForPreview(html));
+  const blob = new Blob([shareHtml], { type: 'text/html;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = filename || safeProjectExportFilename('_interaktif.html');
@@ -10189,7 +10222,8 @@ async function triggerReportHtmlShareOrDownload(html, htmlName, projectName) {
   if (!html) return false;
   const name = htmlName || safeProjectExportFilename('_interaktif.html');
   const title = projectName || 'PlanAI Field';
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const shareHtml = wrapInteractiveHtmlForShare(unwrapInteractiveHtmlForPreview(html));
+  const blob = new Blob([shareHtml], { type: 'text/html;charset=utf-8' });
   try {
     const file = new File([blob], name, { type: 'text/html' });
     if (navigator.share) {
@@ -10213,12 +10247,13 @@ window.triggerReportHtmlShareOrDownload = triggerReportHtmlShareOrDownload;
 async function shareFieldExportFile(dialogTitle, target) {
   const p = _fieldExportPending;
   if (!p?.blob) return false;
+  const shareBlob = await resolveInteractiveShareBlob(p);
   const shareTarget = target || 'any';
   if (typeof FieldFileBridge !== 'undefined' && FieldFileBridge.shareFile) {
     try {
       showHint(t('export.openingShare'));
       const ok = await FieldFileBridge.shareFile({
-        blob: p.blob,
+        blob: shareBlob,
         filename: p.filename,
         mimeType: p.mimeType,
         title: FIELD_PROJECT.name || p.filename,
@@ -10238,7 +10273,7 @@ async function shareFieldExportFile(dialogTitle, target) {
   if (isCapacitorNative()) {
     try {
       showHint(t('export.openingShare'));
-      const cached = await writeFieldExportBlobToCache(p.blob, p.filename);
+      const cached = await writeFieldExportBlobToCache(shareBlob, p.filename);
       p.cachePath = cached.rel;
       const PlanAIShare = getPlanAISharePlugin();
       if (PlanAIShare?.shareCachedFile) {
@@ -10272,7 +10307,7 @@ async function shareFieldExportFile(dialogTitle, target) {
     }
   }
   try {
-    const file = new File([p.blob], p.filename || 'export', { type: p.mimeType || 'application/octet-stream' });
+    const file = new File([shareBlob], p.filename || 'export', { type: p.mimeType || 'application/octet-stream' });
     if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
       await navigator.share({ files: [file], title: FIELD_PROJECT.name || p.filename });
       closeFieldExportSheet();
@@ -10306,11 +10341,12 @@ async function fieldExportActionDrive() {
   return fieldExportActionTarget('drive');
 }
 
-function fieldExportActionDownload() {
+async function fieldExportActionDownload() {
   const p = _fieldExportPending;
   if (!p?.blob) return;
+  const blob = await resolveInteractiveShareBlob(p);
   const a = document.createElement('a');
-  a.href = p.objectUrl || URL.createObjectURL(p.blob);
+  a.href = URL.createObjectURL(blob);
   a.download = p.filename || 'export';
   document.body.appendChild(a);
   a.click();
@@ -11145,6 +11181,7 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
     let html = '';
     try {
       html = pendingShare?.previewHtml || await blob.text();
+      html = unwrapInteractiveHtmlForPreview(html);
       if (html && html.includes('window.__PLANAI_REPORT__')) {
         if (typeof FieldSafeReplay !== 'undefined' && FieldSafeReplay.stripExternalFonts) {
           html = FieldSafeReplay.stripExternalFonts(html);
