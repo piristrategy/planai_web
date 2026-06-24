@@ -11168,13 +11168,7 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
       frame.removeAttribute('src');
       frame.removeAttribute('srcdoc');
       if (html) {
-        const proto = (location.protocol || '').toLowerCase();
-        if (proto === 'http:' || proto === 'https:') {
-          _fieldReportViewerUrl = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
-          frame.src = _fieldReportViewerUrl;
-        } else {
-          frame.srcdoc = html;
-        }
+        frame.srcdoc = html;
       } else {
         _fieldReportViewerUrl = URL.createObjectURL(blob);
         frame.src = _fieldReportViewerUrl;
