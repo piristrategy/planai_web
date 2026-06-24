@@ -11149,6 +11149,9 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
         if (typeof FieldSafeReplay !== 'undefined' && FieldSafeReplay.stripExternalFonts) {
           html = FieldSafeReplay.stripExternalFonts(html);
         }
+        if (typeof FieldCinematicReport !== 'undefined' && FieldCinematicReport.exposeReplayMapInHtml) {
+          html = FieldCinematicReport.exposeReplayMapInHtml(html);
+        }
         if (typeof FieldReplaySafariRoute !== 'undefined') {
           if (FieldReplaySafariRoute.injectRouteFix) {
             html = FieldReplaySafariRoute.injectRouteFix(html);

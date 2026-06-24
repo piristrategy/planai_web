@@ -143,11 +143,23 @@
     return finishReplayHtml(html);
   }
 
+  function exposeReplayMapInHtml(html) {
+    if (!html || typeof html !== 'string') return html;
+    if (html.includes('__PLANAI_REPLAY_MAP__=Y')) return html;
+    const created = 'Y=new qf.Map({container:N.current,style:_b,bounds:[[Z.minLon,Z.minLat],[Z.maxLon,Z.maxLat]],fitBoundsOptions:{padding:48},attributionControl:!0});';
+    if (!html.includes(created)) return html;
+    return html.replace(
+      created,
+      created + 'try{Y.getContainer()._map=Y;window.__PLANAI_REPLAY_MAP__=Y}catch(e){};',
+    );
+  }
+
   function finishReplayHtml(html) {
     if (!html) return html;
     if (global.FieldSafeReplay?.stripExternalFonts) {
       html = global.FieldSafeReplay.stripExternalFonts(html);
     }
+    html = exposeReplayMapInHtml(html);
     if (global.FieldReplaySafariRoute?.injectRouteFix) {
       html = global.FieldReplaySafariRoute.injectRouteFix(html);
     }
@@ -180,5 +192,6 @@
     buildReplayHtml,
     prepareReplayPayload,
     preloadReplayTemplate,
+    exposeReplayMapInHtml,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
