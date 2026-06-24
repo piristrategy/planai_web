@@ -10104,6 +10104,148 @@ function unwrapInteractiveHtmlForPreview(html) {
   return html;
 }
 
+function isPreviewIOSWebKit() {
+  try {
+    const ua = navigator.userAgent || '';
+    const iOS = /iPad|iPhone|iPod/.test(ua);
+    const iPadOS = navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1;
+    return iOS || iPadOS;
+  } catch (_) {
+    return false;
+  }
+}
+
+/** Preview-only: MapLibre line layers need resize/repaint after modal iframe gains layout. */
+function injectPreviewMapResizeBoot(html) {
+  if (!html || typeof html !== 'string') return html;
+  if (!html.includes('id="root"') || html.includes('id="planai-preview-map-resize"')) return html;
+  const boot = [
+    '<script id="planai-preview-map-resize">',
+    '(function(){',
+    '"use strict";',
+    'function poke(tag){',
+    'try{',
+    'var m=window.__PLANAI_REPLAY_MAP__;',
+    'if(m){',
+    'if(typeof m.resize==="function")m.resize();',
+    'if(typeof m.triggerRepaint==="function")m.triggerRepaint();',
+    '}',
+    'var wrap=document.getElementById("planai-route-svg-wrap");',
+    'if(wrap&&typeof wrap._redraw==="function")wrap._redraw();',
+    '}catch(e){console.error("Route Error:",tag,e);}',
+    '}',
+    'function schedule(){',
+    'poke("init");',
+    'setTimeout(function(){poke("t250");},250);',
+    'setTimeout(function(){poke("t800");},800);',
+    'setTimeout(function(){poke("t1800");},1800);',
+    '}',
+    'if(document.readyState==="complete")schedule();',
+    'else window.addEventListener("load",schedule);',
+    'try{',
+    'var root=document.getElementById("root");',
+    'if(root&&window.ResizeObserver){',
+    'new ResizeObserver(function(){poke("ro");}).observe(root);',
+    '}',
+    '}catch(e){console.error("Route Error: ro",e);}',
+    '})();',
+    '<\/script>',
+  ].join('');
+  if (html.includes('</body>')) return html.replace('</body>', boot + '</body>');
+  return html + boot;
+}
+
+function prepareInteractiveHtmlForPreview(html) {
+  if (!html || typeof html !== 'string') return html;
+  html = unwrapInteractiveHtmlForPreview(html);
+  if (!html.includes('window.__PLANAI_REPORT__')) return html;
+  if (typeof FieldSafeReplay !== 'undefined' && FieldSafeReplay.stripExternalFonts) {
+    html = FieldSafeReplay.stripExternalFonts(html);
+  }
+  if (typeof FieldCinematicReport !== 'undefined' && FieldCinematicReport.exposeReplayMapInHtml) {
+    html = FieldCinematicReport.exposeReplayMapInHtml(html);
+  }
+  if (typeof FieldReplaySafariRoute !== 'undefined' && !html.includes('id="planai-safari-route-fix"')) {
+    if (FieldReplaySafariRoute.injectRouteFix) {
+      html = FieldReplaySafariRoute.injectRouteFix(html);
+    } else if (FieldReplaySafariRoute.stripHarmfulReplayPatches) {
+      html = FieldReplaySafariRoute.stripHarmfulReplayPatches(html);
+    }
+  }
+  return injectPreviewMapResizeBoot(html);
+}
+
+function nudgePreviewReplayMap(frame) {
+  if (!frame) return;
+  try {
+    const win = frame.contentWindow;
+    if (!win) return;
+    const poke = () => {
+      try {
+        const map = win.__PLANAI_REPLAY_MAP__;
+        if (map) {
+          if (typeof map.resize === 'function') map.resize();
+          if (typeof map.triggerRepaint === 'function') map.triggerRepaint();
+        }
+        const wrap = win.document?.getElementById('planai-route-svg-wrap');
+        if (wrap && typeof wrap._redraw === 'function') wrap._redraw();
+      } catch (e) {
+        console.error('Route Error: parent poke', e);
+      }
+    };
+    poke();
+    setTimeout(poke, 250);
+    setTimeout(poke, 800);
+    setTimeout(poke, 1800);
+  } catch (_) {}
+}
+
+function openFieldReportViewerModal() {
+  document.getElementById('field-report-viewer-backdrop')?.classList.add('open');
+  document.getElementById('field-report-viewer')?.classList.add('open');
+  document.body.classList.add('field-report-viewer-open');
+  fieldUiRaise('field-report-viewer', { modal: true });
+}
+
+function mountInteractiveReportInViewerFrame(frame, html, blob) {
+  if (!frame) return;
+  frame.style.display = 'block';
+  if (_fieldReportViewerUrl) {
+    try { URL.revokeObjectURL(_fieldReportViewerUrl); } catch (_) {}
+    _fieldReportViewerUrl = null;
+  }
+  frame.removeAttribute('src');
+  frame.removeAttribute('srcdoc');
+  openFieldReportViewerModal();
+  const loadContent = () => {
+    const onFrameLoad = () => {
+      nudgePreviewReplayMap(frame);
+    };
+    frame.addEventListener('load', onFrameLoad, { once: true });
+    if (isPreviewIOSWebKit() && html) {
+      frame.srcdoc = html;
+      return;
+    }
+    if (html) {
+      try {
+        const viewerBlob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        _fieldReportViewerUrl = URL.createObjectURL(viewerBlob);
+        frame.src = _fieldReportViewerUrl;
+        return;
+      } catch (e) {
+        console.warn('[Preview iframe blob]', e);
+      }
+      frame.srcdoc = html;
+      return;
+    }
+    if (blob) {
+      _fieldReportViewerUrl = URL.createObjectURL(blob);
+      frame.src = _fieldReportViewerUrl;
+    }
+  };
+  requestAnimationFrame(() => requestAnimationFrame(loadContent));
+}
+
 function wrapInteractiveHtmlForShare(html) {
   if (!html || typeof html !== 'string') return html;
   if (!html.includes('window.__PLANAI_REPORT__')) return html;
@@ -11181,43 +11323,10 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
     let html = '';
     try {
       html = pendingShare?.previewHtml || await blob.text();
-      html = unwrapInteractiveHtmlForPreview(html);
-      if (html && html.includes('window.__PLANAI_REPORT__')) {
-        if (typeof FieldSafeReplay !== 'undefined' && FieldSafeReplay.stripExternalFonts) {
-          html = FieldSafeReplay.stripExternalFonts(html);
-        }
-        if (typeof FieldCinematicReport !== 'undefined' && FieldCinematicReport.exposeReplayMapInHtml) {
-          html = FieldCinematicReport.exposeReplayMapInHtml(html);
-        }
-        if (typeof FieldReplaySafariRoute !== 'undefined') {
-          if (FieldReplaySafariRoute.injectRouteFix) {
-            html = FieldReplaySafariRoute.injectRouteFix(html);
-          } else if (FieldReplaySafariRoute.stripHarmfulReplayPatches) {
-            html = FieldReplaySafariRoute.stripHarmfulReplayPatches(html);
-          }
-        }
-      }
+      html = prepareInteractiveHtmlForPreview(html);
     } catch (_) { html = ''; }
     if (embed) { embed.removeAttribute('src'); embed.style.display = 'none'; }
-    if (frame) {
-      frame.style.display = 'block';
-      if (_fieldReportViewerUrl) {
-        try { URL.revokeObjectURL(_fieldReportViewerUrl); } catch (_) {}
-        _fieldReportViewerUrl = null;
-      }
-      frame.removeAttribute('src');
-      frame.removeAttribute('srcdoc');
-      if (html) {
-        frame.srcdoc = html;
-      } else {
-        _fieldReportViewerUrl = URL.createObjectURL(blob);
-        frame.src = _fieldReportViewerUrl;
-      }
-    }
-    document.getElementById('field-report-viewer-backdrop')?.classList.add('open');
-    document.getElementById('field-report-viewer')?.classList.add('open');
-    document.body.classList.add('field-report-viewer-open');
-    fieldUiRaise('field-report-viewer', { modal: true });
+    mountInteractiveReportInViewerFrame(frame, html, blob);
     return;
   }
   const url = URL.createObjectURL(blob);
