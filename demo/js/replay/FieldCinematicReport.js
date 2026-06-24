@@ -156,7 +156,9 @@
 
   function finishReplayHtml(html) {
     if (!html) return html;
-    if (global.FieldSafeReplay?.stripExternalFonts) {
+    if (global.FieldSafeReplay?.injectMobileFallback) {
+      html = global.FieldSafeReplay.injectMobileFallback(html);
+    } else if (global.FieldSafeReplay?.stripExternalFonts) {
       html = global.FieldSafeReplay.stripExternalFonts(html);
     }
     html = exposeReplayMapInHtml(html);

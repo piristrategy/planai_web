@@ -10096,10 +10096,34 @@ function showFieldExportSheet() {
   fieldUiRaise('field-export-sheet', { modal: true });
 }
 
+function ensureMobileReplayHtml(html) {
+  if (!html || typeof html !== 'string') return html;
+  if (typeof FieldSafeReplay !== 'undefined' && FieldSafeReplay.ensureMobileViewableReplayHtml) {
+    return FieldSafeReplay.ensureMobileViewableReplayHtml(html);
+  }
+  return html;
+}
+
+async function prepareInteractiveExportBlob(opts) {
+  if (!opts?.blob) return opts;
+  const isInteractive = opts.kind === 'interactive' ||
+    (opts.mimeType && String(opts.mimeType).indexOf('html') >= 0);
+  if (!isInteractive) return opts;
+  let html = opts.previewHtml || '';
+  if (!html) {
+    try { html = await opts.blob.text(); } catch (_) { return opts; }
+  }
+  html = ensureMobileReplayHtml(html);
+  if (!html) return opts;
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  return Object.assign({}, opts, { blob, previewHtml: html, mimeType: 'text/html;charset=utf-8' });
+}
+
 async function offerFieldExport(opts) {
   hideReportProgress();
   closeFieldExportSheet();
   if (!opts?.blob) return;
+  opts = await prepareInteractiveExportBlob(opts);
   if (deviceSecurityBlocksExport()) {
     showHint(typeof PlanAISecurity !== 'undefined' ? PlanAISecurity.exportBlockedMessage()
       : (typeof DeviceSecurity !== 'undefined' ? DeviceSecurity.exportBlockedMessage() : 'Güvenlik modu: dışa aktarma kısıtlı'));
@@ -10151,6 +10175,7 @@ function blobToBase64Data(blob) {
 
 async function shareReportPreviewHtml(html, filename, title) {
   if (!html) return false;
+  html = ensureMobileReplayHtml(html);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const name = filename || safeProjectExportFilename('_interaktif.html');
   if (_fieldExportPending?.objectUrl) {
@@ -10175,6 +10200,7 @@ async function shareReportPreviewHtml(html, filename, title) {
 }
 
 function downloadReportPreviewHtml(html, filename) {
+  html = ensureMobileReplayHtml(html);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -10187,6 +10213,7 @@ function downloadReportPreviewHtml(html, filename) {
 
 async function triggerReportHtmlShareOrDownload(html, htmlName, projectName) {
   if (!html) return false;
+  html = ensureMobileReplayHtml(html);
   const name = htmlName || safeProjectExportFilename('_interaktif.html');
   const title = projectName || 'PlanAI Field';
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
