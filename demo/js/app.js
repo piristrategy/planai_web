@@ -11962,6 +11962,11 @@ function buildReplayPayloadFromReport(data) {
 
 async function buildCinematicInteractiveReportHTML(data, opts) {
   if (typeof FieldCinematicReport === 'undefined') {
+    console.warn('[CinematicReport] FieldCinematicReport not loaded');
+    return null;
+  }
+  if (typeof FieldReplayAssets === 'undefined' || !FieldReplayAssets?.js) {
+    console.warn('[CinematicReport] FieldReplayAssets not loaded — cinematic replay unavailable');
     return null;
   }
   try {
@@ -12018,6 +12023,7 @@ async function buildInteractiveFieldReportHTML(data) {
   }
   const cinematic = await buildCinematicInteractiveReportHTML(data);
   if (cinematic) return cinematic;
+  console.warn('[InteractiveReport] Cinematic HTML unavailable — using legacy interactive layout');
   return buildInteractiveFieldReportHTMLLegacy(data);
 }
 

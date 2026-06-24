@@ -29,7 +29,6 @@ $ExcludeAlways = @(
   'scripts',
   'yedek',
   'releases',
-  'interaktif',
   'interaktif-replay',
   'workers'
 )
