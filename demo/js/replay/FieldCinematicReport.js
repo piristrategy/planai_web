@@ -10,6 +10,39 @@
     'interaktif/Field_Journey_17_06_2026_interaktif.html',
   ];
 
+  const CINEMATIC_FILE_BOOT = [
+    '(function(){',
+    '"use strict";',
+    'var p=(location.protocol||"").toLowerCase();',
+    'var href=location.href||"";',
+    'var offline=p==="file:"||p==="content:"||p==="capacitor-file:"||p==="blob:"||p==="about:"||!p||p==="null:"||/^file:/i.test(href);',
+    'try{if(window.origin==="null")offline=true;}catch(e){}',
+    'if(!offline)return;',
+    'window.__PLANAI_OFFLINE_REPLAY__=1;',
+    '})();',
+  ].join('');
+
+  function demoteModuleScripts(html) {
+    if (!html) return html;
+    return html.replace(/<script([^>]*)\s+type=["']module["']/gi, '<script$1');
+  }
+
+  function injectCinematicFileBoot(html) {
+    if (!html || html.includes('id="planai-cinematic-file-boot"')) return html;
+    const boot = '<script id="planai-cinematic-file-boot">' + CINEMATIC_FILE_BOOT + '<\/script>';
+    const marker = 'window.__PLANAI_REPORT__=';
+    const idx = html.indexOf(marker);
+    if (idx >= 0) {
+      const end = html.indexOf('</script>', idx);
+      if (end >= 0) {
+        const insertAt = end + '</script>'.length;
+        return html.slice(0, insertAt) + boot + html.slice(insertAt);
+      }
+    }
+    if (html.includes('</body>')) return html.replace('</body>', boot + '</body>');
+    return html + boot;
+  }
+
   function coordLon(v) {
     if (!v) return NaN;
     return v.lon != null ? v.lon : v.lng;
@@ -138,7 +171,7 @@
       '<style>' + assets.css + '</style></head><body>' +
       '<div id="root"></div>' +
       '<script>window.__PLANAI_REPORT__=' + safePayload + ';<\/script>' +
-      '<script type="module">' + assets.js + '<\/script>' +
+      '<script>' + assets.js + '<\/script>' +
       '</body></html>';
     return finishReplayHtml(html);
   }
@@ -156,11 +189,14 @@
 
   function finishReplayHtml(html) {
     if (!html) return html;
-    if (global.FieldSafeReplay?.injectMobileFallback) {
-      html = global.FieldSafeReplay.injectMobileFallback(html);
-    } else if (global.FieldSafeReplay?.stripExternalFonts) {
+    if (global.FieldSafeReplay?.stripMobileFallback) {
+      html = global.FieldSafeReplay.stripMobileFallback(html);
+    }
+    if (global.FieldSafeReplay?.stripExternalFonts) {
       html = global.FieldSafeReplay.stripExternalFonts(html);
     }
+    html = demoteModuleScripts(html);
+    html = injectCinematicFileBoot(html);
     html = exposeReplayMapInHtml(html);
     if (global.FieldReplaySafariRoute?.injectRouteFix) {
       html = global.FieldReplaySafariRoute.injectRouteFix(html);

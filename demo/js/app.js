@@ -10096,39 +10096,10 @@ function showFieldExportSheet() {
   fieldUiRaise('field-export-sheet', { modal: true });
 }
 
-function ensureMobileReplayHtml(html) {
-  if (!html || typeof html !== 'string') return html;
-  if (typeof FieldSafeReplay === 'undefined') return html;
-  if (FieldSafeReplay.buildPhoneExportHtml) {
-    const phone = FieldSafeReplay.buildPhoneExportHtml(html);
-    if (phone) return phone;
-  }
-  if (FieldSafeReplay.ensureMobileViewableReplayHtml) {
-    return FieldSafeReplay.ensureMobileViewableReplayHtml(html);
-  }
-  return html;
-}
-
-async function prepareInteractiveExportBlob(opts) {
-  if (!opts?.blob) return opts;
-  const isInteractive = opts.kind === 'interactive' ||
-    (opts.mimeType && String(opts.mimeType).indexOf('html') >= 0);
-  if (!isInteractive) return opts;
-  let html = opts.previewHtml || '';
-  if (!html) {
-    try { html = await opts.blob.text(); } catch (_) { return opts; }
-  }
-  html = ensureMobileReplayHtml(html);
-  if (!html) return opts;
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  return Object.assign({}, opts, { blob, previewHtml: html, mimeType: 'text/html;charset=utf-8' });
-}
-
 async function offerFieldExport(opts) {
   hideReportProgress();
   closeFieldExportSheet();
   if (!opts?.blob) return;
-  opts = await prepareInteractiveExportBlob(opts);
   if (deviceSecurityBlocksExport()) {
     showHint(typeof PlanAISecurity !== 'undefined' ? PlanAISecurity.exportBlockedMessage()
       : (typeof DeviceSecurity !== 'undefined' ? DeviceSecurity.exportBlockedMessage() : 'Güvenlik modu: dışa aktarma kısıtlı'));
@@ -10180,7 +10151,6 @@ function blobToBase64Data(blob) {
 
 async function shareReportPreviewHtml(html, filename, title) {
   if (!html) return false;
-  html = ensureMobileReplayHtml(html);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const name = filename || safeProjectExportFilename('_interaktif.html');
   if (_fieldExportPending?.objectUrl) {
@@ -10205,7 +10175,6 @@ async function shareReportPreviewHtml(html, filename, title) {
 }
 
 function downloadReportPreviewHtml(html, filename) {
-  html = ensureMobileReplayHtml(html);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -10218,7 +10187,6 @@ function downloadReportPreviewHtml(html, filename) {
 
 async function triggerReportHtmlShareOrDownload(html, htmlName, projectName) {
   if (!html) return false;
-  html = ensureMobileReplayHtml(html);
   const name = htmlName || safeProjectExportFilename('_interaktif.html');
   const title = projectName || 'PlanAI Field';
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
@@ -12288,7 +12256,7 @@ async function createInteractiveFieldReport() {
       try { report.pdfBlob = await exportProjectPDF(report.html); } catch (e) { console.warn('[Journey PDF]', e); }
     }
     setReportProgress(95, PA_LANG === 'tr' ? 'Mekansal tekrar hazırlanıyor…' : 'Preparing spatial playback…');
-    const interactiveHtml = ensureMobileReplayHtml(await buildInteractiveFieldReportHTML(report));
+    const interactiveHtml = await buildInteractiveFieldReportHTML(report);
     await persistProjectReportBundle(report, { interactiveHtml });
     showHint(report.pdfBlob ? t('report.journeyBundleReady') : t('report.savedToProject'));
     await offerFieldExport({
@@ -12344,8 +12312,7 @@ async function createSimulatedFieldReports() {
       loadBrandLogoDataUrl,
       synthesizeDemoVoiceDataUrl,
     });
-    const interactiveHtml = ensureMobileReplayHtml(report.interactiveHtml || '');
-    const saved = await persistProjectReportBundle(report, { interactiveHtml });
+    const saved = await persistProjectReportBundle(report, { interactiveHtml: report.interactiveHtml });
     showHint(report.pdfBlob ? t('report.journeyBundleReady') : t('report.demoReady'));
     if (saved?.rptId) {
       setTimeout(() => { openSavedProjectReport(saved.rptId, 'interactive'); }, 400);
@@ -12362,7 +12329,7 @@ window.createSimulatedFieldReports = createSimulatedFieldReports;
 async function addReportBundleToZip(zip) {
   const report = await generateProjectReport((p, s) => setReportProgress(p, s));
   zip.file('report/report.html', report.html);
-  zip.file('report/interactive.html', ensureMobileReplayHtml(await buildInteractiveFieldReportHTML(report)));
+  zip.file('report/interactive.html', await buildInteractiveFieldReportHTML(report));
   if (report.mapPng) zip.file('report/mapshot.png', report.mapPng);
   if (report.pdfBlob) zip.file('report/report.pdf', report.pdfBlob);
   zip.file('layers/measurements.json', JSON.stringify(report.measurements, null, 2));

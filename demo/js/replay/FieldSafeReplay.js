@@ -165,6 +165,16 @@
     '})();',
   ].join('');
 
+  function stripMobileFallback(html) {
+    if (!html || typeof html !== 'string') return html;
+    return html
+      .replace(/<style id="planai-psr-fallback">[\s\S]*?<\/style>/gi, '')
+      .replace(/<script id="planai-replay-gate">[\s\S]*?<\/script>/gi, '')
+      .replace(/<script id="planai-replay-safe">[\s\S]*?<\/script>/gi, '')
+      .replace(/<script id="planai-replay-watchdog">[\s\S]*?<\/script>/gi, '')
+      .replace(/<div id="psr-app"[^>]*>[\s\S]*?<\/div>\s*/i, '');
+  }
+
   function stripExternalFonts(html) {
     if (!html) return html;
     return html
@@ -356,6 +366,7 @@
     upgradeLegacyCinematicHtml,
     ensureMobileViewableReplayHtml,
     stripExternalFonts,
+    stripMobileFallback,
     sanitizeShell,
     BOOT_SCRIPT,
     GATE_SCRIPT,
