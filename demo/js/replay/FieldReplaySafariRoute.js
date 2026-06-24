@@ -16,7 +16,7 @@
     'function isIOSWebKit(){',
     'var ua=navigator.userAgent||"";',
     'var touchMac=navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1;',
-    'return(/iPad|iPhone|iPod/.test(ua)||touchMac)&&/WebKit/.test(ua)&&!/CriOS|FxiOS|EdgiOS/.test(ua);',
+    'return /iPad|iPhone|iPod/.test(ua)||touchMac;',
     '}',
     'function densifyCoords(c,step){',
     'if(!c||c.length<2)return c||[];',
@@ -302,12 +302,9 @@
     'transform:translateX(-50%)!important;margin-left:0!important;}',
   ].join('');
 
-  function stripReplayPatches(html) {
+  function stripHarmfulReplayPatches(html) {
     if (!html || typeof html !== 'string') return html;
     return html
-      .replace(/<script id="planai-safari-route-fix">[\s\S]*?<\/script>/gi, '')
-      .replace(/<script id="planai-replay-controls-fix">[\s\S]*?<\/script>/gi, '')
-      .replace(/<style id="planai-replay-ui-fix">[\s\S]*?<\/style>/gi, '')
       .replace(/<script id="planai-replay-gate">[\s\S]*?<\/script>/gi, '')
       .replace(/<script id="planai-replay-safe">[\s\S]*?<\/script>/gi, '')
       .replace(/<script id="planai-replay-watchdog">[\s\S]*?<\/script>/gi, '')
@@ -315,14 +312,37 @@
       .replace(/<div id="psr-app"[^>]*>\s*<\/div>/gi, '');
   }
 
-  /** @deprecated Export uses stripReplayPatches — runtime inject breaks cinematic replay */
+  function stripReplayPatches(html) {
+    if (!html || typeof html !== 'string') return html;
+    return stripHarmfulReplayPatches(html)
+      .replace(/<script id="planai-safari-route-fix">[\s\S]*?<\/script>/gi, '')
+      .replace(/<script id="planai-replay-controls-fix">[\s\S]*?<\/script>/gi, '')
+      .replace(/<style id="planai-replay-ui-fix">[\s\S]*?<\/style>/gi, '');
+  }
+
+  function injectRouteFix(html) {
+    if (!html || typeof html !== 'string') return html;
+    if (!html.includes('id="root"') || !html.includes('window.__PLANAI_REPORT__')) return html;
+    html = stripReplayPatches(html);
+    const uiStyle = '<style id="planai-replay-ui-fix">' + REPLAY_UI_CSS + '</style>';
+    const routeScript = '<script id="planai-safari-route-fix">' + MAP_OVERLAY_BOOT + '</script>';
+    const controlsScript = '<script id="planai-replay-controls-fix">' + CONTROLS_BOOT + '</script>';
+    if (html.includes('</body>')) {
+      return html.replace('</body>', uiStyle + routeScript + controlsScript + '</body>');
+    }
+    return html + uiStyle + routeScript + controlsScript;
+  }
+
+  /** @deprecated use injectRouteFix */
   function inject(html) {
-    return stripReplayPatches(html);
+    return injectRouteFix(html);
   }
 
   global.FieldReplaySafariRoute = {
     inject,
+    injectRouteFix,
     stripReplayPatches,
+    stripHarmfulReplayPatches,
     MAP_OVERLAY_BOOT,
     CONTROLS_BOOT,
     ROUTE_BOOT: MAP_OVERLAY_BOOT,

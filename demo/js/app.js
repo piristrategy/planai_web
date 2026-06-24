@@ -10936,29 +10936,25 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
   const isHtml = viewKind === 'interactive' || viewKind === 'html' ||
     (blob.type && String(blob.type).indexOf('html') >= 0);
   if (isHtml) {
-    let viewerBlob = blob;
+    let html = '';
     try {
-      let html = await blob.text();
-      if (html && html.includes('window.__PLANAI_REPORT__')) {
-        if (typeof FieldReplaySafariRoute !== 'undefined' && FieldReplaySafariRoute.stripReplayPatches) {
-          html = FieldReplaySafariRoute.stripReplayPatches(html);
-        }
-        if (typeof FieldSafeReplay !== 'undefined' && FieldSafeReplay.stripExternalFonts) {
-          html = FieldSafeReplay.stripExternalFonts(html);
-        }
-        viewerBlob = new Blob([html], { type: 'text/html;charset=utf-8' });
-      }
+      html = pendingShare?.previewHtml || await blob.text();
     } catch (_) {}
     if (embed) { embed.removeAttribute('src'); embed.style.display = 'none'; }
     if (frame) {
       frame.style.display = 'block';
-      frame.removeAttribute('srcdoc');
       if (_fieldReportViewerUrl) {
         try { URL.revokeObjectURL(_fieldReportViewerUrl); } catch (_) {}
+        _fieldReportViewerUrl = null;
       }
-      _fieldReportViewerUrl = URL.createObjectURL(viewerBlob);
       frame.removeAttribute('src');
-      frame.src = _fieldReportViewerUrl;
+      frame.removeAttribute('srcdoc');
+      if (html) {
+        frame.srcdoc = html;
+      } else {
+        _fieldReportViewerUrl = URL.createObjectURL(blob);
+        frame.src = _fieldReportViewerUrl;
+      }
     }
     document.getElementById('field-report-viewer-backdrop')?.classList.add('open');
     document.getElementById('field-report-viewer')?.classList.add('open');
