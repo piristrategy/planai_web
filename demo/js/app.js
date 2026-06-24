@@ -4208,7 +4208,29 @@ const PLAN_GML_CONTAINER_TYPES = new Set([
 const PLAN_GML_TIP_KEYS = [
   'CalismaTip', 'TurizmTip', 'AcikYesilTip', 'EnerjiTesisTip', 'KonutTip', 'TicaretTip',
   'SanayiTip', 'EgitimTesisTip', 'AfetTip',
+  'TarimTip', 'DogalKarakterTip', 'MeraSinif', 'SitTip', 'SuYuzeyiTip', 'EnerjiTip',
 ];
+/** CDP GML'de alt tip alanı boş gelen özellikler → MPYY tip anahtarı. */
+const PLAN_GML_CDP_FEATURE_DEFAULT_TIP = {
+  Orman: 'OrmanAlani',
+  KentselGelismeKonut: 'KentselGelismeAlani',
+  KentselYerlesik: 'KentselMeskunAlan',
+  Mera: 'MeraAlani',
+  TercihliKullanimBolgesi: 'TercihliKullanimBolgesi',
+};
+/** Harita üstü kısa kodlar (MPYY sembol yoksa). */
+const PLAN_GML_TIP_SHORT = {
+  TurizmBolgesi: 'T-Böl', TarimAlani: 'Tarım', Zeytinlik: 'Zeyt', SulamaAlani: 'Sulama',
+  OrganikTarimVeHayvancilikAlani: 'O-Tarım', OrmanAlani: 'Orman',
+  DogalKarakteriKorunacakAlan: 'D-Krk', KentselGelismeAlani: 'K-Gel',
+  KentselMeskunAlan: 'K-Yrl', MeraAlani: 'Mera', TercihliKullanimBolgesi: 'T-Kul',
+  '1DereceArkeolojikSit': 'A-1', '2DereceArkeolojikSit': 'A-2', '3DereceArkeolojikSit': 'A-3',
+  '1DereceDogalSit': 'D-1', '2DereceDogalSit': 'D-2', '3DereceDogalSit': 'D-3',
+  OtelAlani: 'Otel', GunubirlikTesisAlani: 'Gün', Park: 'Park',
+  TicaretTurizmAlani: 'T-Tic', TicaretAlani: 'Tic', KonutAlani: 'Kon',
+};
+const PLAN_GML_LABEL_SCREEN_PX = 10;
+const PLAN_GML_LABEL_MIN_POLY_PX = 48;
 const PLAN_GML_STYLES = {
   _default: { color: '#546e7a', fillColor: 'transparent', strokeWidth: 2, hatchPattern: 'none', noFill: true },
   PlanSiniri: { color: '#0d47a1', fillColor: 'transparent', strokeWidth: 3.5, hatchPattern: 'none', noFill: true },
@@ -4237,6 +4259,27 @@ const PLAN_GML_STYLES = {
   AdaKenari: { color: '#546e7a', fillColor: 'transparent', strokeWidth: 1.8, hatchPattern: 'none', lineStyle: 'dashed', noFill: true },
   YolCizgisi: { color: '#37474f', strokeWidth: 2.5, hatchPattern: 'none', noFill: true },
   MeclisKarariAlani: { color: '#1565c0', fillColor: 'rgba(21,101,192,0.15)', strokeWidth: 2, hatchPattern: 'none' },
+  TurizmBolgesi: { color: '#ef6c00', fillColor: 'rgba(255,115,0,0.72)', strokeWidth: 2, hatchPattern: 'stamp', hatchColor: '#212121' },
+  Tarim: { color: '#558b2f', fillColor: 'rgba(233,250,190,0.72)', strokeWidth: 2, hatchPattern: 'horizontal', hatchColor: '#33691e' },
+  TarimAlani: { color: '#558b2f', fillColor: 'rgba(233,250,190,0.72)', strokeWidth: 2, hatchPattern: 'horizontal', hatchColor: '#33691e' },
+  Zeytinlik: { color: '#6d8c3e', fillColor: 'rgba(233,250,190,0.68)', strokeWidth: 2, hatchPattern: 'horizontal', hatchColor: '#33691e' },
+  ZeytinlikAlan: { color: '#6d8c3e', fillColor: 'rgba(233,250,190,0.68)', strokeWidth: 2, hatchPattern: 'horizontal', hatchColor: '#33691e' },
+  SulamaAlani: { color: '#0277bd', fillColor: 'rgba(115,223,235,0.45)', strokeWidth: 2, hatchPattern: 'horizontal', hatchColor: '#01579b' },
+  OrganikTarimVeHayvancilikAlani: { color: '#7cb342', fillColor: 'rgba(220,237,200,0.65)', strokeWidth: 2, hatchPattern: 'horizontal', hatchColor: '#33691e' },
+  Orman: { color: '#1b5e20', fillColor: 'rgba(34,139,34,0.62)', strokeWidth: 2, hatchPattern: 'vertical', hatchColor: '#1b5e20' },
+  OrmanAlani: { color: '#1b5e20', fillColor: 'rgba(34,139,34,0.62)', strokeWidth: 2, hatchPattern: 'vertical', hatchColor: '#1b5e20' },
+  DogalKarakter: { color: '#689f38', fillColor: 'rgba(180,215,158,0.68)', strokeWidth: 2, hatchPattern: 'diagonal', hatchColor: '#33691e' },
+  DogalKarakteriKorunacakAlan: { color: '#689f38', fillColor: 'rgba(180,215,158,0.68)', strokeWidth: 2, hatchPattern: 'diagonal', hatchColor: '#33691e' },
+  KentselGelismeKonut: { color: '#f9a825', fillColor: 'rgba(255,250,38,0.62)', strokeWidth: 2, hatchPattern: 'cross', hatchColor: '#f57f17' },
+  KentselGelismeAlani: { color: '#f9a825', fillColor: 'rgba(255,250,38,0.62)', strokeWidth: 2, hatchPattern: 'cross', hatchColor: '#f57f17' },
+  KentselYerlesik: { color: '#6d4c41', fillColor: 'rgba(140,84,26,0.55)', strokeWidth: 2, hatchPattern: 'cross', hatchColor: '#4e342e' },
+  KentselMeskunAlan: { color: '#6d4c41', fillColor: 'rgba(140,84,26,0.55)', strokeWidth: 2, hatchPattern: 'cross', hatchColor: '#4e342e' },
+  Mera: { color: '#a1887f', fillColor: 'rgba(205,170,125,0.55)', strokeWidth: 2, hatchPattern: 'dots', hatchColor: '#5d4037' },
+  MeraAlani: { color: '#a1887f', fillColor: 'rgba(205,170,125,0.55)', strokeWidth: 2, hatchPattern: 'dots', hatchColor: '#5d4037' },
+  SitAlanlari: { color: '#8e24aa', fillColor: 'rgba(186,104,200,0.35)', strokeWidth: 2, hatchPattern: 'cross', hatchColor: '#6a1b9a' },
+  SuYuzeyi: { color: '#0288d1', fillColor: 'rgba(115,223,235,0.55)', strokeWidth: 2, hatchPattern: 'none' },
+  TercihliKullanimBolgesi: { color: '#7b1fa2', fillColor: 'rgba(156,39,176,0.42)', strokeWidth: 2, hatchPattern: 'grid', hatchColor: '#4a148c' },
+  EnerjiUretim: { color: '#fbc02d', fillColor: 'rgba(255,235,59,0.48)', strokeWidth: 2, hatchPattern: 'cross', hatchColor: '#f57f17' },
 };
 /** PlanGML dosyalarında TaramaTip yok — MPYY gösterim kodları tip alanından türetilir (mm @ 1:1000). */
 const PLAN_GML_TIP_TARAMA = {
@@ -4287,6 +4330,17 @@ const PLAN_GML_MPY_LAYER_MAP = {
   EkoTurizmKirsalTurizmTesisAlani: 'Eko / Kırsal Turizm',
   TrafoAlani: 'Trafo Alanı',
   EnerjiDagitimDepolama: 'Enerji Dağıtım / Depolama',
+  Tarim: 'Tarım Alanı',
+  Orman: 'Orman Alanı',
+  DogalKarakter: 'Doğal Karakter',
+  KentselGelismeKonut: 'Kentsel Gelişme Konut',
+  KentselYerlesik: 'Kentsel Yerleşik',
+  Mera: 'Mera',
+  SitAlanlari: 'Sit Alanı',
+  SuYuzeyi: 'Su Yüzeyi',
+  TercihliKullanimBolgesi: 'Tercihli Kullanım Bölgesi',
+  EnerjiUretim: 'Enerji Üretim',
+  TurizmBolgesi: 'Turizm Bölgesi',
 };
 /** Bilinmeyen alt tip → ana MPYY stili. */
 const PLAN_GML_TIP_ALIASES = {
@@ -4588,7 +4642,53 @@ const PLAN_GML_TIP_BY_FEATURE = {
   KonutAlani: 'KonutTip',
   TicaretAlani: 'TicaretTip',
   SanayiAlani: 'CalismaTip',
+  Tarim: 'TarimTip',
+  DogalKarakter: 'DogalKarakterTip',
+  Mera: 'MeraSinif',
+  SitAlanlari: 'SitTip',
+  SuYuzeyi: 'SuYuzeyiTip',
+  EnerjiUretim: 'EnerjiTip',
+  AfetTehlikeliAlanlar: 'AfetTip',
 };
+
+function planGmlCdpDefaultTip(featureType) {
+  const ft = planGmlNormalizeFeatureType(featureType);
+  return PLAN_GML_CDP_FEATURE_DEFAULT_TIP[ft] || '';
+}
+
+function inferPlanGmlPlanLevel(text, fileName) {
+  const scale = inferPlanGmlProjectScale(text, fileName);
+  if (scale && typeof MpyyPlanGmlCatalog !== 'undefined') {
+    return MpyyPlanGmlCatalog.resolvePlanLevel(scale);
+  }
+  const raw = String(text || '');
+  if (/cdp\.v\.\d/i.test(raw)) return 'CDP';
+  if (/nip\.v\.\d/i.test(raw)) return 'NIP';
+  if (/uip\.v\.\d/i.test(raw)) return 'UIP';
+  return null;
+}
+
+function planGmlResolvePlanLevels(props) {
+  const out = [];
+  const meta = props?.planGmlLevel;
+  if (meta) out.push(meta);
+  if (typeof MpyyPlanGmlCatalog !== 'undefined') {
+    const fromScale = MpyyPlanGmlCatalog.resolvePlanLevel(S.projectScale || 1000);
+    if (!out.includes(fromScale)) out.push(fromScale);
+  }
+  for (const L of ['CDP', 'NIP', 'UIP']) {
+    if (!out.includes(L)) out.push(L);
+  }
+  return out;
+}
+
+function planGmlIsGenericAdi(adi) {
+  const u = String(adi || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/İ/g, 'I').replace(/ı/g, 'i').toUpperCase().trim();
+  if (!u) return true;
+  if (u.length > 12) return true;
+  return /^(TURIZM|TARIM|ORMAN|KENTSEL|DOGAL|MERA|SIT|SU[\s-]?YUZEY|ACIK[\s-]?YESIL|TERCIHLI|ENERJI|AFET)/.test(u);
+}
 
 function planGmlResolveTip(props, featureType) {
   if (!props) return '';
@@ -4603,6 +4703,8 @@ function planGmlResolveTip(props, featureType) {
     const v = String(props[PLAN_GML_TIP_KEYS[i]] || '').trim();
     if (v) return v;
   }
+  const def = planGmlCdpDefaultTip(ft);
+  if (def) return def;
   return '';
 }
 
@@ -4643,20 +4745,24 @@ function planGmlResolvePresentation(featureType, props) {
   const mPerPx = typeof pxToMeters === 'function' ? pxToMeters(1) : null;
 
   if (typeof MpyyPlanGmlCatalog !== 'undefined' && MpyyPlanGmlCatalog.isReady()) {
-    const planLevel = MpyyPlanGmlCatalog.resolvePlanLevel(S.projectScale || 1000);
+    const planLevels = planGmlResolvePlanLevels(props);
 
-    if (planGmlIsOutlineOnly(ft) || planGmlIsOutlineOnly(tip)) {
-      const brec = MpyyPlanGmlCatalog.lookupBoundary(ft, props || {}, planLevel);
-      if (brec) {
-        return MpyyPlanGmlCatalog.boundaryPresentationFromRecord(brec, S.projectScale, mPerPx);
+    for (let li = 0; li < planLevels.length; li++) {
+      const planLevel = planLevels[li];
+
+      if (planGmlIsOutlineOnly(ft) || planGmlIsOutlineOnly(tip)) {
+        const brec = MpyyPlanGmlCatalog.lookupBoundary(ft, props || {}, planLevel);
+        if (brec) {
+          return MpyyPlanGmlCatalog.boundaryPresentationFromRecord(brec, S.projectScale, mPerPx);
+        }
       }
-    }
 
-    let rec = MpyyPlanGmlCatalog.lookup(ft, tip, planLevel);
-    if (!rec && tip) rec = MpyyPlanGmlCatalog.lookup('', tip, planLevel);
-    if (!rec && props?.Adi) rec = MpyyPlanGmlCatalog.lookupByLabel(props.Adi, planLevel);
-    if (!rec && props?.PlanAdi) rec = MpyyPlanGmlCatalog.lookupByLabel(props.PlanAdi, planLevel);
-    if (rec) return MpyyPlanGmlCatalog.presentationFromRecord(rec);
+      let rec = MpyyPlanGmlCatalog.lookup(ft, tip, planLevel);
+      if (!rec && tip) rec = MpyyPlanGmlCatalog.lookup('', tip, planLevel);
+      if (!rec && props?.Adi) rec = MpyyPlanGmlCatalog.lookupByLabel(props.Adi, planLevel);
+      if (!rec && props?.PlanAdi) rec = MpyyPlanGmlCatalog.lookupByLabel(props.PlanAdi, planLevel);
+      if (rec) return MpyyPlanGmlCatalog.presentationFromRecord(rec);
+    }
   }
 
   if (planGmlIsOutlineOnly(ft) || planGmlIsOutlineOnly(tip)) {
@@ -4744,6 +4850,7 @@ function isPlanGmlImportObj(obj) {
 function planGmlStyleForObject(obj) {
   if (!isPlanGmlImportObj(obj)) return null;
   const attrs = planGmlInferProps(obj);
+  if (obj.metadata?.planGmlLevel) attrs.planGmlLevel = obj.metadata.planGmlLevel;
   const ft = obj.metadata?.planFeatureType || attrs.PlanFeatureType || '';
   return planGmlStyleForFeature(ft, attrs);
 }
@@ -4757,19 +4864,25 @@ function planGmlShortLabel(attrs, planFeatureType) {
   if (calisma === 'TicaretAlani') return 'TİC';
   if (calisma === 'KonutAlani') return 'KON';
   const adi = String(attrs.Adi || attrs.PlanAdi || '').trim();
-  const tip = String(attrs.TurizmTip || attrs.AcikYesilTip || attrs.KonutTip || '').trim();
+  const tip = String(
+    attrs.TurizmTip || attrs.TarimTip || attrs.DogalKarakterTip || attrs.SitTip
+    || attrs.AcikYesilTip || attrs.KonutTip || attrs.CalismaTip || '',
+  ).trim();
 
+  const planLevels = planGmlResolvePlanLevels(attrs);
   if (typeof MpyyPlanGmlCatalog !== 'undefined' && MpyyPlanGmlCatalog.isReady()) {
-    const planLevel = MpyyPlanGmlCatalog.resolvePlanLevel(S.projectScale || 1000);
-    const mpyyCode = MpyyPlanGmlCatalog.symbolCodeFor(ft, tip, adi, planLevel);
-    if (mpyyCode) return mpyyCode;
+    for (let i = 0; i < planLevels.length; i++) {
+      const mpyyCode = MpyyPlanGmlCatalog.symbolCodeFor(ft, tip, adi, planLevels[i]);
+      if (mpyyCode) return mpyyCode;
+    }
   }
 
+  if (tip && PLAN_GML_TIP_SHORT[tip]) return PLAN_GML_TIP_SHORT[tip];
   if (tip === 'OtelAlani' || /otel/i.test(adi)) return 'OTEL';
   if (tip === 'GunubirlikTesisAlani' || /günübirlik|gunubirlik/i.test(adi)) return 'G';
   if (tip === 'EkoTurizmKirsalTurizmTesisAlani' || /eko.*tur|kırsal.*tur/i.test(adi)) return 'EKO';
   if (tip === 'Park' || /^park$/i.test(adi)) return 'PARK';
-  if (adi.length >= 2 && adi.length <= 14) return adi.toUpperCase();
+  if (adi && !planGmlIsGenericAdi(adi) && adi.length >= 2 && adi.length <= 10) return adi.toUpperCase();
   return '';
 }
 
@@ -4841,7 +4954,9 @@ function refreshPlanGmlPresentation() {
     obj.metadata.source = 'plan-gml';
     obj.metadata.attributes = { ...(obj.metadata.attributes || {}), ...attrs };
     if (!obj.metadata.planFeatureType && attrs.PlanFeatureType) obj.metadata.planFeatureType = attrs.PlanFeatureType;
-    const ps = planGmlResolvePresentation(obj.metadata.planFeatureType || attrs.PlanFeatureType, attrs);
+    const styleAttrs = { ...attrs };
+    if (obj.metadata.planGmlLevel) styleAttrs.planGmlLevel = obj.metadata.planGmlLevel;
+    const ps = planGmlResolvePresentation(obj.metadata.planFeatureType || attrs.PlanFeatureType, styleAttrs);
     applyPlanGmlStyleToObject(obj, ps);
   });
 }
@@ -4868,7 +4983,7 @@ function planGmlReadFeatureProps(parentEl) {
   return gmlAttrs(parentEl);
 }
 
-function planGmlBuildMeta(f, layerName, isPlanGml) {
+function planGmlBuildMeta(f, layerName, isPlanGml, planGmlLevel) {
   const attrs = planGmlMergeAttributes(f);
   const meta = {
     source: isPlanGml ? 'plan-gml' : 'gml',
@@ -4878,6 +4993,7 @@ function planGmlBuildMeta(f, layerName, isPlanGml) {
     planLabel: f.planFeatureLabel || layerName,
     name: attrs.Adi || attrs.PlanAdi || f.planFeatureLabel || layerName,
   };
+  if (planGmlLevel) meta.planGmlLevel = planGmlLevel;
   return meta;
 }
 
@@ -6364,6 +6480,58 @@ let _gmlFileCmOverride = null;
 /** Per-import E/N swap before TUREF reproject (axis-order recovery). */
 let _gmlFileSwapEN = false;
 
+function isTurefProjectedEpsg(epsg) {
+  return (epsg >= 7930 && epsg <= 7936)
+    || (epsg >= 5253 && epsg <= 5259);
+}
+
+/** CSB plan GML legacy EPSG:2303x — resmi anlamı ED50 / UTM zone (23035 = zone 35N). */
+function isCsbLegacyPlanEpsg(epsg) {
+  return epsg >= 23030 && epsg <= 23039;
+}
+
+/** CSB 2303x → TUREF TM band (EPSG etiketi sık hatalı; yalnızca TUREF yedek yolu için). */
+function csbLegacyEpsgToTurefCm(epsg, avgE, avgN, importName) {
+  if (!isCsbLegacyPlanEpsg(epsg)) return null;
+  const name = String(importName || '').toLowerCase()
+    .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c');
+  if (/dikili|ismetpasa|bergama|edremit|ayvalik|candarli|foca|foça|aliaga|menemen|cesme|alacati|urla|seferihisar|tire|odemis/.test(name)) return 27;
+  if (avgN >= 4190000 && avgE >= 350000 && avgE < 520000) return 27;
+  if (avgN >= 4040000 && avgN < 4200000 && avgE >= 440000 && avgE < 620000) return 30;
+  if (avgN >= 4260000 && avgE >= 515000 && avgE < 650000) return 30;
+  return regionalTurefCmPrior(avgE, avgN);
+}
+
+function ed50UtmProj4String(zone) {
+  return '+proj=utm +zone=' + zone + ' +ellps=intl +towgs84=-87,-98,-121,0,0,0,0 +units=m +no_defs';
+}
+
+function ensureCsbLegacyPlanProjDefs() {
+  ensureGmlProjDefs();
+  if (typeof proj4 === 'undefined') return;
+  try {
+    for (let epsg = 23030; epsg <= 23039; epsg++) {
+      const code = 'EPSG:' + epsg;
+      if (!proj4.defs[code]) proj4.defs(code, ed50UtmProj4String(epsg - 23000));
+    }
+  } catch (e) {
+    console.warn('[GML] CSB legacy UTM defs', e);
+  }
+}
+
+/** CSB PlanGML EPSG:2303x — resmi ED50 / UTM (e-Plan / NetCAD ile uyumlu). */
+function csbLegacyPlanToWgs84(normE, normN, epsg) {
+  ensureCsbLegacyPlanProjDefs();
+  if (typeof proj4 === 'undefined') return null;
+  try {
+    const p = proj4('EPSG:' + epsg, 'EPSG:4326', [normE, normN]);
+    if (isFinite(p[0]) && isFinite(p[1])) return { lat: p[1], lon: p[0] };
+  } catch (err) {
+    console.warn('[GML] CSB legacy reproject', epsg, err);
+  }
+  return null;
+}
+
 function turefProj4String(cm) {
   return '+proj=tmerc +lat_0=0 +lon_0=' + cm + ' +k=1 +x_0=500000 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs';
 }
@@ -6382,7 +6550,7 @@ function normalizeTurefEN(valE, valN) {
 
 function detectTurefCm(e) {
   if (e < 350000) return 27;
-  if (e < 550000) return 30;
+  if (e < 520000) return 27;
   if (e < 650000) return 33;
   if (e < 750000) return 36;
   if (e < 850000) return 39;
@@ -6425,7 +6593,7 @@ function collectTurefSamplesFromFeats(feats, maxSamples = 24) {
     const f = feats[i];
     if (!f.nums || f.nums.length < 2) continue;
     const epsg = parseEpsgFromSrs(f.srs || '');
-    if (!looksLikeTurefEN(f.nums[0], f.nums[1]) && !(epsg >= 7930 && epsg <= 7936)) continue;
+    if (!looksLikeTurefEN(f.nums[0], f.nums[1]) && !isTurefProjectedEpsg(epsg) && !isCsbLegacyPlanEpsg(epsg)) continue;
     const norm = normalizeTurefEN(f.nums[0], f.nums[1]);
     samples.push({ e: norm.e, n: norm.n });
   }
@@ -6450,7 +6618,8 @@ const PLACE_GEO_HINTS = {
   cesme: { lat: 38.32, lon: 26.30 },
   izmir: { lat: 38.42, lon: 27.14 },
   kusadasi: { lat: 37.86, lon: 27.26 },
-  didim: { lat: 37.38, lon: 27.27 },
+  dikili: { lat: 39.07, lon: 26.89 },
+  ismetpasa: { lat: 39.08, lon: 26.90 },
   bodrum: { lat: 37.03, lon: 27.43 },
   antalya: { lat: 36.89, lon: 30.71 },
   burdur: { lat: 37.72, lon: 30.29 },
@@ -6491,13 +6660,20 @@ function regionalTurefCmPrior(avgE, avgN) {
   return detectTurefCm(avgE);
 }
 
-/** File-level TM band — reproj + bölge/dosya adı (GPS kullanılmaz). */
-function pickTurefCmForFile(samples, taggedEpsg, importName) {
+/** File-level TM band — koordinat + EPSG etiketi (dosya adı kullanılmaz). */
+function pickTurefCmForFile(samples, taggedEpsg) {
   if (!samples.length) return detectTurefCm(500000);
   const { avgE, avgN } = avgSampleEN(samples);
   const taggedCm = taggedEpsg ? turefCmFromEpsg(taggedEpsg) : null;
-  const geoHint = geoHintFromImportName(importName);
   const priorCm = regionalTurefCmPrior(avgE, avgN);
+  if (taggedCm != null) {
+    let ok = 0;
+    for (const { e, n: northing } of samples) {
+      const hit = turefReprojHit(e, northing, taggedCm);
+      if (hit && isInTurkeyBbox(hit.lat, hit.lon)) ok++;
+    }
+    if (ok >= Math.ceil(samples.length * 0.55)) return taggedCm;
+  }
   const cms = [27, 30, 33, 36, 39, 42, 45];
   const rated = [];
   for (const cm of cms) {
@@ -6523,8 +6699,8 @@ function pickTurefCmForFile(samples, taggedEpsg, importName) {
   for (const r of pool) {
     let score = r.reproj;
     score += Math.abs(r.cm - priorCm) * 10;
-    if (geoHint) score += geoHintDistDeg(r.lat, r.lon, geoHint) * 45;
-    if (ambiguous.length <= 1 && taggedCm && r.cm === taggedCm) score *= 0.96;
+    if (ambiguous.length <= 1 && taggedCm && r.cm === taggedCm) score *= 0.92;
+    if (!isInTurkeyBbox(r.lat, r.lon)) score += 500;
     if (score < bestScore) { bestScore = score; best = r; }
   }
   return best.cm;
@@ -6688,8 +6864,13 @@ function gmlToWgs84Raw(x, y, srs) {
   const epsg = parseEpsgFromSrs(srs);
   let ax = x, ay = y;
   if (_gmlFileSwapEN) { ax = y; ay = x; }
-  if ((epsg >= 7930 && epsg <= 7936) || (epsg >= 5253 && epsg <= 5259) || looksLikeTurefEN(ax, ay)) {
-    const r = turefENtoWgs84(ax, ay, null, srs);
+  const norm = normalizeTurefEN(ax, ay);
+  if (isCsbLegacyPlanEpsg(epsg)) {
+    const g = csbLegacyPlanToWgs84(norm.e, norm.n, epsg);
+    if (g) return g;
+  }
+  if (isTurefProjectedEpsg(epsg) || looksLikeTurefEN(norm.e, norm.n)) {
+    const r = turefENtoWgs84(norm.e, norm.n, _gmlFileCmOverride, srs);
     return { lat: r.lat, lon: r.lon };
   }
   if (!epsg || epsg === 4326) {
@@ -6839,6 +7020,16 @@ function detectPlanGml(doc, text) {
   return /xmlns:plan=["'][^"']*csb\.gov\.tr/i.test(raw)
     || /<(?:plan:)?FeatureCollection\b/i.test(raw) && /csb\.gov\.tr/i.test(raw)
     || /uip\.v\.\d/i.test(raw);
+}
+
+function inferPlanGmlProjectScale(text, fileName) {
+  const fn = String(fileName || '').toUpperCase();
+  const raw = String(text || '');
+  if (/100\s*000\s*CDP|CDP[\s_.-]*100\s*000|100000\s*CDP/i.test(fn)) return 100000;
+  if (/cdp\.v\.\d/i.test(raw) || /xsi:schemaLocation=["'][^"']*cdp\.v/i.test(raw)) return 100000;
+  if (/25000\s*NIP|NIP[\s_.-]*25000/i.test(fn)) return 25000;
+  if (/5000\s*NIP/i.test(fn)) return 5000;
+  return null;
 }
 
 function planGmlPropsFromTextBefore(text, index) {
@@ -7554,14 +7745,26 @@ async function gmlToImportObjects(text, fileName, bounds, debug, singleLayerId) 
   _gmlFileCmOverride = null;
   _gmlFileSwapEN = false;
   try {
+    const taggedEpsg = parseEpsgFromSrs(feats[0]?.srs || gmlDocumentDefaultSrs(doc, text));
+    const isCsbLegacyFile = isCsbLegacyPlanEpsg(taggedEpsg);
     const turefSamples = collectTurefSamplesFromFeats(feats);
-    if (turefSamples.length) {
-      const taggedEpsg = parseEpsgFromSrs(feats[0]?.srs || gmlDocumentDefaultSrs(doc, text));
-      _gmlFileCmOverride = pickTurefCmForFile(turefSamples, taggedEpsg, fileName);
+    if (!isCsbLegacyFile && turefSamples.length) {
+      _gmlFileCmOverride = pickTurefCmForFile(turefSamples, taggedEpsg);
     }
-    _gmlFileSwapEN = detectGmlFileCoordSwap(feats);
+    _gmlFileSwapEN = isCsbLegacyFile ? false : detectGmlFileCoordSwap(feats);
 
     const isPlanGml = debug.format === 'plan-gml';
+    const planGmlLevel = isPlanGml ? inferPlanGmlPlanLevel(text, fileName) : null;
+    if (isPlanGml) {
+      const inferredScale = inferPlanGmlProjectScale(text, fileName);
+      if (inferredScale && inferredScale !== S.projectScale) {
+        setProjectScale(inferredScale);
+        const scaleLabel = inferredScale >= 1000
+          ? `1:${Math.round(inferredScale / 1000)}.000`
+          : `1:${inferredScale}`;
+        showHint(`Plan ölçeği ${scaleLabel} olarak ayarlandı — tüm kullanım kararları görünür olmalı`);
+      }
+    }
     const fileSlug = importSlug(fileName.replace(/\.[^.]+$/i, ''));
     const objects = [];
     const defaultLayer = singleLayerId || ensureGmlLayer(isCityGml ? 'CityGML' : 'Özellikler', fileSlug);
@@ -7576,9 +7779,12 @@ async function gmlToImportObjects(text, fileName, bounds, debug, singleLayerId) 
         const layerName = f.layer || f.props?.name || (isPlanGml ? PLAN_GML_FALLBACK_LAYER : (isCityGml ? 'CityGML' : 'Özellikler'));
         const lid = singleLayerId || ensureGmlLayer(layerName, fileSlug);
         debug.gmlLayers.add(layerName);
-        const planStyle = isPlanGml ? planGmlStyleForFeature(f.planFeatureType, f.props) : null;
+        const styleProps = isPlanGml
+          ? { ...(f.props || {}), planGmlLevel: planGmlLevel || undefined }
+          : null;
+        const planStyle = isPlanGml ? planGmlStyleForFeature(f.planFeatureType, styleProps) : null;
         const meta = isPlanGml
-          ? planGmlBuildMeta(f, layerName, true)
+          ? planGmlBuildMeta(f, layerName, true, planGmlLevel)
           : {
             source: isCityGml ? 'citygml' : 'gml',
             attributes: typeof SpatialSecurity !== 'undefined'
@@ -10939,7 +11145,15 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
     let html = '';
     try {
       html = pendingShare?.previewHtml || await blob.text();
-    } catch (_) {}
+      if (html && html.includes('window.__PLANAI_REPORT__')) {
+        // if (typeof FieldReplaySafariRoute !== 'undefined' && FieldReplaySafariRoute.stripHarmfulReplayPatches) {
+        //   html = FieldReplaySafariRoute.stripHarmfulReplayPatches(html); // was stripping the route layer — disabled
+        // }
+        if (typeof FieldSafeReplay !== 'undefined' && FieldSafeReplay.stripExternalFonts) {
+          html = FieldSafeReplay.stripExternalFonts(html);
+        }
+      }
+    } catch (_) { html = ''; }
     if (embed) { embed.removeAttribute('src'); embed.style.display = 'none'; }
     if (frame) {
       frame.style.display = 'block';
@@ -16591,6 +16805,8 @@ function setGridSizeCm(cm) {
 function setProjectScale(scale) {
   S.projectScale = scale;
   _hatchPatternCache.clear();
+  const sel = document.getElementById('scale-selector');
+  if (sel && [...sel.options].some((o) => +o.value === scale)) sel.value = String(scale);
   refreshPlanGmlPresentation();
   updateScaleInfo();
   scheduleRender();
@@ -16750,17 +16966,29 @@ function geoRingCentroidWorldFlat(flatPts) {
   return { x: x / n, y: y / n };
 }
 
+function geoRingScreenSpanPx(flatPts) {
+  if (!flatPts || flatPts.length < 4) return 0;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (let i = 0; i < flatPts.length; i += 2) {
+    minX = Math.min(minX, flatPts[i]);
+    maxX = Math.max(maxX, flatPts[i]);
+    minY = Math.min(minY, flatPts[i + 1]);
+    maxY = Math.max(maxY, flatPts[i + 1]);
+  }
+  return Math.max(maxX - minX, maxY - minY) * S.scale;
+}
+
 function renderPlanGmlMapLabel(text, wx, wy) {
   if (!text) return;
   const lines = String(text).split('\n').filter(Boolean);
   if (!lines.length) return;
-  const fs = Math.max(8, 12 / S.scale);
-  const lineGap = Math.max(1, 2 / S.scale);
+  const fs = PLAN_GML_LABEL_SCREEN_PX / S.scale;
+  const lineGap = 2 / S.scale;
   ctx.save();
   ctx.font = `700 ${fs}px Inter, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const pad = Math.max(2, 4 / S.scale);
+  const pad = 3 / S.scale;
   let maxW = 0;
   lines.forEach(line => { maxW = Math.max(maxW, ctx.measureText(line).width); });
   const bw = maxW + pad * 2;
@@ -16768,7 +16996,7 @@ function renderPlanGmlMapLabel(text, wx, wy) {
   const top = wy - bh / 2;
   ctx.fillStyle = 'rgba(255,255,255,0.94)';
   ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-  ctx.lineWidth = Math.max(0.8, 1.2 / S.scale);
+  ctx.lineWidth = 1 / S.scale;
   ctx.fillRect(wx - bw / 2, top, bw, bh);
   ctx.strokeRect(wx - bw / 2, top, bw, bh);
   ctx.fillStyle = '#111';
@@ -17429,7 +17657,8 @@ function renderImportObj(obj, sel) {
         && !obj._skipHatch
         && S.scale >= PLAN_GML_LABEL_MIN_SCALE) {
       const lblLines = planGmlMapLabelLines(planGmlInferProps(obj), obj.metadata?.planFeatureType);
-      if (lblLines.length) {
+      const polySpan = geoRingScreenSpanPx(ringPts);
+      if (lblLines.length && polySpan >= PLAN_GML_LABEL_MIN_POLY_PX) {
         const c = geoRingCentroidWorldFlat(ringPts);
         renderPlanGmlMapLabel(lblLines.join('\n'), c.x, c.y);
       }
@@ -18509,38 +18738,6 @@ function tileToLatLon(x, y, z) {
   const lon = x / n * 360 - 180;
   const lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))) * 180 / Math.PI;
   return { lat, lon };
-}
-
-// ── Inverse Transverse Mercator (TUREF → WGS84 lat/lon) ──────
-function inverseTM(easting, northing, cm) {
-  const k0 = 0.9996, a = 6378137, f = 1/298.257223563;
-  const e2 = 2*f - f*f;
-  const e1 = (1 - Math.sqrt(1-e2)) / (1 + Math.sqrt(1-e2));
-  const x = (easting - 500000) / k0;
-  const M = northing / k0;
-  const mu = M / (a * (1 - e2/4 - 3*e2**2/64 - 5*e2**3/256));
-  const phi1 = mu
-    + (3*e1/2 - 27*e1**3/32) * Math.sin(2*mu)
-    + (21*e1**2/16 - 55*e1**4/32) * Math.sin(4*mu)
-    + (151*e1**3/96) * Math.sin(6*mu)
-    + (1097*e1**4/512) * Math.sin(8*mu);
-  const sp = Math.sin(phi1), cp = Math.cos(phi1), tp = Math.tan(phi1);
-  const ep2 = e2/(1-e2);
-  const N1 = a / Math.sqrt(1 - e2*sp*sp);
-  const T1 = tp*tp, C1 = ep2*cp*cp;
-  const R1 = a*(1-e2) / Math.pow(1-e2*sp*sp, 1.5);
-  const D = x / N1;
-  const lat = phi1 - (N1*tp/R1) * (
-    D**2/2
-    - (5+3*T1+10*C1-4*C1*C1-9*ep2)*D**4/24
-    + (61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D**6/720
-  );
-  const lon = (
-    D
-    - (1+2*T1+C1)*D**3/6
-    + (5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120
-  ) / cp;
-  return { lat: lat*180/Math.PI, lon: cm + lon*180/Math.PI };
 }
 
 // ── Render OSM tiles ──────────────────────────────────────────

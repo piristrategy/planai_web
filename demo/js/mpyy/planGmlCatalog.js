@@ -18,6 +18,15 @@ const MpyyPlanGmlCatalog = (function () {
     EnerjiDagitimDepolama: 'TrafoAlani',
     GunesEnerjisiSantraliAlani: 'YenilenebilirEnerjiKaynaklarinaDayaliUretimTesisiAlani',
     GunesEnerjiSantraliAlani: 'YenilenebilirEnerjiKaynaklarinaDayaliUretimTesisiAlani',
+    '1DereceArkeolojikSit': '1.DereceArkeolojikSitAlani',
+    '2DereceArkeolojikSit': '2.DereceArkeolojikSitAlani',
+    '3DereceArkeolojikSit': '3.DereceArkeolojikSitAlani',
+    '1DereceDogalSit': '1.DereceDogalSitAlani',
+    '2DereceDogalSit': '2.DereceDogalSitAlani',
+    '3DereceDogalSit': '3.DereceDogalSitAlani',
+    OrganikTarimVeHayvancilikAlani: 'OrganizeTarimVeHayvancilikAlani',
+    Zeytinlik: 'ZeytinlikAlan',
+    Deniz: 'SuYuzeyi',
   };
 
   const BOUNDARY_FEATURE_MAP = {

@@ -29,6 +29,7 @@
     /^urn:ogc:def:crs:EPSG::3857$/i,
     /^EPSG:793[0-9]$/i,
     /^EPSG:525[0-9]$/i,
+    /^EPSG:2303[0-9]$/i,
     /WGS\s*84/i,
     /CRS84/i,
     /TUREF/i,
