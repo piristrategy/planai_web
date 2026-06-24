@@ -11146,11 +11146,15 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
     try {
       html = pendingShare?.previewHtml || await blob.text();
       if (html && html.includes('window.__PLANAI_REPORT__')) {
-        // if (typeof FieldReplaySafariRoute !== 'undefined' && FieldReplaySafariRoute.stripHarmfulReplayPatches) {
-        //   html = FieldReplaySafariRoute.stripHarmfulReplayPatches(html); // was stripping the route layer — disabled
-        // }
         if (typeof FieldSafeReplay !== 'undefined' && FieldSafeReplay.stripExternalFonts) {
           html = FieldSafeReplay.stripExternalFonts(html);
+        }
+        if (typeof FieldReplaySafariRoute !== 'undefined') {
+          if (FieldReplaySafariRoute.injectRouteFix) {
+            html = FieldReplaySafariRoute.injectRouteFix(html);
+          } else if (FieldReplaySafariRoute.stripHarmfulReplayPatches) {
+            html = FieldReplaySafariRoute.stripHarmfulReplayPatches(html);
+          }
         }
       }
     } catch (_) { html = ''; }

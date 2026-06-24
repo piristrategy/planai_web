@@ -148,6 +148,9 @@
     if (global.FieldSafeReplay?.stripExternalFonts) {
       html = global.FieldSafeReplay.stripExternalFonts(html);
     }
+    if (global.FieldReplaySafariRoute?.injectRouteFix) {
+      html = global.FieldReplaySafariRoute.injectRouteFix(html);
+    }
     return html;
   }
 
