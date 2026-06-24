@@ -10098,7 +10098,12 @@ function showFieldExportSheet() {
 
 function ensureMobileReplayHtml(html) {
   if (!html || typeof html !== 'string') return html;
-  if (typeof FieldSafeReplay !== 'undefined' && FieldSafeReplay.ensureMobileViewableReplayHtml) {
+  if (typeof FieldSafeReplay === 'undefined') return html;
+  if (FieldSafeReplay.buildPhoneExportHtml) {
+    const phone = FieldSafeReplay.buildPhoneExportHtml(html);
+    if (phone) return phone;
+  }
+  if (FieldSafeReplay.ensureMobileViewableReplayHtml) {
     return FieldSafeReplay.ensureMobileViewableReplayHtml(html);
   }
   return html;
@@ -12283,7 +12288,7 @@ async function createInteractiveFieldReport() {
       try { report.pdfBlob = await exportProjectPDF(report.html); } catch (e) { console.warn('[Journey PDF]', e); }
     }
     setReportProgress(95, PA_LANG === 'tr' ? 'Mekansal tekrar hazırlanıyor…' : 'Preparing spatial playback…');
-    const interactiveHtml = await buildInteractiveFieldReportHTML(report);
+    const interactiveHtml = ensureMobileReplayHtml(await buildInteractiveFieldReportHTML(report));
     await persistProjectReportBundle(report, { interactiveHtml });
     showHint(report.pdfBlob ? t('report.journeyBundleReady') : t('report.savedToProject'));
     await offerFieldExport({
@@ -12339,7 +12344,8 @@ async function createSimulatedFieldReports() {
       loadBrandLogoDataUrl,
       synthesizeDemoVoiceDataUrl,
     });
-    const saved = await persistProjectReportBundle(report, { interactiveHtml: report.interactiveHtml });
+    const interactiveHtml = ensureMobileReplayHtml(report.interactiveHtml || '');
+    const saved = await persistProjectReportBundle(report, { interactiveHtml });
     showHint(report.pdfBlob ? t('report.journeyBundleReady') : t('report.demoReady'));
     if (saved?.rptId) {
       setTimeout(() => { openSavedProjectReport(saved.rptId, 'interactive'); }, 400);
@@ -12356,7 +12362,7 @@ window.createSimulatedFieldReports = createSimulatedFieldReports;
 async function addReportBundleToZip(zip) {
   const report = await generateProjectReport((p, s) => setReportProgress(p, s));
   zip.file('report/report.html', report.html);
-  zip.file('report/interactive.html', await buildInteractiveFieldReportHTML(report));
+  zip.file('report/interactive.html', ensureMobileReplayHtml(await buildInteractiveFieldReportHTML(report)));
   if (report.mapPng) zip.file('report/mapshot.png', report.mapPng);
   if (report.pdfBlob) zip.file('report/report.pdf', report.pdfBlob);
   zip.file('layers/measurements.json', JSON.stringify(report.measurements, null, 2));

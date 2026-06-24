@@ -145,16 +145,23 @@
   const GATE_SCRIPT = [
     '(function(){',
     '"use strict";',
-    'var p=location.protocol||"";',
-    'var fileLike=p==="file:"||p==="content:"||p==="capacitor-file:";',
-    'if(!fileLike){window.__PLANAI_REPLAY_MODE__="cinematic";return;}',
+    'function offlineReplay(){',
+    'var p=(location.protocol||"").toLowerCase();',
+    'var h=location.href||"";',
+    'if(p==="file:"||p==="content:"||p==="capacitor-file:"||p==="blob:"||p==="about:")return true;',
+    'if(!p||p==="null:")return true;',
+    'try{if(window.origin==="null")return true;}catch(e){}',
+    'if(/^file:/i.test(h))return true;',
+    'return p!=="https:"&&p!=="http:"&&p!=="capacitor:";',
+    '}',
+    'if(!offlineReplay()){window.__PLANAI_REPLAY_MODE__="cinematic";return;}',
     'window.__PLANAI_REPLAY_MODE__="safe";',
     'var mods=document.querySelectorAll(\'script[type="module"]\');',
     'for(var i=0;i<mods.length;i++){mods[i].setAttribute("type","application/json");mods[i].setAttribute("data-planai-disabled","1");}',
     'var root=document.getElementById("root");',
-    'if(root)root.style.display="none";',
+    'if(root){root.style.display="none";root.classList.add("planai-safe-off");}',
     'var psr=document.getElementById("psr-app");',
-    'if(psr)psr.style.display="block";',
+    'if(psr){psr.style.display="block";psr.classList.add("planai-safe-on");}',
     '})();',
   ].join('');
 
@@ -230,29 +237,83 @@
   }
 
   function ensureMobileViewableReplayHtml(html) {
-    return upgradeLegacyCinematicHtml(html);
+    return buildPhoneExportHtml(html) || upgradeLegacyCinematicHtml(html);
+  }
+
+  function isSafeOnlyExport(html) {
+    if (!html || typeof html !== 'string') return false;
+    if (/<script[^>]*type=["']module["']/i.test(html)) return false;
+    if (!html.includes('id="psr-app"')) return false;
+    if (html.includes('id="root"')) return false;
+    return html.includes('window.__PLANAI_REPLAY_MODE__="safe"') ||
+      html.includes('id="planai-replay-safe"') ||
+      !html.includes('maplibregl');
+  }
+
+  function extractReportPayload(html) {
+    if (!html || typeof html !== 'string') return null;
+    const marker = 'window.__PLANAI_REPORT__=';
+    const idx = html.indexOf(marker);
+    if (idx < 0) return null;
+    const start = html.indexOf('{', idx);
+    if (start < 0) return null;
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    let q = '';
+    for (let i = start; i < html.length; i++) {
+      const c = html[i];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (c === '\\') esc = true;
+        else if (c === q) inStr = false;
+        continue;
+      }
+      if (c === '"' || c === "'") { inStr = true; q = c; continue; }
+      if (c === '{') depth++;
+      if (c === '}') {
+        depth--;
+        if (depth === 0) {
+          try { return JSON.parse(html.slice(start, i + 1)); } catch (e) { return null; }
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Phone / WhatsApp / Files export — safe replay only (no MapLibre bundle).
+   */
+  function buildPhoneExportHtml(html) {
+    if (!html || typeof html !== 'string') return null;
+    if (isSafeOnlyExport(html)) return html;
+    const payload = extractReportPayload(html);
+    if (!payload) return null;
+    const safePayload = typeof global.ExportSafety !== 'undefined'
+      ? global.ExportSafety.safeJsonInHtml(payload)
+      : JSON.stringify(payload).replace(/</g, '\\u003c');
+    return buildSafeReplayHtml(payload, safePayload);
   }
 
   function buildWatchdogScript() {
     return '<script id="planai-replay-watchdog">(function(){' +
       '"use strict";' +
-      'if(window.__PLANAI_REPLAY_MODE__==="safe")return;' +
+      'if(window.__PLANAI_REPLAY_MODE__==="safe"||window.__PLANAI_SAFE_BOOTED__)return;' +
       'function runSafe(){' +
       'if(window.__PLANAI_SAFE_BOOTED__)return;' +
-      'var root=document.getElementById("root");' +
-      'if(root&&root.childElementCount>0)return;' +
       'window.__PLANAI_REPLAY_MODE__="safe";' +
       'var mods=document.querySelectorAll(\'script[type="module"]\');' +
       'for(var i=0;i<mods.length;i++){mods[i].setAttribute("type","application/json");}' +
-      'if(root)root.style.display="none";' +
+      'var root=document.getElementById("root");' +
+      'if(root){root.style.display="none";root.classList.add("planai-safe-off");}' +
       'var psr=document.getElementById("psr-app");' +
-      'if(psr)psr.style.display="block";' +
+      'if(psr){psr.style.display="block";psr.classList.add("planai-safe-on");}' +
       'var s=document.createElement("script");' +
       's.textContent=' + JSON.stringify(BOOT_SCRIPT) + ';' +
       'document.body.appendChild(s);' +
       '}' +
-      'setTimeout(runSafe,7000);' +
-      'window.addEventListener("error",function(ev){var m=ev&&ev.message?String(ev.message):"";if(/module|import|worker|maplibre|blob/i.test(m))setTimeout(runSafe,300);},true);' +
+      'setTimeout(runSafe,1800);' +
+      'window.addEventListener("error",function(ev){var m=ev&&ev.message?String(ev.message):"";if(/module|import|worker|maplibre|blob|script/i.test(m))setTimeout(runSafe,120);},true);' +
       '})();<\/script>';
   }
 
@@ -274,7 +335,11 @@
       '<meta name="color-scheme" content="dark light"/>' +
       '<title>' + title + '</title>' +
       '<style>' + SAFE_CSS + '</style></head><body>' +
-      '<div id="psr-app"></div>' +
+      '<noscript><p style="padding:16px;font-family:system-ui,sans-serif">' +
+      (lang === 'tr' ? 'Bu rapor JavaScript gerektirir. Dosyayı Safari ile açın.' : 'This report needs JavaScript. Open the file in Safari.') +
+      '</p></noscript>' +
+      '<div id="psr-app"><p style="padding:16px;color:#e8eef4;font-family:system-ui,sans-serif">' +
+      (lang === 'tr' ? 'Rapor yükleniyor…' : 'Loading report…') + '</p></div>' +
       '<script>window.__PLANAI_REPORT__=' + safePayload + ';window.__PLANAI_REPLAY_MODE__="safe";<\/script>' +
       extra +
       '<script>' + BOOT_SCRIPT + '<\/script>' +
@@ -284,6 +349,9 @@
   global.FieldSafeReplay = {
     detectReplayCapabilities,
     buildSafeReplayHtml,
+    buildPhoneExportHtml,
+    extractReportPayload,
+    isSafeOnlyExport,
     injectMobileFallback,
     upgradeLegacyCinematicHtml,
     ensureMobileViewableReplayHtml,
