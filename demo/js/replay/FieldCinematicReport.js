@@ -10,37 +10,81 @@
     'interaktif/Field_Journey_17_06_2026_interaktif.html',
   ];
 
-  const CINEMATIC_FILE_BOOT = [
+  const OFFLINE_LAUNCHER_SCRIPT = [
     '(function(){',
     '"use strict";',
+    'function offline(){',
     'var p=(location.protocol||"").toLowerCase();',
-    'var href=location.href||"";',
-    'var offline=p==="file:"||p==="content:"||p==="capacitor-file:"||p==="blob:"||p==="about:"||!p||p==="null:"||/^file:/i.test(href);',
-    'try{if(window.origin==="null")offline=true;}catch(e){}',
-    'if(!offline)return;',
-    'window.__PLANAI_OFFLINE_REPLAY__=1;',
+    'if(p==="file:"||p==="content:"||p==="capacitor-file:"||p==="about:"||!p||p==="null:")return true;',
+    'try{if(window.origin==="null"||location.origin==="null")return true;}catch(e){}',
+    'return false;',
+    '}',
+    'function fail(msg){',
+    'document.body.innerHTML="<p style=\\"padding:16px;font-family:system-ui,sans-serif;background:#0f1a28;color:#fff\\">PlanAI Field — "+String(msg||"Yüklenemedi")+"</p>";',
+    '}',
+    'function run(){',
+    'var el=document.getElementById("planai-cinematic-payload");',
+    'if(!el||!el.textContent){fail("Rapor verisi yok");return;}',
+    'var html=el.textContent;',
+    'try{',
+    'if(offline()){',
+    'var u=URL.createObjectURL(new Blob([html],{type:"text/html;charset=utf-8"}));',
+    'location.replace(u);',
+    'return;',
+    '}',
+    'document.open("text/html","replace");',
+    'document.write(html);',
+    'document.close();',
+    '}catch(e){fail(e&&e.message?e.message:e);}',
+    '}',
+    'if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",run);',
+    'else run();',
     '})();',
   ].join('');
+
+  function escapePayloadForEmbed(html) {
+    return String(html).replace(/<\/script/gi, '<\\/script');
+  }
+
+  /** iOS Files / file:// cannot run MapLibre cinematic inline — relaunch inner HTML on blob: URL. */
+  function wrapOfflineFileLauncher(html) {
+    if (!html || typeof html !== 'string') return html;
+    if (html.includes('id="planai-offline-launcher"')) return html;
+    if (!html.includes('window.__PLANAI_REPORT__')) return html;
+    const payload = escapePayloadForEmbed(html);
+    const titleM = html.match(/<title>([^<]*)<\/title>/i);
+    const title = titleM ? titleM[1] : 'PlanAI Field — Inspection Replay';
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>' +
+      '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>' +
+      '<meta name="color-scheme" content="dark light"/>' +
+      '<title>' + title.replace(/</g, '') + '</title>' +
+      '<style>body{margin:0;background:#0f1a28;color:#e8eef4;font-family:system-ui,-apple-system,sans-serif}' +
+      '#planai-launch-status{padding:16px;text-align:center}</style></head><body>' +
+      '<p id="planai-launch-status">PlanAI Field…</p>' +
+      '<script type="text/plain" id="planai-cinematic-payload">' + payload + '</script>' +
+      '<script id="planai-offline-launcher">' + OFFLINE_LAUNCHER_SCRIPT + '<\/script>' +
+      '</body></html>';
+  }
 
   function demoteModuleScripts(html) {
     if (!html) return html;
     return html.replace(/<script([^>]*)\s+type=["']module["']/gi, '<script$1');
   }
 
-  function injectCinematicFileBoot(html) {
-    if (!html || html.includes('id="planai-cinematic-file-boot"')) return html;
-    const boot = '<script id="planai-cinematic-file-boot">' + CINEMATIC_FILE_BOOT + '<\/script>';
-    const marker = 'window.__PLANAI_REPORT__=';
-    const idx = html.indexOf(marker);
-    if (idx >= 0) {
-      const end = html.indexOf('</script>', idx);
-      if (end >= 0) {
-        const insertAt = end + '</script>'.length;
-        return html.slice(0, insertAt) + boot + html.slice(insertAt);
-      }
+  function finishReplayHtml(html) {
+    if (!html) return html;
+    if (global.FieldSafeReplay?.stripMobileFallback) {
+      html = global.FieldSafeReplay.stripMobileFallback(html);
     }
-    if (html.includes('</body>')) return html.replace('</body>', boot + '</body>');
-    return html + boot;
+    if (global.FieldSafeReplay?.stripExternalFonts) {
+      html = global.FieldSafeReplay.stripExternalFonts(html);
+    }
+    html = demoteModuleScripts(html);
+    html = exposeReplayMapInHtml(html);
+    if (global.FieldReplaySafariRoute?.injectRouteFix) {
+      html = global.FieldReplaySafariRoute.injectRouteFix(html);
+    }
+    return wrapOfflineFileLauncher(html);
   }
 
   function coordLon(v) {
@@ -185,23 +229,6 @@
       created,
       created + 'try{Y.getContainer()._map=Y;window.__PLANAI_REPLAY_MAP__=Y}catch(e){};',
     );
-  }
-
-  function finishReplayHtml(html) {
-    if (!html) return html;
-    if (global.FieldSafeReplay?.stripMobileFallback) {
-      html = global.FieldSafeReplay.stripMobileFallback(html);
-    }
-    if (global.FieldSafeReplay?.stripExternalFonts) {
-      html = global.FieldSafeReplay.stripExternalFonts(html);
-    }
-    html = demoteModuleScripts(html);
-    html = injectCinematicFileBoot(html);
-    html = exposeReplayMapInHtml(html);
-    if (global.FieldReplaySafariRoute?.injectRouteFix) {
-      html = global.FieldReplaySafariRoute.injectRouteFix(html);
-    }
-    return html;
   }
 
   function buildReplayHtml(payload) {
