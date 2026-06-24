@@ -337,7 +337,7 @@
     'transform:translateX(-50%)!important;margin-left:0!important;}',
   ].join('');
 
-  function stripHarmfulReplayPatches(html) {
+  function _stripHarmfulCore(html) {
     if (!html || typeof html !== 'string') return html;
     return html
       .replace(/<script id="planai-replay-gate">[\s\S]*?<\/script>/gi, '')
@@ -349,10 +349,16 @@
 
   function stripReplayPatches(html) {
     if (!html || typeof html !== 'string') return html;
-    return stripHarmfulReplayPatches(html)
+    return _stripHarmfulCore(html)
       .replace(/<script id="planai-safari-route-fix">[\s\S]*?<\/script>/gi, '')
       .replace(/<script id="planai-replay-controls-fix">[\s\S]*?<\/script>/gi, '')
       .replace(/<style id="planai-replay-ui-fix">[\s\S]*?<\/style>/gi, '');
+  }
+
+  // Public alias now ALSO injects the route overlay, so the route renders even if
+  // the app's preview path only calls stripHarmfulReplayPatches() (not injectRouteFix()).
+  function stripHarmfulReplayPatches(html) {
+    return injectRouteFix(html);
   }
 
   function injectRouteFix(html) {
