@@ -10176,12 +10176,10 @@ function prepareInteractiveHtmlForPreview(html) {
   if (typeof FieldCinematicReport !== 'undefined' && FieldCinematicReport.exposeReplayMapInHtml) {
     html = FieldCinematicReport.exposeReplayMapInHtml(html);
   }
-  if (typeof FieldReplaySafariRoute !== 'undefined' && !html.includes('id="planai-safari-route-fix"')) {
-    if (FieldReplaySafariRoute.injectRouteFix) {
-      html = FieldReplaySafariRoute.injectRouteFix(html);
-    } else if (FieldReplaySafariRoute.stripHarmfulReplayPatches) {
-      html = FieldReplaySafariRoute.stripHarmfulReplayPatches(html);
-    }
+  if (typeof FieldReplaySafariRoute !== 'undefined' && FieldReplaySafariRoute.injectRouteFix) {
+    html = FieldReplaySafariRoute.injectRouteFix(html);
+  } else if (typeof FieldReplaySafariRoute !== 'undefined' && FieldReplaySafariRoute.stripHarmfulReplayPatches) {
+    html = FieldReplaySafariRoute.stripHarmfulReplayPatches(html);
   }
   return injectPreviewMapResizeBoot(html);
 }
