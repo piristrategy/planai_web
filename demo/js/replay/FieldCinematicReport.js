@@ -27,15 +27,35 @@
     'function fail(msg){',
     'document.body.innerHTML="<p style=\\"padding:16px;font-family:system-ui,sans-serif;background:#0f1a28;color:#fff;line-height:1.5\\">PlanAI Field — "+String(msg||"Yüklenemedi")+"</p>";',
     '}',
+    'function setStatus(msg){',
+    'var s=document.getElementById("planai-launch-status");',
+    'if(s)s.textContent=String(msg||"");',
+    '}',
+    'function collectPayload(){',
+    'var chunks=document.querySelectorAll("script[id^=\\"planai-cinematic-chunk-\\"]");',
+    'if(chunks&&chunks.length){',
+    'var out="";',
+    'for(var i=0;i<chunks.length;i++)out+=chunks[i].textContent||"";',
+    'return out;',
+    '}',
+    'var el=document.getElementById("planai-cinematic-payload");',
+    'return el?(el.textContent||""):"";',
+    '}',
     'function readPayload(cb,attempt){',
     'attempt=attempt||0;',
-    'var el=document.getElementById("planai-cinematic-payload");',
-    'var html=el&&el.textContent;',
-    'if(!html||html.length<500){',
-    'if(attempt<40)return setTimeout(function(){readPayload(cb,attempt+1);},120);',
-    'fail("Rapor verisi okunamadı ("+(html?html.length:0)+" bayt)");',
+    'var html=collectPayload();',
+    'var lenEl=document.getElementById("planai-payload-len");',
+    'var expected=lenEl?parseInt(lenEl.getAttribute("data-len")||"0",10):0;',
+    'var minOk=expected>0?Math.floor(expected*0.92):500;',
+    'if(!html||html.length<minOk){',
+    'if(attempt<120){',
+    'if(attempt%8===0)setStatus("PlanAI Field — yükleniyor… ("+Math.round((html?html.length:0)/1024)+" KB)");',
+    'return setTimeout(function(){readPayload(cb,attempt+1);},150);',
+    '}',
+    'fail("Rapor verisi okunamadı ("+(html?html.length:0)+"/"+expected+" bayt)");',
     'return;',
     '}',
+    'setStatus("PlanAI Field — başlatılıyor…");',
     'cb(html);',
     '}',
     'function mountFrame(html,src){',
@@ -44,7 +64,7 @@
     'document.body.style.background="#0f1a28";',
     'var f=document.createElement("iframe");',
     'f.setAttribute("title","PlanAI Field Replay");',
-    'f.setAttribute("sandbox","allow-scripts allow-same-origin allow-popups");',
+    'if(!isIOS())f.setAttribute("sandbox","allow-scripts allow-same-origin allow-popups");',
     'f.style.cssText="position:fixed;inset:0;border:0;width:100%;height:100%;background:#0f1a28";',
     'if(src)f.src=src;',
     'else f.srcdoc=html;',
@@ -79,8 +99,23 @@
     '})();',
   ].join('');
 
+  const PAYLOAD_CHUNK_BYTES = 380000;
+
   function escapePayloadForEmbed(html) {
     return String(html).replace(/<\/script/gi, '<\\/script');
+  }
+
+  function buildPayloadEmbed(html) {
+    const payload = escapePayloadForEmbed(html);
+    if (payload.length <= PAYLOAD_CHUNK_BYTES) {
+      return '<script type="text/plain" id="planai-cinematic-payload">' + payload + '</script>';
+    }
+    let embed = '<span id="planai-payload-len" data-len="' + payload.length + '" hidden></span>';
+    for (let i = 0, part = 0; i < payload.length; i += PAYLOAD_CHUNK_BYTES, part++) {
+      const chunk = payload.slice(i, i + PAYLOAD_CHUNK_BYTES);
+      embed += '<script type="text/plain" id="planai-cinematic-chunk-' + part + '">' + chunk + '</script>';
+    }
+    return embed;
   }
 
   /** iOS Files / file:// cannot run MapLibre cinematic inline — relaunch inner HTML on blob: URL. */
@@ -88,7 +123,6 @@
     if (!html || typeof html !== 'string') return html;
     if (html.includes('id="planai-offline-launcher"')) return html;
     if (!html.includes('window.__PLANAI_REPORT__')) return html;
-    const payload = escapePayloadForEmbed(html);
     const titleM = html.match(/<title>([^<]*)<\/title>/i);
     const title = titleM ? titleM[1] : 'PlanAI Field — Inspection Replay';
     return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>' +
@@ -98,7 +132,7 @@
       '<style>body{margin:0;background:#0f1a28;color:#e8eef4;font-family:system-ui,-apple-system,sans-serif}' +
       '#planai-launch-status{padding:16px;text-align:center}</style></head><body>' +
       '<p id="planai-launch-status">PlanAI Field — yükleniyor…</p>' +
-      '<script type="text/plain" id="planai-cinematic-payload">' + payload + '</script>' +
+      buildPayloadEmbed(html) +
       '<script id="planai-offline-launcher">' + OFFLINE_LAUNCHER_SCRIPT + '<\/script>' +
       '</body></html>';
   }
