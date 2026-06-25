@@ -92,17 +92,53 @@ const HatchWorldSpace = (function () {
     return entry;
   }
 
-  function drawParkDotsOnTile(c, size, color, lod) {
-    c.clearRect(0, 0, size, size);
+  function drawStaggeredStippleOnTile(c, w, h, color, lod, dotRatio) {
+    c.clearRect(0, 0, w, h);
     c.fillStyle = color;
-    const sz = size * (lod === 'coarse' ? 0.11 : lod === 'medium' ? 0.13 : 0.14);
-    const rowH = size * 0.866;
-    c.fillRect(size / 2 - sz / 2, size / 2 - sz / 2, sz, sz);
-    c.fillRect(-sz / 2, rowH + size / 2 - sz / 2, sz, sz);
+    const dr = Math.max(0.04, Math.min(0.35, Number(dotRatio) || 0.167));
+    const r = w * dr * (lod === 'coarse' ? 0.9 : lod === 'medium' ? 1 : 1.05);
+    const rowH = Math.round(w * 0.866);
+    const dot = (cx, cy) => {
+      c.beginPath();
+      c.arc(cx, cy, r, 0, Math.PI * 2);
+      c.fill();
+    };
+    dot(w / 2, w / 2);
+    dot(0, rowH + w / 2);
+  }
+
+  function getStaggeredStippleTile(color, lod, dotRatio) {
+    const dr = (Number(dotRatio) || 0.167).toFixed(3);
+    const key = 'staggeredStipple|' + color + '|' + lod + '|' + dr;
+    const hit = cacheGet(key);
+    if (hit) return hit;
+    const rowH = Math.round(TILE_PX * 0.866);
+    const tileH = rowH * 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = TILE_PX;
+    canvas.height = tileH;
+    drawStaggeredStippleOnTile(canvas.getContext('2d'), TILE_PX, tileH, color, lod, dotRatio);
+    const entry = { canvas, tileW: TILE_PX, tileH, worldW: 1, worldH: tileH / TILE_PX };
+    cacheSet(key, entry);
+    return entry;
+  }
+
+  function drawParkDotsOnTile(c, w, h, color, lod) {
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = color;
+    const r = w * (lod === 'coarse' ? 0.055 : lod === 'medium' ? 0.065 : 0.07);
+    const rowH = Math.round(w * 0.866);
+    const dot = (cx, cy) => {
+      c.beginPath();
+      c.arc(cx, cy, r, 0, Math.PI * 2);
+      c.fill();
+    };
+    dot(w / 2, w / 2);
+    dot(0, rowH + w / 2);
   }
 
   function getParkDotsTile(color, lod) {
-    const key = 'parkDots|' + color + '|' + lod;
+    const key = 'parkDots|circles|' + color + '|' + lod;
     const hit = cacheGet(key);
     if (hit) return hit;
     const rowH = Math.round(TILE_PX * 0.866);
@@ -111,7 +147,7 @@ const HatchWorldSpace = (function () {
     canvas.width = TILE_PX;
     canvas.height = tileH;
     const c = canvas.getContext('2d');
-    drawParkDotsOnTile(c, TILE_PX, color, lod);
+    drawParkDotsOnTile(c, TILE_PX, tileH, color, lod);
     const entry = { canvas, tileW: TILE_PX, tileH, worldW: 1, worldH: tileH / TILE_PX };
     cacheSet(key, entry);
     return entry;
@@ -153,7 +189,7 @@ const HatchWorldSpace = (function () {
     return true;
   }
 
-  function fillRepeating(ctx, patternType, color, cellWorld, bounds, alpha) {
+  function fillRepeating(ctx, patternType, color, cellWorld, bounds, alpha, dotRatio) {
     const screenCell = cellWorld * (typeof S !== 'undefined' ? (S.scale || 1) : 1);
     let lod = lodFromScreenPx(screenCell);
     if (lod === 'skip') lod = 'coarse';
@@ -167,6 +203,7 @@ const HatchWorldSpace = (function () {
     let tile;
     if (patternType === 'stamp') tile = getStampTile(color, lod);
     else if (patternType === 'parkDots') tile = getParkDotsTile(color, lod);
+    else if (patternType === 'staggeredStipple') tile = getStaggeredStippleTile(color, lod, dotRatio);
     else if (patternType === 'dots') tile = getDotsTile(color, lod);
     else return false;
 

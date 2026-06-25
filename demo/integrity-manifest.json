@@ -1,14 +1,14 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-06-23T21:40:22.426Z",
+  "generatedAt": "2026-06-25T21:07:17.037Z",
   "modules": [
     {
       "path": "js/app.js",
-      "sha256": "37f6c08b96b0f2de3299222e30ab4e680771a94e7f314ebd71e1b653f20470e5"
+      "sha256": "3a13860f05d35b35c18728d2f6d485a73a5d46982d2d2410415b8a0865a83082"
     },
     {
       "path": "js/spatial/SpatialSecurity.js",
-      "sha256": "36b61b5c8d85d78c1a35515f4f939356502efecc08f0d9b4238435f856ef10b6"
+      "sha256": "4c24bf638bf3dbd629507ee06a65b53892a5d1c0ca0b7e38a29d5e77f98b742a"
     },
     {
       "path": "js/security/DeviceSecurity.js",
@@ -24,7 +24,7 @@
     },
     {
       "path": "js/spatial/SpatialLimitsCore.js",
-      "sha256": "8298f3a3567953c037e7c7b435ea110c97c6293ea430877a26085ea545d4a944"
+      "sha256": "9de286209bef6c98da09f95ab2af8f7cd4cc6f7be470aa33e3028b6c88ee1d96"
     }
   ]
 }

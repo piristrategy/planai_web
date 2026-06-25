@@ -24,7 +24,10 @@ const MpyyPlanGmlCatalog = (function () {
     '1DereceDogalSit': '1.DereceDogalSitAlani',
     '2DereceDogalSit': '2.DereceDogalSitAlani',
     '3DereceDogalSit': '3.DereceDogalSitAlani',
-    OrganikTarimVeHayvancilikAlani: 'OrganizeTarimVeHayvancilikAlani',
+    SporAlani: 'SporAlani',
+    SemtSporAlani: 'SemtSporAlani',
+    AcikSporTesisAlani: 'AcikSporTesisAlani',
+    KapaliSporTesisAlani: 'KapaliSporTesisAlani',
     Zeytinlik: 'ZeytinlikAlan',
     Deniz: 'SuYuzeyi',
   };
@@ -40,7 +43,7 @@ const MpyyPlanGmlCatalog = (function () {
 
   const RENDER_STYLE_HATCH = {
     ring_stamp: 'stamp',
-    staggered_stipple: 'stamp',
+    staggered_stipple: 'staggeredStipple',
     free_stipple: 'dots',
     karolaj_center_dots: 'parkDots',
     karolaj_hollow_dots: 'parkDots',
@@ -216,20 +219,29 @@ const MpyyPlanGmlCatalog = (function () {
     return null;
   }
 
-  function mmToScreenUnits(mm, projectScale, mPerPx) {
-    const scale = projectScale || 1000;
+  function mmToScreenPx(mm) {
     const val = Number(mm);
     if (!val || val <= 0) return 2;
-    const meters = (val / 1000) * scale;
-    if (!mPerPx || mPerPx <= 0) return Math.max(1.2, val * 0.35);
+    return Math.max(0.75, val * (96 / 25.4));
+  }
+
+  function mmToWorldUnits(mm, projectScale, mPerPx) {
+    const val = Number(mm);
+    if (!val || val <= 0) return 2;
+    const meters = (val / 1000) * (projectScale || 1000);
+    if (!mPerPx || mPerPx <= 0) return Math.max(1, val * 0.35);
     return Math.max(1, meters / mPerPx);
   }
 
+  function mmToScreenUnits(mm, projectScale, mPerPx) {
+    return mmToWorldUnits(mm, projectScale, mPerPx);
+  }
+
   function boundaryDashFromRecord(rec, projectScale, mPerPx) {
-    const seg = mmToScreenUnits(rec.segmentLengthMM || 10, projectScale, mPerPx);
-    const gap = mmToScreenUnits(rec.gapMM || 2, projectScale, mPerPx);
-    const dot = mmToScreenUnits(rec.dotDiameterMM || 1, projectScale, mPerPx);
-    const circle = mmToScreenUnits(rec.circleDiameterMM || 5, projectScale, mPerPx);
+    const seg = mmToScreenPx(rec.segmentLengthMM || 10);
+    const gap = mmToScreenPx(rec.gapMM || 2);
+    const dot = mmToScreenPx(rec.dotDiameterMM || 1);
+    const circle = mmToScreenPx(rec.circleDiameterMM || 5);
     const pt = rec.patternType || 'solid';
 
     switch (pt) {
@@ -261,12 +273,13 @@ const MpyyPlanGmlCatalog = (function () {
   }
 
   function boundaryPresentationFromRecord(rec, projectScale, mPerPx) {
-    const strokeW = Math.max(1, mmToScreenUnits(rec.lineThicknessMM || 0.6, projectScale, mPerPx));
+    const lineMm = rec.lineThicknessMM || 0.25;
     const pattern = rec.patternType || 'solid';
     const periodMm = (rec.circleDiameterMM || 0) + (rec.gapMM || rec.segmentLengthMM || 10);
     return {
       color: rec.strokeHex || '#000000',
-      strokeWidth: strokeW,
+      strokeWidthPaperMm: lineMm,
+      strokeWidth: mmToScreenPx(lineMm),
       lineStyle: 'mpyy-boundary',
       boundaryPattern: pattern,
       boundaryDash: boundaryDashFromRecord(rec, projectScale, mPerPx),
@@ -290,6 +303,7 @@ const MpyyPlanGmlCatalog = (function () {
   function hatchSpacingMm(hatchParams) {
     if (!hatchParams) return null;
     return hatchParams.karolajMm
+      || hatchParams.karolajSpacingMm
       || hatchParams.pairSpacingMm
       || hatchParams.horizontalSpacingMm
       || hatchParams.diagonalSpacingMm
@@ -303,7 +317,9 @@ const MpyyPlanGmlCatalog = (function () {
     const rs = hp.renderStyle || rec.patternType || 'none';
     let hatchPattern = RENDER_STYLE_HATCH[rs];
     if (hatchPattern == null) {
-      if (/stamp|stipple/i.test(rec.renderPatternId || '')) hatchPattern = 'stamp';
+      if (/staggered-stipple/i.test(rec.renderPatternId || '')) hatchPattern = 'staggeredStipple';
+      else if (/ring-stamp|ring_stamp/i.test(rec.renderPatternId || '')) hatchPattern = 'stamp';
+      else if (/stamp|stipple/i.test(rec.renderPatternId || '')) hatchPattern = 'stamp';
       else if (/diagonal|capraz/i.test(rec.renderPatternId || '')) hatchPattern = 'diagonal';
       else if (/cross|capraz.*capraz/i.test(rec.renderPatternId || '')) hatchPattern = 'cross';
       else if (/horizontal|yatay/i.test(rec.renderPatternId || '')) hatchPattern = 'horizontal';
@@ -314,6 +330,8 @@ const MpyyPlanGmlCatalog = (function () {
     if (rs === 'solid_fill' || rs === 'none' || rs === 'symbol_only') hatchPattern = 'none';
 
     const hatchMm = hatchSpacingMm(hp);
+    const hatchDotMm = hp.circleDiameterMm > 0 ? hp.circleDiameterMm : null;
+    const lineMm = hp.lineThicknessMm || 0.18;
     const fillHex = rec.fillHex || rec.fieldSketchMapping?.fillHex || '#9e9e9e';
     const strokeHex = rec.fieldSketchMapping?.strokeHex || rec.hatchInk || '#000000';
     const hatchCol = rec.hatchInk || rec.fieldSketchMapping?.hatchInk || '#212121';
@@ -322,10 +340,12 @@ const MpyyPlanGmlCatalog = (function () {
     return {
       color: strokeHex,
       fillColor: hasFill ? hexToRgba(fillHex, hatchPattern === 'none' ? 0.38 : 0.58) : 'transparent',
-      strokeWidth: hp.lineThicknessMm ? Math.max(1.5, hp.lineThicknessMm * 4) : 2,
+      strokeWidthPaperMm: lineMm,
+      strokeWidth: mmToScreenPx(lineMm),
       hatchPattern,
       hatchColor: hatchCol,
       hatchMm,
+      hatchDotMm,
       noFill: !hasFill,
       mpyyRecordId: rec.id,
       mpyyKind: 'landuse',
@@ -353,6 +373,8 @@ const MpyyPlanGmlCatalog = (function () {
     boundaryPresentationFromRecord,
     boundaryDashFromRecord,
     mmToScreenUnits,
+    mmToScreenPx,
+    mmToWorldUnits,
     resolvePlanLevel,
     isReady: () => ready,
     tipKeyFromLabel: subClassToTipKey,

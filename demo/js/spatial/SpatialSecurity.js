@@ -310,7 +310,8 @@ const SpatialSecurity = (function () {
     if (!srs) return true;
     const s = String(srs).trim();
     return /^(EPSG:4326|EPSG:3857)$/i.test(s)
-      || /EPSG:793[0-9]|EPSG:525[0-9]|TUREF/i.test(s)
+      || /EPSG:793[0-9]|EPSG:525[0-9]|EPSG:2303[0-9]|EPSG:23(1[9]|2[0-9])|EPSG:3263[5-8]/i.test(s)
+      || /TUREF|ED50|GGRS/i.test(s)
       || /WGS\s*84|CRS84/i.test(s);
   }
 
@@ -338,7 +339,7 @@ const SpatialSecurity = (function () {
       SPATIAL_ZIP_ENTRIES: 'Dataset exceeds safe import limits.',
       SPATIAL_ZIP_UNCOMPRESSED: 'Dataset exceeds safe import limits.',
       SPATIAL_ZIP_INVALID: 'Dataset exceeds safe import limits.',
-      SPATIAL_CRS_UNSUPPORTED: 'Unsupported coordinate reference system.',
+      SPATIAL_CRS_UNSUPPORTED: 'Desteklenmeyen koordinat sistemi.',
     };
     return map[code] || null;
   }

@@ -25,15 +25,24 @@
   const CRS_WHITELIST = [
     /^EPSG:4326$/i,
     /^EPSG:3857$/i,
+    /^EPSG:5252$/i,
     /^urn:ogc:def:crs:EPSG::4326$/i,
     /^urn:ogc:def:crs:EPSG::3857$/i,
     /^EPSG:793[0-9]$/i,
     /^EPSG:525[0-9]$/i,
     /^EPSG:2303[0-9]$/i,
+    /^EPSG:23(1[9]|2[0-5])$/i,
+    /^EPSG:23(26|27|28|29)$/i,
+    /^EPSG:3263[5-8]$/i,
+    /^urn:ogc:def:crs:EPSG::(2319|23[12][0-9]|2303[0-9]|3263[5-8]|525[2-9]|793[0-6])$/i,
     /WGS\s*84/i,
     /CRS84/i,
     /TUREF/i,
     /Turkish\s*National\s*Reference/i,
+    /ED50\s*\/?\s*TM\s*\d+/i,
+    /ED50.*UTM/i,
+    /GGRS\s*87/i,
+    /ITRF\s*96/i,
   ];
 
   const DANGEROUS_XML = /<!(ENTITY|DOCTYPE)|<\?xml-stylesheet|javascript:|data:text\/html/i;

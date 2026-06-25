@@ -4171,7 +4171,7 @@ const FIELD_AUTOSAVE_INTERVAL_MS = 20000;
 const FIELD_AUTOSAVE_LS_KEY = 'planai_field_autosave';
 
 const PROJECT_DB_NAME = 'planai_field_db';
-const PROJECT_DB_VER = 2;
+const PROJECT_DB_VER = 3;
 const MAP_TILE_CACHE_MAX = 600;
 const DEM_TILE_CACHE_MAX = 120;
 const TILE_MISS_RETRY_MS = 8000;
@@ -4207,7 +4207,7 @@ const PLAN_GML_CONTAINER_TYPES = new Set([
 ]);
 const PLAN_GML_TIP_KEYS = [
   'CalismaTip', 'TurizmTip', 'AcikYesilTip', 'EnerjiTesisTip', 'KonutTip', 'TicaretTip',
-  'SanayiTip', 'EgitimTesisTip', 'AfetTip',
+  'SanayiTip', 'EgitimTesisTip', 'AfetTip', 'SosyalKulturelTip', 'SaglikTesisTip',
   'TarimTip', 'DogalKarakterTip', 'MeraSinif', 'SitTip', 'SuYuzeyiTip', 'EnerjiTip',
 ];
 /** CDP GML'de alt tip alanı boş gelen özellikler → MPYY tip anahtarı. */
@@ -4226,11 +4226,21 @@ const PLAN_GML_TIP_SHORT = {
   KentselMeskunAlan: 'K-Yrl', MeraAlani: 'Mera', TercihliKullanimBolgesi: 'T-Kul',
   '1DereceArkeolojikSit': 'A-1', '2DereceArkeolojikSit': 'A-2', '3DereceArkeolojikSit': 'A-3',
   '1DereceDogalSit': 'D-1', '2DereceDogalSit': 'D-2', '3DereceDogalSit': 'D-3',
-  OtelAlani: 'Otel', GunubirlikTesisAlani: 'Gün', Park: 'Park',
+  OtelAlani: 'Otel', GunubirlikTesisAlani: 'Gün', Park: 'Park', SporAlani: 'Spor',
   TicaretTurizmAlani: 'T-Tic', TicaretAlani: 'Tic', KonutAlani: 'Kon',
 };
 const PLAN_GML_LABEL_SCREEN_PX = 10;
 const PLAN_GML_LABEL_MIN_POLY_PX = 48;
+/** MPYY kağıt çizgi kalınlıkları (mm) — 1/1000 UIP, 1/5000–1/25000 NIP aynı kağıt ölçüsü. */
+const PLAN_GML_DEFAULT_LINE_MM = {
+  area: 0.18,
+  boundary: 0.25,
+  planSinir: 0.35,
+  hatch: 0.13,
+  adaKenari: 0.18,
+};
+/** Plan ölçeği → MPYY plan seviyesi (katalog anahtarı). */
+const PLAN_GML_SCALE_TO_LEVEL = { 1000: 'UIP', 5000: 'NIP', 25000: 'NIP', 100000: 'CDP' };
 const PLAN_GML_STYLES = {
   _default: { color: '#546e7a', fillColor: 'transparent', strokeWidth: 2, hatchPattern: 'none', noFill: true },
   PlanSiniri: { color: '#0d47a1', fillColor: 'transparent', strokeWidth: 3.5, hatchPattern: 'none', noFill: true },
@@ -4254,12 +4264,17 @@ const PLAN_GML_STYLES = {
   EnerjiDagitimDepolama: { color: '#f9a825', fillColor: 'rgba(255,213,79,0.48)', strokeWidth: 2, hatchPattern: 'cross', hatchColor: '#6d4c41' },
   EgitimTesisAlani: { color: '#5c6bc0', fillColor: 'rgba(92,107,192,0.45)', strokeWidth: 2, hatchPattern: 'none' },
   SaglikTesisAlani: { color: '#ec407a', fillColor: 'rgba(236,64,122,0.42)', strokeWidth: 2, hatchPattern: 'none' },
+  SosyalKulturelAlan: { color: '#2e7d32', fillColor: 'transparent', strokeWidth: 2, hatchPattern: 'none', noFill: true },
+  SporAlani: { color: '#000000', fillColor: 'rgba(137,205,102,0.58)', strokeWidth: 2, hatchPattern: 'parkDots', hatchColor: '#000000', hatchMm: 4 },
+  SemtSporAlani: { color: '#000000', fillColor: 'rgba(137,205,102,0.55)', strokeWidth: 2, hatchPattern: 'parkDots', hatchColor: '#000000', hatchMm: 4 },
+  AcikSporTesisAlani: { color: '#000000', fillColor: 'rgba(137,205,102,0.55)', strokeWidth: 2, hatchPattern: 'parkDots', hatchColor: '#000000', hatchMm: 4 },
+  KapaliSporTesisAlani: { color: '#000000', fillColor: 'rgba(137,205,102,0.52)', strokeWidth: 2, hatchPattern: 'grid', hatchColor: '#000000', hatchMm: 4 },
   AfetTehlikeliAlanlar: { color: '#757575', fillColor: 'rgba(158,158,158,0.35)', strokeWidth: 2, hatchPattern: 'horizontal' },
   YapiYaklasmaSiniri: { color: '#d32f2f', fillColor: 'transparent', strokeWidth: 2.5, hatchPattern: 'none', lineStyle: 'dashed', noFill: true },
   AdaKenari: { color: '#546e7a', fillColor: 'transparent', strokeWidth: 1.8, hatchPattern: 'none', lineStyle: 'dashed', noFill: true },
   YolCizgisi: { color: '#37474f', strokeWidth: 2.5, hatchPattern: 'none', noFill: true },
   MeclisKarariAlani: { color: '#1565c0', fillColor: 'rgba(21,101,192,0.15)', strokeWidth: 2, hatchPattern: 'none' },
-  TurizmBolgesi: { color: '#ef6c00', fillColor: 'rgba(255,115,0,0.72)', strokeWidth: 2, hatchPattern: 'stamp', hatchColor: '#212121' },
+  TurizmBolgesi: { color: '#ef6c00', fillColor: 'rgba(255,115,0,0.72)', strokeWidth: 2, hatchPattern: 'staggeredStipple', hatchColor: '#212121', hatchMm: 9, hatchDotMm: 3 },
   Tarim: { color: '#558b2f', fillColor: 'rgba(233,250,190,0.72)', strokeWidth: 2, hatchPattern: 'horizontal', hatchColor: '#33691e' },
   TarimAlani: { color: '#558b2f', fillColor: 'rgba(233,250,190,0.72)', strokeWidth: 2, hatchPattern: 'horizontal', hatchColor: '#33691e' },
   Zeytinlik: { color: '#6d8c3e', fillColor: 'rgba(233,250,190,0.68)', strokeWidth: 2, hatchPattern: 'horizontal', hatchColor: '#33691e' },
@@ -4284,22 +4299,23 @@ const PLAN_GML_STYLES = {
 /** PlanGML dosyalarında TaramaTip yok — MPYY gösterim kodları tip alanından türetilir (mm @ 1:1000). */
 const PLAN_GML_TIP_TARAMA = {
   OtelAlani: 'T-55', GunubirlikTesisAlani: 'T-55', KonaklamaTesisAlani: 'T-55',
-  EkoTurizmKirsalTurizmTesisAlani: 'T-55', TurizmAlani: 'T-05',
+  EkoTurizmKirsalTurizmTesisAlani: 'T-55', TurizmAlani: 'T-05', TurizmBolgesi: 'T-57',
   Park: 'T-91', ParkAlani: 'T-91', MilletBahcesi: 'T-01', RekreatifAlan: 'T-01',
+  SporAlani: 'T-91', SemtSporAlani: 'T-91', AcikSporTesisAlani: 'T-91', KapaliSporTesisAlani: 'T-08',
   TicaretTurizmAlani: 'T-08', TicaretAlani: 'T-09', KonutAlani: 'T-14',
   SanayiAlani: 'T-20', TrafoAlani: 'T-20', EnerjiDagitimDepolama: 'T-20',
 };
 const PLAN_GML_PATTERN_TARAMA = {
-  stamp: 'T-55', parkDots: 'T-91', grid: 'T-08', concentric: 'T-05', dots: 'T-55',
+  stamp: 'T-55', parkDots: 'T-91', staggeredStipple: 'T-57', grid: 'T-08', concentric: 'T-05', dots: 'T-55',
   cross: 'T-02', diagonal: 'T-12', horizontal: 'T-07',
 };
 /** MPYY tarama kodu → kağıt üzerinde hücre aralığı (mm, 1:1000 referans). */
 const PLAN_GML_TARAMA_MM = {
-  'T-55': 18, 'T-05': 4, 'T-91': 2.5, 'T-01': 4, 'T-08': 5, 'T-09': 5,
+  'T-55': 18, 'T-05': 4, 'T-57': 9, 'T-91': 2.5, 'T-01': 4, 'T-08': 5, 'T-09': 5,
   'T-14': 4, 'T-02': 3, 'T-12': 4, 'T-07': 3, 'T-20': 3,
 };
 const PLAN_GML_SCALE_HATCH_PATTERNS = new Set([
-  'stamp', 'parkDots', 'grid', 'concentric', 'dots',
+  'stamp', 'parkDots', 'staggeredStipple', 'grid', 'concentric', 'dots',
 ]);
 /** MPYY / gösterim kodu → katman adı (bilinmeyenler PlanGML fallback). */
 const PLAN_GML_MPY_LAYER_MAP = {
@@ -4320,6 +4336,11 @@ const PLAN_GML_MPY_LAYER_MAP = {
   KonaklamaTesisAlani: 'Konaklama Tesis Alanı',
   EgitimTesisAlani: 'Eğitim Tesis Alanı',
   SaglikTesisAlani: 'Sağlık Tesis Alanı',
+  SosyalKulturelAlan: 'Sosyal ve Kültürel Alan',
+  SporAlani: 'Spor Alanı',
+  SemtSporAlani: 'Semt Spor Alanı',
+  AcikSporTesisAlani: 'Açık Spor Tesisi',
+  KapaliSporTesisAlani: 'Kapalı Spor Tesisi',
   AfetTehlikeliAlanlar: 'Afet Tehlikeli Alan',
   YapiYaklasmaSiniri: 'Yapı Yaklaşma Sınırı',
   AdaKenari: 'Ada Kenarı',
@@ -4649,6 +4670,9 @@ const PLAN_GML_TIP_BY_FEATURE = {
   SuYuzeyi: 'SuYuzeyiTip',
   EnerjiUretim: 'EnerjiTip',
   AfetTehlikeliAlanlar: 'AfetTip',
+  SosyalKulturelAlan: 'SosyalKulturelTip',
+  EgitimTesisAlani: 'EgitimTesisTip',
+  SaglikTesisAlani: 'SaglikTesisTip',
 };
 
 function planGmlCdpDefaultTip(featureType) {
@@ -4690,6 +4714,70 @@ function planGmlIsGenericAdi(adi) {
   return /^(TURIZM|TARIM|ORMAN|KENTSEL|DOGAL|MERA|SIT|SU[\s-]?YUZEY|ACIK[\s-]?YESIL|TERCIHLI|ENERJI|AFET)/.test(u);
 }
 
+function planGmlTipKeyFromLabel(label) {
+  const n = String(label || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/İ/g, 'I')
+    .replace(/ı/g, 'i')
+    .replace(/[/\\|]+/g, ' ')
+    .replace(/-/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const parts = n.split(' ').filter((w) => w && /^[a-z0-9]/i.test(w));
+  if (!parts.length) return '';
+  return parts.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('');
+}
+
+/** Kağıt mm → ekran pikseli (zoom'dan bağımsız görsel kalınlık). */
+function planGmlPaperMmToScreenPx(mm) {
+  const v = Number(mm);
+  const paperMm = !isFinite(v) || v <= 0 ? PLAN_GML_DEFAULT_LINE_MM.area : v;
+  return Math.max(0.75, paperMm * (SCREEN_DPI / 25.4));
+}
+
+/** Ekran pikseli → canvas world lineWidth (ctx.scale(S.scale) altında). */
+function planGmlCtxLineWidth(screenPx) {
+  return screenPx / Math.max(0.05, S.scale || 1);
+}
+
+function planGmlResolveStrokePaperMm(obj, planStyle) {
+  if (obj?.strokeWidthPaperMm > 0) return obj.strokeWidthPaperMm;
+  if (planStyle?.strokeWidthPaperMm > 0) return planStyle.strokeWidthPaperMm;
+  const ft = planGmlNormalizeFeatureType(obj?.metadata?.planFeatureType);
+  if (planGmlIsOutlineOnly(ft)) {
+    if (/PlanSiniri|PlanDegisiklikSiniri/i.test(ft)) return PLAN_GML_DEFAULT_LINE_MM.planSinir;
+    if (ft === 'AdaKenari') return PLAN_GML_DEFAULT_LINE_MM.adaKenari;
+    return PLAN_GML_DEFAULT_LINE_MM.boundary;
+  }
+  return PLAN_GML_DEFAULT_LINE_MM.area;
+}
+
+function planGmlResolveStrokeScreenPx(obj, planStyle) {
+  return planGmlPaperMmToScreenPx(planGmlResolveStrokePaperMm(obj, planStyle));
+}
+
+/** @deprecated world-px; yalnızca sınır periyodu için */
+function planGmlPaperMmToScreen(mm) {
+  const mapScale = S.projectScale || 1000;
+  const meters = ((Number(mm) > 0 ? Number(mm) : 0.18) / 1000) * mapScale;
+  const mPerPx = typeof pxToMeters === 'function' ? pxToMeters(1) : null;
+  if (!mPerPx || mPerPx <= 0) return planGmlPaperMmToScreenPx(mm);
+  return Math.max(1, meters / mPerPx);
+}
+
+function planGmlApplyBoundaryProps(pres, props) {
+  if (!pres) return pres;
+  const out = { ...pres };
+  if (props && props.CizgiKalinligi != null && String(props.CizgiKalinligi).trim() !== '') {
+    out.strokeWidthPaperMm = Math.max(0.1, parseFloat(props.CizgiKalinligi) || PLAN_GML_DEFAULT_LINE_MM.adaKenari);
+  }
+  const cizgiTip = String(props?.AdaKenariCizgiTip || props?.YolCizgiTip || '').toLowerCase();
+  if (/onerilen|önerilen/.test(cizgiTip)) out.lineStyle = 'dashed';
+  else if (/mevcut|kesin/.test(cizgiTip)) out.lineStyle = 'solid';
+  return out;
+}
+
 function planGmlResolveTip(props, featureType) {
   if (!props) return '';
   const ft = planGmlNormalizeFeatureType(featureType);
@@ -4697,14 +4785,23 @@ function planGmlResolveTip(props, featureType) {
   if (primary) {
     const v = String(props[primary] || '').trim();
     if (v) return v;
-    return '';
   }
   for (let i = 0; i < PLAN_GML_TIP_KEYS.length; i++) {
     const v = String(props[PLAN_GML_TIP_KEYS[i]] || '').trim();
     if (v) return v;
   }
+  for (const [k, v] of Object.entries(props)) {
+    if (!/Tip$/i.test(k)) continue;
+    const t = String(v || '').trim();
+    if (t) return t;
+  }
   const def = planGmlCdpDefaultTip(ft);
   if (def) return def;
+  const adi = String(props.Adi || props.PlanAdi || '').trim();
+  if (adi) {
+    const fromAdi = planGmlTipKeyFromLabel(adi);
+    if (fromAdi && (PLAN_GML_STYLES[fromAdi] || PLAN_GML_TIP_ALIASES[fromAdi])) return fromAdi;
+  }
   return '';
 }
 
@@ -4753,7 +4850,10 @@ function planGmlResolvePresentation(featureType, props) {
       if (planGmlIsOutlineOnly(ft) || planGmlIsOutlineOnly(tip)) {
         const brec = MpyyPlanGmlCatalog.lookupBoundary(ft, props || {}, planLevel);
         if (brec) {
-          return MpyyPlanGmlCatalog.boundaryPresentationFromRecord(brec, S.projectScale, mPerPx);
+          return planGmlApplyBoundaryProps(
+            MpyyPlanGmlCatalog.boundaryPresentationFromRecord(brec, S.projectScale, mPerPx),
+            props,
+          );
         }
       }
 
@@ -4766,15 +4866,22 @@ function planGmlResolvePresentation(featureType, props) {
   }
 
   if (planGmlIsOutlineOnly(ft) || planGmlIsOutlineOnly(tip)) {
-    return planGmlApplyOutlineOnly(PLAN_GML_STYLES[ft] || PLAN_GML_STYLES._default);
+    return planGmlApplyBoundaryProps(
+      planGmlApplyOutlineOnly(PLAN_GML_STYLES[ft] || PLAN_GML_STYLES._default),
+      props,
+    );
   }
 
   if (tip && PLAN_GML_STYLES[tip]) {
     const tarama = PLAN_GML_TIP_TARAMA[tip] || '';
-    return tarama ? { ...PLAN_GML_STYLES[tip], taramaCode: tarama } : { ...PLAN_GML_STYLES[tip] };
+    const base = { ...PLAN_GML_STYLES[tip] };
+    if (!base.strokeWidthPaperMm) base.strokeWidthPaperMm = PLAN_GML_DEFAULT_LINE_MM.area;
+    return tarama ? { ...base, taramaCode: tarama } : base;
   }
   if (tip && PLAN_GML_TIP_ALIASES[tip] && PLAN_GML_STYLES[PLAN_GML_TIP_ALIASES[tip]]) {
-    return { ...PLAN_GML_STYLES[PLAN_GML_TIP_ALIASES[tip]] };
+    const base = { ...PLAN_GML_STYLES[PLAN_GML_TIP_ALIASES[tip]] };
+    if (!base.strokeWidthPaperMm) base.strokeWidthPaperMm = PLAN_GML_DEFAULT_LINE_MM.area;
+    return base;
   }
 
   if (PLAN_GML_CONTAINER_TYPES.has(ft) && !tip) {
@@ -4811,7 +4918,8 @@ function planGmlInferProps(obj) {
     return attrs;
   }
   if (ft === 'KentselCalisma') {
-    if (/TICARET.*TURIZM|TİCARET.*TURİZM/.test(u)) attrs.CalismaTip = 'TicaretTurizmAlani';
+    if (/TURIZM.*BOLG|TURİZM.*BÖLG|T-BOL/i.test(u)) attrs.CalismaTip = 'TurizmBolgesi';
+    else if (/TICARET.*TURIZM|TİCARET.*TURİZM/.test(u)) attrs.CalismaTip = 'TicaretTurizmAlani';
     else if (/TICARET/.test(u)) attrs.CalismaTip = 'TicaretAlani';
     else if (/KONUT/.test(u)) attrs.CalismaTip = 'KonutAlani';
     return attrs;
@@ -4909,13 +5017,19 @@ function planGmlMapLabelLines(attrs, planFeatureType) {
 function applyPlanGmlStyleToObject(obj, ps) {
   if (!ps) return;
   obj.color = ps.color;
-  obj.strokeWidth = ps.strokeWidth ?? obj.strokeWidth;
+  if (ps.strokeWidthPaperMm != null && ps.strokeWidthPaperMm > 0) {
+    obj.strokeWidthPaperMm = ps.strokeWidthPaperMm;
+    obj.strokeWidth = planGmlPaperMmToScreenPx(ps.strokeWidthPaperMm);
+  } else if (ps.strokeWidth != null) {
+    obj.strokeWidth = ps.strokeWidth;
+  }
   if (ps.noFill) {
     obj.fillColor = 'transparent';
     obj.hatchPattern = 'none';
     delete obj.hatchColor;
     delete obj.taramaCode;
     delete obj.hatchMm;
+    delete obj.hatchDotMm;
   } else {
     obj.fillColor = ps.fillColor;
     obj.hatchPattern = ps.hatchPattern || 'none';
@@ -4925,6 +5039,8 @@ function applyPlanGmlStyleToObject(obj, ps) {
     else delete obj.taramaCode;
     if (ps.hatchMm != null && ps.hatchMm > 0) obj.hatchMm = ps.hatchMm;
     else delete obj.hatchMm;
+    if (ps.hatchDotMm != null && ps.hatchDotMm > 0) obj.hatchDotMm = ps.hatchDotMm;
+    else delete obj.hatchDotMm;
   }
   if (ps.lineStyle) obj.lineStyle = ps.lineStyle;
   else if (obj.type === 'import_polyline' && obj.lineStyle === 'dashed' && !ps.lineStyle) obj.lineStyle = 'solid';
@@ -5131,6 +5247,14 @@ function openPlanOverlayPanel(layerId) {
 
 function closePlanOverlayPanel() {
   document.getElementById('plan-overlay-panel')?.classList.remove('open');
+}
+
+function goToActivePlanOverlayLayer() {
+  if (!_activePlanOverlayLayerId) {
+    showHint(t('layer.goMissing'));
+    return;
+  }
+  goToPlanOverlayLayer(_activePlanOverlayLayerId);
 }
 
 function toggleActivePlanOverlayVisibility() {
@@ -5892,6 +6016,10 @@ function kmlToImportObjects(xmlText, layerId, bounds, debug, name) {
 }
 
 function parsePrjEpsg(prjText) {
+  if (typeof TurkeyCrs !== 'undefined') {
+    const tc = TurkeyCrs.parseEpsgFromPrj(prjText);
+    if (tc) return tc;
+  }
   if (!prjText) return null;
   const m = prjText.match(/AUTHORITY\["EPSG","(\d+)"\]/i);
   if (m) return +m[1];
@@ -5919,6 +6047,9 @@ function shpReadParts(dv, offset, numParts, numPoints) {
 }
 
 function shpRingToLatLon(ring, epsg) {
+  if (typeof TurkeyCrs !== 'undefined' && typeof proj4 !== 'undefined') {
+    TurkeyCrs.ensureProjDefs(proj4);
+  }
   const out = [];
   for (const p of ring) {
     let lon = p.x, lat = p.y;
@@ -6477,12 +6608,21 @@ let _gmlProjReady = false;
 let _gmlCrsWarned = new Set();
 /** Per-import TM band — fixes ambiguous EPSG:793x tags (Çeşme CM27 vs CM30, etc.). */
 let _gmlFileCmOverride = null;
+/** Per-import resolved EPSG (CSB plan GML — e-plan uyumlu). */
+let _gmlFileResolvedEpsg = null;
 /** Per-import E/N swap before TUREF reproject (axis-order recovery). */
 let _gmlFileSwapEN = false;
 
 function isTurefProjectedEpsg(epsg) {
+  if (typeof TurkeyCrs !== 'undefined' && TurkeyCrs.isTurefTmEpsg(epsg)) return true;
   return (epsg >= 7930 && epsg <= 7936)
     || (epsg >= 5253 && epsg <= 5259);
+}
+
+function isTurkeyImportEpsg(epsg) {
+  if (!epsg) return false;
+  if (typeof TurkeyCrs !== 'undefined' && TurkeyCrs.isTurkeyProjectedEpsg(epsg)) return true;
+  return isTurefProjectedEpsg(epsg) || isCsbLegacyPlanEpsg(epsg);
 }
 
 /** CSB plan GML legacy EPSG:2303x — resmi anlamı ED50 / UTM zone (23035 = zone 35N). */
@@ -6508,15 +6648,6 @@ function ed50UtmProj4String(zone) {
 
 function ensureCsbLegacyPlanProjDefs() {
   ensureGmlProjDefs();
-  if (typeof proj4 === 'undefined') return;
-  try {
-    for (let epsg = 23030; epsg <= 23039; epsg++) {
-      const code = 'EPSG:' + epsg;
-      if (!proj4.defs[code]) proj4.defs(code, ed50UtmProj4String(epsg - 23000));
-    }
-  } catch (e) {
-    console.warn('[GML] CSB legacy UTM defs', e);
-  }
 }
 
 /** CSB PlanGML EPSG:2303x — resmi ED50 / UTM (e-Plan / NetCAD ile uyumlu). */
@@ -6574,15 +6705,32 @@ function turefReprojHit(normE, normN, cm) {
   return { score: Math.abs(500000 + (ll.lon - cm) * k - normE), lat: ll.lat, lon: ll.lon };
 }
 
-function getGmlImportAnchor() {
+function getGmlGpsAnchor() {
   const fix = _fieldGpsFix || _fieldGpsDisplay;
   if (fix?.lat != null && fix?.lon != null && isFinite(fix.lat) && isFinite(fix.lon)) {
     return { lat: fix.lat, lon: fix.lon };
   }
-  if (S.mapCenter?.lat != null && isFinite(S.mapCenter.lat)) {
+  return null;
+}
+
+function getGmlImportAnchor() {
+  const gps = getGmlGpsAnchor();
+  if (gps) return gps;
+  if (S.mapCenter?.lat != null && isFinite(S.mapCenter.lat)
+      && isInTurkeyBbox(S.mapCenter.lat, S.mapCenter.lon)) {
     return { lat: S.mapCenter.lat, lon: S.mapCenter.lon };
   }
   return null;
+}
+
+function collectGeometrySrsVotes(feats) {
+  const votes = {};
+  if (!feats?.length) return votes;
+  for (const f of feats) {
+    const epsg = parseEpsgFromSrs(f.srs || '');
+    if (epsg) votes[epsg] = (votes[epsg] || 0) + 1;
+  }
+  return votes;
 }
 
 function collectTurefSamplesFromFeats(feats, maxSamples = 24) {
@@ -6593,7 +6741,7 @@ function collectTurefSamplesFromFeats(feats, maxSamples = 24) {
     const f = feats[i];
     if (!f.nums || f.nums.length < 2) continue;
     const epsg = parseEpsgFromSrs(f.srs || '');
-    if (!looksLikeTurefEN(f.nums[0], f.nums[1]) && !isTurefProjectedEpsg(epsg) && !isCsbLegacyPlanEpsg(epsg)) continue;
+    if (!looksLikeTurefEN(f.nums[0], f.nums[1]) && !isTurkeyImportEpsg(epsg)) continue;
     const norm = normalizeTurefEN(f.nums[0], f.nums[1]);
     samples.push({ e: norm.e, n: norm.n });
   }
@@ -6621,6 +6769,12 @@ const PLACE_GEO_HINTS = {
   dikili: { lat: 39.07, lon: 26.89 },
   ismetpasa: { lat: 39.08, lon: 26.90 },
   bodrum: { lat: 37.03, lon: 27.43 },
+  mugla: { lat: 37.22, lon: 28.36 },
+  fethiye: { lat: 36.62, lon: 29.11 },
+  marmaris: { lat: 36.85, lon: 28.27 },
+  datca: { lat: 36.73, lon: 27.69 },
+  koycegiz: { lat: 36.97, lon: 28.68 },
+  dalaman: { lat: 36.77, lon: 28.80 },
   antalya: { lat: 36.89, lon: 30.71 },
   burdur: { lat: 37.72, lon: 30.29 },
   afyon: { lat: 38.76, lon: 30.54 },
@@ -6630,13 +6784,21 @@ const PLACE_GEO_HINTS = {
 };
 
 function geoHintFromImportName(name) {
+  if (typeof TurkeyPlaceIndex !== 'undefined') {
+    const h = TurkeyPlaceIndex.geoHintFromFileName(name);
+    if (h) return h;
+  }
+  if (typeof PlanGmlCrs !== 'undefined') {
+    const h = PlanGmlCrs.geoHintFromName(name);
+    if (h) return h;
+  }
   const norm = String(name || '').toLowerCase()
     .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c');
   const tokens = norm.split(/[^a-z0-9]+/).filter(Boolean);
-  let best = null, bestLen = 0;
+  let best = null;
+  let bestLen = 0;
   for (const [key, hint] of Object.entries(PLACE_GEO_HINTS)) {
-    if (!hint) continue;
-    if (key.length < bestLen) continue;
+    if (!hint || key.length < bestLen) continue;
     if (norm.includes(key) || tokens.some(t => t.includes(key) || key.includes(t))) {
       best = hint;
       bestLen = key.length;
@@ -6654,25 +6816,73 @@ function geoHintDistDeg(lat, lon, hint) {
 /** CSB GML E+N bölgesel TM band önceliği (EPSG:793x etiketi sık hatalı). */
 function regionalTurefCmPrior(avgE, avgN) {
   if (avgN >= 4190000 && avgE >= 370000 && avgE < 515000) return 27;
-  if (avgN >= 4040000 && avgN < 4170000 && avgE >= 440000 && avgE < 620000) return 30;
+  // Muğla–Fethiye–Dalaman: yüksek E, güney Ege (7931 etiketiyle TM27 gelir)
+  if (avgN >= 4040000 && avgN <= 4130000 && avgE >= 520000 && avgE <= 680000) return 27;
+  if (avgN >= 4040000 && avgN < 4170000 && avgE >= 440000 && avgE < 520000) return 30;
   if (avgN >= 4260000 && avgE >= 520000 && avgE < 600000) return 30;
   if (avgN >= 4150000 && avgN < 4280000 && avgE >= 520000 && avgE < 700000) return 33;
   return detectTurefCm(avgE);
 }
 
-/** File-level TM band — koordinat + EPSG etiketi (dosya adı kullanılmaz). */
-function pickTurefCmForFile(samples, taggedEpsg) {
+/** Anchor WGS84 → TM easting uyumu (Muğla TM27 vs hatalı 7931 etiketi). */
+function turefCmFromEastingFit(samples, anchor) {
+  if (!anchor || !samples.length || typeof proj4 === 'undefined') return null;
+  ensureGmlProjDefs();
+  const { avgE, avgN } = avgSampleEN(samples);
+  const cms = [27, 30, 33, 36, 39, 42, 45];
+  let bestCm = null, bestErr = Infinity;
+  for (const cm of cms) {
+    const epsg = epsgFromTurefCm(cm);
+    const code = 'EPSG:' + epsg;
+    if (!proj4.defs[code]) continue;
+    try {
+      const fwd = proj4('EPSG:4326', code, [anchor.lon, anchor.lat]);
+      const err = Math.hypot(fwd[0] - avgE, (fwd[1] - avgN) * 0.35);
+      if (err < bestErr) { bestErr = err; bestCm = cm; }
+    } catch (_) { /* next */ }
+  }
+  return bestCm;
+}
+
+/** File-level TM band — koordinat + EPSG etiketi + dosya adı / GPS ipucu. */
+function pickTurefCmForFile(samples, taggedEpsg, fileName) {
   if (!samples.length) return detectTurefCm(500000);
   const { avgE, avgN } = avgSampleEN(samples);
   const taggedCm = taggedEpsg ? turefCmFromEpsg(taggedEpsg) : null;
   const priorCm = regionalTurefCmPrior(avgE, avgN);
+  const geoHint = geoHintFromImportName(fileName);
+
+  if (taggedCm != null && priorCm != null && taggedCm !== priorCm) {
+    return priorCm;
+  }
+
+  const anchor = geoHint || getGmlGpsAnchor();
+  const eastFitCm = anchor ? turefCmFromEastingFit(samples, anchor) : null;
+  if (eastFitCm != null && geoHint) {
+    return eastFitCm;
+  }
+
+  if (anchor) {
+    const cms = [27, 30, 33, 36, 39, 42, 45];
+    let bestCm = priorCm, bestScore = Infinity;
+    for (const cm of cms) {
+      const hit = turefReprojHit(avgE, avgN, cm);
+      if (!hit || !isInTurkeyBbox(hit.lat, hit.lon)) continue;
+      let score = geoHintDistDeg(hit.lat, hit.lon, anchor);
+      score += Math.abs(cm - priorCm) * 0.15;
+      if (taggedCm === cm) score *= 0.92;
+      if (score < bestScore) { bestScore = score; bestCm = cm; }
+    }
+    if (isFinite(bestScore)) return bestCm;
+  }
+
   if (taggedCm != null) {
     let ok = 0;
     for (const { e, n: northing } of samples) {
       const hit = turefReprojHit(e, northing, taggedCm);
       if (hit && isInTurkeyBbox(hit.lat, hit.lon)) ok++;
     }
-    if (ok >= Math.ceil(samples.length * 0.55)) return taggedCm;
+    if (ok >= Math.ceil(samples.length * 0.55) && taggedCm === priorCm) return taggedCm;
   }
   const cms = [27, 30, 33, 36, 39, 42, 45];
   const rated = [];
@@ -6833,7 +7043,13 @@ function warnUnknownCrs(srs, epsg) {
 }
 
 function ensureGmlProjDefs() {
-  if (_gmlProjReady || typeof proj4 === 'undefined') return;
+  if (typeof proj4 === 'undefined') return;
+  if (typeof TurkeyCrs !== 'undefined') {
+    TurkeyCrs.ensureProjDefs(proj4);
+    _gmlProjReady = true;
+    return;
+  }
+  if (_gmlProjReady) return;
   try {
     if (!proj4.defs['EPSG:3857']) {
       proj4.defs('EPSG:3857', '+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs');
@@ -6865,8 +7081,25 @@ function gmlToWgs84Raw(x, y, srs) {
   let ax = x, ay = y;
   if (_gmlFileSwapEN) { ax = y; ay = x; }
   const norm = normalizeTurefEN(ax, ay);
+  if (_gmlFileResolvedEpsg && typeof TurkeyCrs !== 'undefined'
+      && TurkeyCrs.isTurkeyProjectedEpsg(_gmlFileResolvedEpsg)) {
+    const g = TurkeyCrs.reprojectToWgs84(norm.e, norm.n, _gmlFileResolvedEpsg);
+    if (g) return g;
+  }
   if (isCsbLegacyPlanEpsg(epsg)) {
     const g = csbLegacyPlanToWgs84(norm.e, norm.n, epsg);
+    if (g) return g;
+  }
+  if (typeof TurkeyCrs !== 'undefined' && TurkeyCrs.isEd50TmEpsg(epsg)) {
+    const g = TurkeyCrs.reprojectToWgs84(norm.e, norm.n, epsg);
+    if (g) return g;
+  }
+  if (typeof TurkeyCrs !== 'undefined' && TurkeyCrs.isEd50UtmEpsg(epsg) && !isCsbLegacyPlanEpsg(epsg)) {
+    const g = TurkeyCrs.reprojectToWgs84(norm.e, norm.n, epsg);
+    if (g) return g;
+  }
+  if (typeof TurkeyCrs !== 'undefined' && TurkeyCrs.isWgs84UtmTrEpsg(epsg)) {
+    const g = TurkeyCrs.reprojectToWgs84(ax, ay, epsg);
     if (g) return g;
   }
   if (isTurefProjectedEpsg(epsg) || looksLikeTurefEN(norm.e, norm.n)) {
@@ -7028,7 +7261,10 @@ function inferPlanGmlProjectScale(text, fileName) {
   if (/100\s*000\s*CDP|CDP[\s_.-]*100\s*000|100000\s*CDP/i.test(fn)) return 100000;
   if (/cdp\.v\.\d/i.test(raw) || /xsi:schemaLocation=["'][^"']*cdp\.v/i.test(raw)) return 100000;
   if (/25000\s*NIP|NIP[\s_.-]*25000/i.test(fn)) return 25000;
+  if (/\b25000\b/.test(fn) || /(?:^|[_\-.])25000(?:[_\-.]|\.|$)/i.test(fn)) return 25000;
   if (/5000\s*NIP/i.test(fn)) return 5000;
+  if (/\b5000\b/.test(fn) || /(?:^|[_\-.])5000(?:[_\-.]|\.GML|$)/i.test(fn)) return 5000;
+  if (/nip\.v\.\d/i.test(raw) && /\b5000\b/.test(fn)) return 5000;
   return null;
 }
 
@@ -7251,6 +7487,12 @@ function planGmlExtractFeatures(doc, text) {
   }
   for (const ms of gmlAllElementsByLocalName(doc, 'CompositeSurface')) {
     planGmlPushMultiSurfaceFeats(feats, seen, ms, defaultSrs);
+  }
+  for (const mp of gmlAllElementsByLocalName(doc, 'MultiPolygon')) {
+    const srs = planGmlInheritedSrs(mp, defaultSrs);
+    for (const poly of gmlAllElementsByLocalName(mp, 'Polygon')) {
+      planGmlPushPolygonFeats(feats, seen, poly, srs, null);
+    }
   }
   if (text && !feats.length) {
     planGmlExtractCoordinatesRegex(text, defaultSrs).forEach(f => {
@@ -7743,13 +7985,26 @@ async function gmlToImportObjects(text, fileName, bounds, debug, singleLayerId) 
   if (!feats.length) throw new Error(t('import.err.noGeom'));
 
   _gmlFileCmOverride = null;
+  _gmlFileResolvedEpsg = null;
   _gmlFileSwapEN = false;
   try {
     const taggedEpsg = parseEpsgFromSrs(feats[0]?.srs || gmlDocumentDefaultSrs(doc, text));
     const isCsbLegacyFile = isCsbLegacyPlanEpsg(taggedEpsg);
     const turefSamples = collectTurefSamplesFromFeats(feats);
     if (!isCsbLegacyFile && turefSamples.length) {
-      _gmlFileCmOverride = pickTurefCmForFile(turefSamples, taggedEpsg);
+      const utmTagged = typeof TurkeyCrs !== 'undefined'
+        && (TurkeyCrs.isWgs84UtmTrEpsg(taggedEpsg) || TurkeyCrs.isEd50UtmEpsg(taggedEpsg));
+      if (utmTagged) {
+        _gmlFileResolvedEpsg = taggedEpsg;
+      } else if (typeof PlanGmlCrs !== 'undefined') {
+        const geomSrsVotes = collectGeometrySrsVotes(feats);
+        _gmlFileResolvedEpsg = PlanGmlCrs.resolvePlanGmlEpsg(
+          turefSamples, taggedEpsg, text, getGmlGpsAnchor(), geomSrsVotes);
+        _gmlFileCmOverride = PlanGmlCrs.resolvePlanGmlCm(
+          turefSamples, taggedEpsg, text, getGmlGpsAnchor(), geomSrsVotes);
+      } else {
+        _gmlFileCmOverride = pickTurefCmForFile(turefSamples, taggedEpsg, fileName);
+      }
     }
     _gmlFileSwapEN = isCsbLegacyFile ? false : detectGmlFileCoordSwap(feats);
 
@@ -7817,6 +8072,7 @@ async function gmlToImportObjects(text, fileName, bounds, debug, singleLayerId) 
               meta,
             );
             if (planStyle?.lineStyle) obj.lineStyle = planStyle.lineStyle;
+            if (planStyle?.strokeWidthPaperMm) obj.strokeWidthPaperMm = planStyle.strokeWidthPaperMm;
             if (planStyle?.boundaryPattern) {
               obj.boundaryPattern = planStyle.boundaryPattern;
               obj.boundaryParams = planStyle.boundaryParams || null;
@@ -7844,6 +8100,8 @@ async function gmlToImportObjects(text, fileName, bounds, debug, singleLayerId) 
             if (planStyle?.hatchColor) obj.hatchColor = planStyle.hatchColor;
             if (planStyle?.taramaCode) obj.taramaCode = planStyle.taramaCode;
             if (planStyle?.hatchMm) obj.hatchMm = planStyle.hatchMm;
+            if (planStyle?.hatchDotMm) obj.hatchDotMm = planStyle.hatchDotMm;
+            if (planStyle?.strokeWidthPaperMm) obj.strokeWidthPaperMm = planStyle.strokeWidthPaperMm;
             if (planStyle?.boundaryPattern) {
               obj.boundaryPattern = planStyle.boundaryPattern;
               obj.boundaryParams = planStyle.boundaryParams || null;
@@ -7878,12 +8136,14 @@ async function gmlToImportObjects(text, fileName, bounds, debug, singleLayerId) 
       layerNames: [...debug.gmlLayers],
       srsSample: feats[0]?.srs || gmlDocumentDefaultSrs(doc, text),
       turefCm: _gmlFileCmOverride,
+      resolvedEpsg: _gmlFileResolvedEpsg,
       swapEN: _gmlFileSwapEN,
       citygml: isCityGml,
     });
     return objects;
   } finally {
     _gmlFileCmOverride = null;
+    _gmlFileResolvedEpsg = null;
     _gmlFileSwapEN = false;
   }
 }
@@ -8420,6 +8680,9 @@ function openProjectDb() {
       if (!db.objectStoreNames.contains('dem_tiles')) {
         db.createObjectStore('dem_tiles', { keyPath: 'key' });
       }
+      if (!db.objectStoreNames.contains('session_meta')) {
+        db.createObjectStore('session_meta', { keyPath: 'key' });
+      }
     };
     req.onsuccess = () => { _projectDb = req.result; resolve(_projectDb); };
     req.onerror = () => reject(req.error);
@@ -8876,10 +9139,49 @@ function basemapTileFallbackUrls(url) {
   return out;
 }
 
-function basemapMaxTileZoom() {
-  if (S.basemap === 'satellite') return 19;
+/** Esri boş karo — “Map data not yet available” (HTTP 200, onerror tetiklenmez). */
+function isEsriNoDataPlaceholder(img) {
+  if (!img?.naturalWidth || img.naturalWidth < 32) return false;
+  try {
+    const sz = 32;
+    const c = document.createElement('canvas');
+    c.width = sz;
+    c.height = sz;
+    const cx = c.getContext('2d', { willReadFrequently: true });
+    cx.drawImage(img, 0, 0, sz, sz);
+    const d = cx.getImageData(0, 0, sz, sz).data;
+    let light = 0;
+    let dark = 0;
+    const px = sz * sz;
+    for (let i = 0; i < d.length; i += 4) {
+      const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      if (lum > 215) light++;
+      else if (lum < 90) dark++;
+    }
+    return light > px * 0.7 && dark > px * 0.015 && dark < px * 0.22;
+  } catch (_) {
+    return false;
+  }
+}
+
+function rejectBasemapPlaceholderTile(url, img) {
+  if (!img || img.naturalWidth <= 0) return true;
+  if (S.basemap === 'satellite' && url.indexOf('arcgisonline') >= 0 && isEsriNoDataPlaceholder(img)) {
+    markTileCacheMiss(url);
+    return true;
+  }
+  return false;
+}
+
+/** Uydu/topo için sunucunun gerçek karo çözünürlüğü (bölgeye göre değişir). */
+function basemapMaxNativeZoom() {
+  if (S.basemap === 'satellite') return 18;
   if (S.basemap === 'topo') return 17;
   return 19;
+}
+
+function basemapMaxTileZoom() {
+  return basemapMaxNativeZoom();
 }
 
 function clampBasemapZoom(z) {
@@ -8919,12 +9221,16 @@ function tryDrawBasemapTile(tx, ty, zoom, sx, sy, sw, sh) {
   const url = basemapTileUrl(zoom, tx, ty);
   const cached = _tileCache[url];
   if (cached && cached instanceof Image && cached.complete && cached.naturalWidth > 0) {
+    if (rejectBasemapPlaceholderTile(url, cached)) {
+      delete _tileCache[url];
+    } else {
     const prevSmooth = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = true;
     if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(cached, sx, sy, sw, sh);
     ctx.imageSmoothingEnabled = prevSmooth;
     return { drawn: true, native: true };
+    }
   }
   for (let pz = zoom - 1; pz >= Math.max(1, zoom - 4); pz--) {
     const shift = zoom - pz;
@@ -8933,7 +9239,8 @@ function tryDrawBasemapTile(tx, ty, zoom, sx, sy, sw, sh) {
     const pty = Math.floor(ty / scale);
     const purl = basemapTileUrl(pz, ptx, pty);
     const parent = _tileCache[purl];
-    if (parent && parent instanceof Image && parent.complete && parent.naturalWidth > 0) {
+    if (parent && parent instanceof Image && parent.complete && parent.naturalWidth > 0
+        && !rejectBasemapPlaceholderTile(purl, parent)) {
       const localTx = tx - ptx * scale;
       const localTy = ty - pty * scale;
       const tilePx = 256 / scale;
@@ -8971,6 +9278,12 @@ function startBasemapTileImageLoad(url) {
   img.onload = () => {
     _tileLoadQueue--;
     delete _tileLoadingSince[url];
+    if (rejectBasemapPlaceholderTile(url, img)) {
+      delete _tileCache[url];
+      scheduleRender();
+      scheduleBasemapRefresh(300);
+      return;
+    }
     scheduleRender();
     scheduleBasemapRefresh(300);
     if (mapTileUseCrossOrigin() && img.naturalWidth > 0) {
@@ -9004,6 +9317,10 @@ function tryBasemapTileFallback(origUrl, fallbacks, idx) {
   img.referrerPolicy = 'no-referrer';
   img.decoding = 'async';
   img.onload = () => {
+    if (rejectBasemapPlaceholderTile(origUrl, img)) {
+      scheduleRender();
+      return;
+    }
     _tileCache[origUrl] = img;
     scheduleRender();
     scheduleBasemapRefresh(300);
@@ -9063,7 +9380,9 @@ async function warmViewportTilesFromDb() {
       const row = await idbGet(db, 'map_tiles', url);
       if (!row?.blob) continue;
       try {
-        _tileCache[url] = await blobToImage(row.blob);
+        const img = await blobToImage(row.blob);
+        if (rejectBasemapPlaceholderTile(url, img)) continue;
+        _tileCache[url] = img;
         warmed++;
       } catch (_) {}
     }
@@ -9115,7 +9434,10 @@ async function loadMapTileFromNetwork(url) {
     let img = useCors ? await loadMapTileViaFetch(u) : null;
     if (!img) img = await loadMapTileViaImage(u, useCors);
     if (!img && useCors) img = await loadMapTileViaImage(u, false);
-    if (img && img.naturalWidth > 0) return { img, persist: useCors && u === url };
+    if (img && img.naturalWidth > 0) {
+      if (rejectBasemapPlaceholderTile(url, img)) continue;
+      return { img, persist: useCors && u === url };
+    }
   }
   return null;
 }
@@ -9143,11 +9465,13 @@ async function loadMapTileImage(url) {
       const row = await idbGet(db, 'map_tiles', url);
       if (row?.blob) {
         const img = await blobToImage(row.blob);
-        delete _tileLoadingSince[url];
-        _tileCache[url] = img;
-        scheduleRender();
-        scheduleBasemapRefresh(300);
-        return;
+        if (!rejectBasemapPlaceholderTile(url, img)) {
+          delete _tileLoadingSince[url];
+          _tileCache[url] = img;
+          scheduleRender();
+          scheduleBasemapRefresh(300);
+          return;
+        }
       }
     } catch (_) {}
     if (!navigator.onLine) {
@@ -10181,6 +10505,12 @@ function prepareInteractiveHtmlForPreview(html) {
   } else if (typeof FieldReplaySafariRoute !== 'undefined' && FieldReplaySafariRoute.stripHarmfulReplayPatches) {
     html = FieldReplaySafariRoute.stripHarmfulReplayPatches(html);
   }
+  if (typeof FieldReplayPreviewDiagnostics !== 'undefined' &&
+      FieldReplayPreviewDiagnostics.isPreviewDiagnosticMode &&
+      FieldReplayPreviewDiagnostics.isPreviewDiagnosticMode() &&
+      FieldReplayPreviewDiagnostics.injectPreviewDiagnostics) {
+    html = FieldReplayPreviewDiagnostics.injectPreviewDiagnostics(html);
+  }
   return injectPreviewMapResizeBoot(html);
 }
 
@@ -10216,6 +10546,16 @@ function openFieldReportViewerModal() {
   fieldUiRaise('field-report-viewer', { modal: true });
 }
 
+function previewIframePrefersSrcdoc() {
+  if (isPreviewIOSWebKit()) return true;
+  try {
+    const p = (location.protocol || '').toLowerCase();
+    return p === 'file:' || p === 'content:' || p === 'capacitor-file:';
+  } catch (_) {
+    return false;
+  }
+}
+
 function mountInteractiveReportInViewerFrame(frame, html, blob) {
   if (!frame) return;
   frame.style.display = 'block';
@@ -10231,7 +10571,7 @@ function mountInteractiveReportInViewerFrame(frame, html, blob) {
       nudgePreviewReplayMap(frame);
     };
     frame.addEventListener('load', onFrameLoad, { once: true });
-    if (isPreviewIOSWebKit() && html) {
+    if (html && previewIframePrefersSrcdoc()) {
       frame.srcdoc = html;
       return;
     }
@@ -10248,8 +10588,7 @@ function mountInteractiveReportInViewerFrame(frame, html, blob) {
       return;
     }
     if (blob) {
-      _fieldReportViewerUrl = URL.createObjectURL(blob);
-      frame.src = _fieldReportViewerUrl;
+      showHint(PA_LANG === 'tr' ? 'Önizleme HTML yüklenemedi' : 'Preview HTML could not load', 6000);
     }
   };
   requestAnimationFrame(() => requestAnimationFrame(loadContent));
@@ -11331,11 +11670,18 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
   if (isHtml) {
     let html = '';
     try {
-      html = pendingShare?.previewHtml || await blob.text();
-      html = prepareInteractiveHtmlForPreview(html);
+      const raw = pendingShare?.previewHtml || await blob.text();
+      html = prepareInteractiveHtmlForPreview(raw);
+      if (!html || html.length < 500 || !html.includes('window.__PLANAI_REPORT__')) {
+        html = prepareInteractiveHtmlForPreview(raw);
+      }
     } catch (_) { html = ''; }
+    if (!html || !html.includes('window.__PLANAI_REPORT__')) {
+      showHint(t('report.missing'), 6000);
+      return;
+    }
     if (embed) { embed.removeAttribute('src'); embed.style.display = 'none'; }
-    mountInteractiveReportInViewerFrame(frame, html, blob);
+    mountInteractiveReportInViewerFrame(frame, html, null);
     return;
   }
   const url = URL.createObjectURL(blob);
@@ -17278,15 +17624,16 @@ function planGmlHatchCellWorld(pattern, taramaCode, hatchMm) {
   return Math.max(4, meters / mPerPx);
 }
 
-function hatchCellSpacing(pattern, strokeWidth, taramaCode, hatchMm) {
+function hatchCellSpacing(pattern, strokeScreenPx, taramaCode, hatchMm) {
   if (hatchMm != null && hatchMm > 0) return planGmlHatchMmToWorld(hatchMm);
   if (PLAN_GML_SCALE_HATCH_PATTERNS.has(pattern)) {
     return planGmlHatchCellWorld(pattern, taramaCode, hatchMm);
   }
-  return Math.max(strokeWidth * 5, 9);
+  const px = strokeScreenPx > 0 ? strokeScreenPx : planGmlPaperMmToScreenPx(PLAN_GML_DEFAULT_LINE_MM.area);
+  return Math.max(planGmlPaperMmToScreenPx(1.5), px * 2) / Math.max(0.05, S.scale || 1);
 }
 
-function drawHatch(pattern, color, strokeWidth, taramaCode, bounds, hatchMm) {
+function drawHatch(pattern, color, strokeWidth, taramaCode, bounds, hatchMm, hatchDotMm) {
   if (!pattern || pattern === 'none') return;
   ctx.save();
   ctx.clip();  // clip to current path
@@ -17301,13 +17648,14 @@ function drawHatch(pattern, color, strokeWidth, taramaCode, bounds, hatchMm) {
   ctx.fillStyle   = color;
   ctx.setLineDash([]);
   ctx.lineCap = 'round';
+  const hatchLw = planGmlCtxLineWidth(planGmlPaperMmToScreenPx(PLAN_GML_DEFAULT_LINE_MM.hatch));
 
   const hatchBounds = { x0, y0, x1, y1 };
   const worldGrid = typeof HatchWorldSpace !== 'undefined';
 
   switch (pattern) {
     case 'diagonal':
-      ctx.lineWidth = strokeWidth * 0.6;
+      ctx.lineWidth = hatchLw;
       ctx.globalAlpha = 0.4;
       if (worldGrid) {
         HatchWorldSpace.forEachWorldDiagonal(x0, y0, x1, y1, sp, d => {
@@ -17321,7 +17669,7 @@ function drawHatch(pattern, color, strokeWidth, taramaCode, bounds, hatchMm) {
       break;
 
     case 'cross':
-      ctx.lineWidth = strokeWidth * 0.5;
+      ctx.lineWidth = hatchLw;
       ctx.globalAlpha = 0.35;
       if (worldGrid) {
         HatchWorldSpace.forEachWorldDiagonal(x0, y0, x1, y1, sp, d => {
@@ -17337,7 +17685,7 @@ function drawHatch(pattern, color, strokeWidth, taramaCode, bounds, hatchMm) {
       break;
 
     case 'grid':
-      ctx.lineWidth = Math.max(0.7, strokeWidth * 0.55);
+      ctx.lineWidth = hatchLw;
       ctx.globalAlpha = 0.62;
       if (worldGrid) {
         HatchWorldSpace.forEachWorldGrid(x0, y0, x1, y1, sp, (axis, v) => {
@@ -17357,7 +17705,7 @@ function drawHatch(pattern, color, strokeWidth, taramaCode, bounds, hatchMm) {
       break;
 
     case 'horizontal':
-      ctx.lineWidth = strokeWidth * 0.5;
+      ctx.lineWidth = hatchLw;
       ctx.globalAlpha = 0.35;
       if (worldGrid) {
         const oy = HatchWorldSpace.snapOrigin(x0, y0, sp).y;
@@ -17372,7 +17720,7 @@ function drawHatch(pattern, color, strokeWidth, taramaCode, bounds, hatchMm) {
       break;
 
     case 'vertical':
-      ctx.lineWidth = strokeWidth * 0.5;
+      ctx.lineWidth = hatchLw;
       ctx.globalAlpha = 0.35;
       if (worldGrid) {
         const ox = HatchWorldSpace.snapOrigin(x0, y0, sp).x;
@@ -17406,6 +17754,16 @@ function drawHatch(pattern, color, strokeWidth, taramaCode, bounds, hatchMm) {
       }
       break;
 
+    case 'staggeredStipple': {
+      if (worldGrid) {
+        const spacingMm = hatchMm > 0 ? hatchMm : 9;
+        const dotMm = hatchDotMm > 0 ? hatchDotMm : 3;
+        const dotRatio = (dotMm * 0.5) / spacingMm;
+        HatchWorldSpace.fillRepeating(ctx, 'staggeredStipple', color, sp, hatchBounds, 0.65, dotRatio);
+      }
+      break;
+    }
+
     case 'stamp':
       if (worldGrid) {
         HatchWorldSpace.fillRepeating(ctx, 'stamp', color, sp, hatchBounds, 0.68);
@@ -17413,7 +17771,7 @@ function drawHatch(pattern, color, strokeWidth, taramaCode, bounds, hatchMm) {
       break;
 
     case 'concentric': {
-      ctx.lineWidth = Math.max(0.6, strokeWidth * 0.45);
+      ctx.lineWidth = hatchLw;
       ctx.globalAlpha = 0.42;
       const cell = sp * 1.15;
       const r1 = Math.max(1.1, cell * 0.18);
@@ -17430,7 +17788,7 @@ function drawHatch(pattern, color, strokeWidth, taramaCode, bounds, hatchMm) {
 
     case 'ecology': {
       // Organic wavy lines — like vegetation/ecology symbols
-      ctx.lineWidth = strokeWidth * 0.55;
+      ctx.lineWidth = hatchLw;
       ctx.globalAlpha = 0.45;
       const freq = sp * 0.7, amp = sp * 0.35;
       for (let y = y0; y < y1; y += sp) {
@@ -17447,7 +17805,7 @@ function drawHatch(pattern, color, strokeWidth, taramaCode, bounds, hatchMm) {
     case 'density': {
       // Fine tight cross-hatch at 45° both ways
       const dsp = sp * 0.55;
-      ctx.lineWidth = strokeWidth * 0.35;
+      ctx.lineWidth = hatchLw;
       ctx.globalAlpha = 0.3;
       for (let d = x0 - h; d < x1 + h; d += dsp) {
         ctx.beginPath(); ctx.moveTo(d, y0); ctx.lineTo(d + h, y1); ctx.stroke();
@@ -17458,7 +17816,7 @@ function drawHatch(pattern, color, strokeWidth, taramaCode, bounds, hatchMm) {
 
     case 'circulation': {
       // Diagonal dashes with slight movement feel
-      ctx.lineWidth = strokeWidth * 0.7;
+      ctx.lineWidth = hatchLw;
       ctx.globalAlpha = 0.4;
       ctx.setLineDash([sp * 0.6, sp * 0.5]);
       for (let d = x0 - h; d < x1 + h; d += sp * 1.4) {
@@ -17470,7 +17828,7 @@ function drawHatch(pattern, color, strokeWidth, taramaCode, bounds, hatchMm) {
 
     case 'sketch': {
       // Irregular hand-drawn lines at varying angles
-      ctx.lineWidth = strokeWidth * 0.55;
+      ctx.lineWidth = hatchLw;
       ctx.globalAlpha = 0.38;
       const rng = (s) => (Math.sin(s * 127.1 + 311.7) * 0.5 + 0.5);
       for (let y = y0; y < y1; y += sp * 1.2) {
@@ -17631,10 +17989,10 @@ function drawHead(x1, y1, x2, y2, size, style, color, sw) {
 
 /** MPYY sınır — dünya koordinatlı çizgi üzerinde periyot (mm @ plan ölçeği). */
 function planGmlBoundaryPeriodPx(periodMm) {
-  if (typeof MpyyPlanGmlCatalog !== 'undefined' && MpyyPlanGmlCatalog.mmToScreenUnits) {
-    return MpyyPlanGmlCatalog.mmToScreenUnits(periodMm || 10, S.projectScale || 1000, pxToMeters(1));
+  if (typeof MpyyPlanGmlCatalog !== 'undefined' && MpyyPlanGmlCatalog.mmToWorldUnits) {
+    return MpyyPlanGmlCatalog.mmToWorldUnits(periodMm || 10, S.projectScale || 1000, pxToMeters(1));
   }
-  return Math.max(6, (periodMm || 10) * 0.35);
+  return planGmlPaperMmToScreen(periodMm || 10);
 }
 
 function forEachPointOnFlatPath(flatPts, intervalPx, fn) {
@@ -17662,25 +18020,28 @@ function forEachPointOnFlatPath(flatPts, intervalPx, fn) {
   }
 }
 
-function drawMpyyBoundaryDecorations(flatPts, pattern, params, color, strokeW) {
+function drawMpyyBoundaryDecorations(flatPts, pattern, params, color, strokeCtxW) {
   if (!pattern || !flatPts || flatPts.length < 4) return;
   const p = params || {};
   const mPerPx = pxToMeters(1);
   const scale = S.projectScale || 1000;
-  const mmPx = (mm) => (typeof MpyyPlanGmlCatalog !== 'undefined'
-    ? MpyyPlanGmlCatalog.mmToScreenUnits(mm, scale, mPerPx)
-    : Math.max(1, mm * 0.35));
+  const mmWorld = (mm) => (typeof MpyyPlanGmlCatalog !== 'undefined' && MpyyPlanGmlCatalog.mmToWorldUnits
+    ? MpyyPlanGmlCatalog.mmToWorldUnits(mm, scale, mPerPx)
+    : planGmlPaperMmToScreen(mm));
+  const mmScr = (mm) => (typeof MpyyPlanGmlCatalog !== 'undefined' && MpyyPlanGmlCatalog.mmToScreenPx
+    ? MpyyPlanGmlCatalog.mmToScreenPx(mm)
+    : planGmlPaperMmToScreenPx(mm));
 
-  const circleR = mmPx(p.circleDiameterMM || 5) * 0.5;
-  const dotR = Math.max(0.6, mmPx(p.dotDiameterMM || 1) * 0.5);
-  const tickLen = mmPx(p.perpendicularLengthMM || 5);
-  const period = mmPx((p.circleDiameterMM || 0) + (p.gapMM || 0))
+  const circleR = mmWorld(p.circleDiameterMM || 5) * 0.5;
+  const dotR = Math.max(planGmlCtxLineWidth(mmScr(0.5)), mmWorld(p.dotDiameterMM || 1) * 0.5);
+  const tickLen = mmWorld(p.perpendicularLengthMM || 5);
+  const period = mmWorld((p.circleDiameterMM || 0) + (p.gapMM || 0))
     || planGmlBoundaryPeriodPx((p.circleDiameterMM || 5) + (p.gapMM || 2.5));
 
   ctx.save();
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = Math.max(0.8, strokeW * 0.85);
+  ctx.lineWidth = strokeCtxW || planGmlCtxLineWidth(mmScr(p.lineThicknessMM || PLAN_GML_DEFAULT_LINE_MM.boundary));
   ctx.lineCap = 'round';
 
   const decoPatterns = new Set([
@@ -17724,23 +18085,29 @@ function drawMpyyBoundaryDecorations(flatPts, pattern, params, color, strokeW) {
   ctx.restore();
 }
 
-function resolvePlanGmlBoundaryDash(obj, planStyle, strokeW) {
-  if (obj.boundaryDash?.length) return obj.boundaryDash;
-  if (planStyle?.boundaryDash?.length) return planStyle.boundaryDash;
+function resolvePlanGmlBoundaryDash(obj, planStyle, strokeScreenPx) {
+  if (obj.boundaryDash?.length) {
+    return obj.boundaryDash.map((v) => v / Math.max(0.05, S.scale || 1));
+  }
+  if (planStyle?.boundaryDash?.length) {
+    return planStyle.boundaryDash.map((v) => v / Math.max(0.05, S.scale || 1));
+  }
   if ((planStyle?.lineStyle || obj.lineStyle) === 'dashed') {
-    return [strokeW * 2.2 / S.scale, strokeW * 1.6 / S.scale];
+    const sw = strokeScreenPx || planGmlResolveStrokeScreenPx(obj, planStyle);
+    return [sw * 2.2 / S.scale, sw * 1.6 / S.scale];
   }
   return [];
 }
 
-function strokePlanGmlBoundaryPath(flatPts, obj, planStyle, stroke, strokeW, closed) {
+function strokePlanGmlBoundaryPath(flatPts, obj, planStyle, stroke, strokeScreenPx, closed) {
   if (!flatPts || flatPts.length < 4) return;
   const pattern = obj.boundaryPattern || planStyle?.boundaryPattern;
   const params = obj.boundaryParams || planStyle?.boundaryParams;
-  const dash = resolvePlanGmlBoundaryDash(obj, planStyle, strokeW);
+  const dash = resolvePlanGmlBoundaryDash(obj, planStyle, strokeScreenPx);
+  const ctxLw = planGmlCtxLineWidth(strokeScreenPx);
 
   ctx.strokeStyle = stroke;
-  ctx.lineWidth = strokeW;
+  ctx.lineWidth = ctxLw;
   ctx.setLineDash(dash);
   ctx.beginPath();
   ctx.moveTo(flatPts[0], flatPts[1]);
@@ -17753,7 +18120,7 @@ function strokePlanGmlBoundaryPath(flatPts, obj, planStyle, stroke, strokeW, clo
     ? flatPts.concat(flatPts[0], flatPts[1])
     : flatPts;
   if (pattern && !RenderCoordinator.isLowRenderMode()) {
-    drawMpyyBoundaryDecorations(decoPts, pattern, params, stroke, strokeW);
+    drawMpyyBoundaryDecorations(decoPts, pattern, params, stroke, ctxLw);
   }
 }
 
@@ -17774,7 +18141,8 @@ function renderImportObj(obj, sel) {
     const rings = obj.rings || [];
     if (!rings.length) { ctx.restore(); return; }
     const planStyle = planGmlStyleForObject(obj);
-    const strokeW = planStyle?.strokeWidth || obj.strokeWidth || IMPORT_STYLE.polygon.strokeWidth;
+    const strokeScreenPx = planGmlResolveStrokeScreenPx(obj, planStyle);
+    const strokeW = planGmlCtxLineWidth(strokeScreenPx);
     const noFill = !!(planStyle?.noFill || planGmlIsOutlineOnly(obj.metadata?.planFeatureType));
     const fill = noFill ? 'transparent' : (planStyle?.fillColor || obj.fillColor || IMPORT_STYLE.polygon.fillColor);
     const stroke = planStyle?.color || obj.color || IMPORT_STYLE.polygon.color;
@@ -17782,6 +18150,7 @@ function renderImportObj(obj, sel) {
     const hatchCol = obj.hatchColor || planStyle?.hatchColor || stroke;
     const taramaCode = obj.taramaCode || planStyle?.taramaCode || '';
     const hatchMm = obj.hatchMm ?? planStyle?.hatchMm ?? null;
+    const hatchDotMm = obj.hatchDotMm ?? planStyle?.hatchDotMm ?? null;
     const drawRing = (ring, fillIt) => {
       const pts = geoRingToWorldFlat(ring);
       if (pts.length < 6) return;
@@ -17797,16 +18166,17 @@ function renderImportObj(obj, sel) {
             && !obj._skipHatch
             && !RenderCoordinator.shouldSkipHatch()
             && (!obj._planOverlay || S.scale >= PLAN_OVERLAY_HATCH_MIN_SCALE)) {
-          drawHatch(hatchPat, hatchCol, strokeW, taramaCode, flatPtsBounds(pts), hatchMm);
+          drawHatch(hatchPat, hatchCol, strokeScreenPx, taramaCode, flatPtsBounds(pts), hatchMm, hatchDotMm);
         }
       }
       ctx.globalAlpha = obj.opacity ?? 1;
       if (obj.boundaryPattern || planStyle?.boundaryPattern) {
-        strokePlanGmlBoundaryPath(pts, obj, planStyle, stroke, strokeW, true);
+        strokePlanGmlBoundaryPath(pts, obj, planStyle, stroke, strokeScreenPx, true);
       } else {
         ctx.strokeStyle = stroke;
         ctx.lineWidth = strokeW;
-        ctx.setLineDash(obj.lineStyle === 'dashed' ? [strokeW * 2.2 / S.scale, strokeW * 1.6 / S.scale] : []);
+        ctx.setLineDash(obj.lineStyle === 'dashed'
+          ? [strokeScreenPx * 2.2 / S.scale, strokeScreenPx * 1.6 / S.scale] : []);
         ctx.beginPath();
         ctx.moveTo(pts[0], pts[1]);
         for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
@@ -17835,7 +18205,7 @@ function renderImportObj(obj, sel) {
       const pts = ringPts;
       ctx.save();
       ctx.strokeStyle = infoFocus ? '#1a73e8' : '#4488ff';
-      ctx.lineWidth = strokeW + 4;
+      ctx.lineWidth = strokeW + planGmlCtxLineWidth(4);
       ctx.globalAlpha = infoFocus ? 0.28 : 0.2;
       ctx.beginPath();
       ctx.moveTo(pts[0], pts[1]);
@@ -17848,7 +18218,8 @@ function renderImportObj(obj, sel) {
     const verts = obj.vertices || [];
     if (verts.length < 2) { ctx.restore(); return; }
     const planStyle = planGmlStyleForObject(obj);
-    const strokeW = planStyle?.strokeWidth || obj.strokeWidth || IMPORT_STYLE.polyline.strokeWidth;
+    const strokeScreenPx = planGmlResolveStrokeScreenPx(obj, planStyle);
+    const strokeW = planGmlCtxLineWidth(strokeScreenPx);
     const stroke = planStyle?.color || obj.color || IMPORT_STYLE.polyline.color;
     ctx.globalAlpha = obj.opacity ?? 1;
     const flatPts = [];
@@ -17857,12 +18228,12 @@ function renderImportObj(obj, sel) {
       flatPts.push(w.x, w.y);
     }
     if (obj.boundaryPattern || planStyle?.boundaryPattern) {
-      strokePlanGmlBoundaryPath(flatPts, obj, planStyle, stroke, strokeW);
+      strokePlanGmlBoundaryPath(flatPts, obj, planStyle, stroke, strokeScreenPx);
     } else {
       ctx.strokeStyle = stroke;
       ctx.lineWidth = strokeW;
       ctx.setLineDash((planStyle?.lineStyle || obj.lineStyle) === 'dashed'
-        ? [strokeW * 2.2 / S.scale, strokeW * 1.6 / S.scale] : []);
+        ? [strokeScreenPx * 2.2 / S.scale, strokeScreenPx * 1.6 / S.scale] : []);
       ctx.beginPath();
       ctx.moveTo(flatPts[0], flatPts[1]);
       for (let i = 2; i < flatPts.length; i += 2) ctx.lineTo(flatPts[i], flatPts[i + 1]);
@@ -17873,7 +18244,7 @@ function renderImportObj(obj, sel) {
     if (showHighlight) {
       ctx.save();
       ctx.strokeStyle = infoFocus ? '#1a73e8' : '#4488ff';
-      ctx.lineWidth = strokeW + (infoFocus ? 3 : 5);
+      ctx.lineWidth = strokeW + planGmlCtxLineWidth(infoFocus ? 3 : 5);
       ctx.globalAlpha = infoFocus ? 0.28 : 0.18;
       ctx.stroke();
       ctx.restore();
