@@ -1,10 +1,10 @@
 {
   "version": "1.0.0",
-  "generatedAt": "2026-06-25T21:39:19.667Z",
+  "generatedAt": "2026-06-25T22:07:51.129Z",
   "modules": [
     {
       "path": "js/app.js",
-      "sha256": "bf68122cb87d4f9a266430005eb64a10ea8ac465f37f5681311125a73c0ec471"
+      "sha256": "8d1df2ef48c369e29cfcc04e33ee88db58e475ac0f5c429fd3c72c310d1da28d"
     },
     {
       "path": "js/spatial/SpatialSecurity.js",

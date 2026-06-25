@@ -13,6 +13,8 @@ const MpyyPlanGmlCatalog = (function () {
 
   const TIP_ALIASES = {
     KonutAlani: 'YerlesikKonutAlani',
+    GelismeKonut: 'GelismeKonutAlani',
+    YerlesikKonut: 'YerlesikKonutAlani',
     EkoTurizmKirsalTurizmTesisAlani: 'EkoKirsalTurizmTesisAlani',
     KonaklamaTesisAlani: 'PansiyonAlani',
     EnerjiDagitimDepolama: 'TrafoAlani',

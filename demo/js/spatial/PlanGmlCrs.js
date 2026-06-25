@@ -20,6 +20,7 @@
     [4340000, 4415000, 370000, 490000, 7930],
     [4360000, 4410000, 470000, 560000, 7931],
     [4090000, 4145000, 450000, 540000, 7934],
+    [4080000, 4200000, 450000, 550000, 7934],
     [4190000, 4360000, 370000, 515000, 7930],
     [4190000, 4360000, 515000, 620000, 7931],
     [4360000, 4550000, 60000, 180000, 7936],
@@ -279,8 +280,15 @@
     return [...set].filter(e => e && isFinite(e));
   }
 
+  function geoHintDistDeg(a, b) {
+    if (!a || !b) return Infinity;
+    const dlat = a.lat - b.lat;
+    const dlon = a.lon - b.lon;
+    return Math.sqrt(dlat * dlat + dlon * dlon);
+  }
+
   function scoreCandidateEpsg(samples, epsg, ctx) {
-    const { hints, gpsAnchor, tagged, avgE, avgN, family } = ctx;
+    const { hints, gpsAnchor, nameHint, tagged, avgE, avgN, family } = ctx;
     if (!centroidWgs84(samples, epsg)) return -Infinity;
 
     let score = 0;
@@ -328,11 +336,29 @@
       score += 150000;
     }
 
-    if (gpsAnchor && isInTurkeyBbox(gpsAnchor.lat, gpsAnchor.lon)) {
+    if (nameHint && isInTurkeyBbox(nameHint.lat, nameHint.lon)) {
       const c = centroidWgs84(samples, epsg);
-      const dlat = c.lat - gpsAnchor.lat;
-      const dlon = c.lon - gpsAnchor.lon;
-      score -= (dlat * dlat + dlon * dlon) * 1.5e6;
+      if (c) {
+        const dlat = c.lat - nameHint.lat;
+        const dlon = c.lon - nameHint.lon;
+        score -= (dlat * dlat + dlon * dlon) * 3.2e6;
+      }
+    }
+
+    if (gpsAnchor && isInTurkeyBbox(gpsAnchor.lat, gpsAnchor.lon)) {
+      const gpsConflictsName = nameHint
+        && geoHintDistDeg(gpsAnchor, nameHint) > 1.5;
+      if (!gpsConflictsName) {
+        const c = centroidWgs84(samples, epsg);
+        if (c) {
+          const dlat = c.lat - gpsAnchor.lat;
+          const dlon = c.lon - gpsAnchor.lon;
+          const w = nameHint ? 0.35e6 : 1.5e6;
+          score -= (dlat * dlat + dlon * dlon) * w;
+        }
+      } else if (famEn === epsg) {
+        score += 120000;
+      }
     }
 
     return score;
@@ -342,10 +368,11 @@
    * @param {Array<{e:number,n:number}>} samples
    * @param {number|null} taggedEpsg — ilk geometri srsName (zayıf sinyal)
    * @param {string} gmlText — tüm dosya metni (SembolPoz vb.)
-   * @param {{lat:number,lon:number}|null} gpsAnchor — yalnızca cihaz GPS
+   * @param {{lat:number,lon:number}|null} gpsAnchor — cihaz GPS (dosya adı ipucu yoksa)
    * @param {Object<number,number>} geometrySrsVotes — tüm geometrilerdeki srsName oyları
+   * @param {{lat:number,lon:number}|null} nameHint — dosya adından il/yer ipucu (GPS'ten öncelikli)
    */
-  function resolvePlanGmlEpsg(samples, taggedEpsg, gmlText, gpsAnchor, geometrySrsVotes) {
+  function resolvePlanGmlEpsg(samples, taggedEpsg, gmlText, gpsAnchor, geometrySrsVotes, nameHint) {
     if (!samples?.length) return taggedEpsg || null;
 
     const { avgE, avgN } = avgEN(samples);
@@ -356,7 +383,7 @@
     if (isTrustedUtmTaggedEpsg(tagged, samples)) return tagged;
 
     const candidates = listCandidateEpsgs(taggedEpsg, hints, family, samples);
-    const ctx = { hints, gpsAnchor, tagged, avgE, avgN, family };
+    const ctx = { hints, gpsAnchor, nameHint, tagged, avgE, avgN, family };
 
     let bestEpsg = null;
     let bestScore = -Infinity;
@@ -374,8 +401,8 @@
     return cmToEpsg793(33);
   }
 
-  function resolvePlanGmlCm(samples, taggedEpsg, gmlText, gpsAnchor, geometrySrsVotes) {
-    const epsg = resolvePlanGmlEpsg(samples, taggedEpsg, gmlText, gpsAnchor, geometrySrsVotes);
+  function resolvePlanGmlCm(samples, taggedEpsg, gmlText, gpsAnchor, geometrySrsVotes, nameHint) {
+    const epsg = resolvePlanGmlEpsg(samples, taggedEpsg, gmlText, gpsAnchor, geometrySrsVotes, nameHint);
     if (!epsg) return null;
     if (isTuref793(epsg)) return epsg793ToCm(epsg);
     if (isEd50Tm(epsg)) return epsg793ToCm(7930 + (epsg - 2319));
