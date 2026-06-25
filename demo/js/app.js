@@ -17604,29 +17604,36 @@ function drawRingStampDotsOnCanvas(c, cx, cy, radius, simplified) {
   }
 }
 
-/** Şaşırtmalı karolajda tek damga döşemesi — CanvasPattern ile tek fillRect. */
+/** Şaşırtmalı karolajda tek damga döşemesi — bleed kenarlı tile. */
 function getStampHatchPattern(color, cellPx) {
   const cell = Math.max(8, Math.round(cellPx));
   const simplified = cell < 14;
-  const key = 'stamp|81218u|' + color + '|' + cell + '|' + (simplified ? 's' : 'f');
+  const key = 'stamp|81218p|' + color + '|' + cell + '|' + (simplified ? 's' : 'f');
   const cached = hatchPatternCacheGet(key);
   if (cached) return cached;
 
+  const circleR = cell * (6 / 18) * (simplified ? 0.9 : 1);
+  const dotR = Math.max(0.95, circleR * 0.058);
+  const pad = Math.ceil(circleR * 0.72 + dotR) + 2;
   const rowH = Math.round(cell * 0.866);
-  const tileH = rowH * 2;
+  const logicalH = rowH * 2;
+  const w = cell + 2 * pad;
+  const h = logicalH + 2 * pad;
   const off = document.createElement('canvas');
-  off.width = cell;
-  off.height = tileH;
+  off.width = w;
+  off.height = h;
   const c = off.getContext('2d');
-  const circleR = cell * (6 / 18);
   c.fillStyle = color;
   c.strokeStyle = color;
-
-  // staggeredStippleHatchSvg ile aynı: satır0 merkez cell/2, satır1 merkez 0 (cell ≡ 0 döşeme)
-  drawRingStampDotsOnCanvas(c, cell / 2, cell / 2, circleR, simplified);
-  drawRingStampDotsOnCanvas(c, 0, rowH + cell / 2, circleR, simplified);
+  drawRingStampDotsOnCanvas(c, pad + cell / 2, pad + cell / 2, circleR, simplified);
+  drawRingStampDotsOnCanvas(c, pad, pad + rowH + cell / 2, circleR, simplified);
 
   const pattern = ctx.createPattern(off, 'repeat');
+  if (pattern && typeof pattern.setTransform === 'function') {
+    const sx = cell / w;
+    const sy = logicalH / h;
+    pattern.setTransform(new DOMMatrix().scale(1 / sx, 1 / sy).translate(-pad, -pad));
+  }
   if (pattern) hatchPatternCacheSet(key, pattern);
   return pattern;
 }

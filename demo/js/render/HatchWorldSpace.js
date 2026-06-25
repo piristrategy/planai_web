@@ -35,18 +35,6 @@ const HatchWorldSpace = (function () {
     _tileCache.set(key, entry);
   }
 
-  function drawStampOnTile(c, w, h, color, lod) {
-    const simplified = lod === 'coarse';
-    const cell = w;
-    const circleR = cell * (6 / 18) * (simplified ? 0.9 : 1);
-    const rowH = Math.round(cell * 0.866);
-    c.clearRect(0, 0, w, h);
-    c.fillStyle = color;
-    c.strokeStyle = color;
-    drawRingStampDots(c, cell / 2, cell / 2, circleR, simplified);
-    drawRingStampDots(c, 0, rowH + cell / 2, circleR, simplified);
-  }
-
   /** MPYY ring_stamp — merkez + 3 halka (8 + 12 + 18 nokta), tek nokta çapı. */
   function drawRingStampDots(c, cx, cy, radius, simplified) {
     const dotR = Math.max(0.95, radius * 0.058);
@@ -71,78 +59,125 @@ const HatchWorldSpace = (function () {
     }
   }
 
+  function ringStampMetrics(cell, simplified) {
+    const circleR = cell * (6 / 18) * (simplified ? 0.9 : 1);
+    const dotR = Math.max(0.95, circleR * 0.058);
+    const outer = circleR * 0.72 + dotR;
+    const pad = Math.ceil(outer) + 2;
+    const rowH = Math.round(cell * 0.866);
+    return { circleR, pad, rowH, logicalH: rowH * 2 };
+  }
+
+  function dotGridMetrics(cell, lod, dotRatio) {
+    const rowH = Math.round(cell * 0.866);
+    let r;
+    if (dotRatio != null) {
+      const dr = Math.max(0.04, Math.min(0.35, Number(dotRatio) || 0.167));
+      r = cell * dr * (lod === 'coarse' ? 0.9 : lod === 'medium' ? 1 : 1.05);
+    } else {
+      r = cell * (lod === 'coarse' ? 0.055 : lod === 'medium' ? 0.065 : 0.07);
+    }
+    return { r, pad: Math.ceil(r) + 2, rowH, logicalH: rowH * 2 };
+  }
+
+  function makeBleedTileEntry(canvas, cellPx, padPx, logicalH) {
+    return {
+      canvas,
+      tileW: canvas.width,
+      tileH: canvas.height,
+      cellPx,
+      padPx,
+      logicalH,
+      bleed: true,
+      worldW: 1,
+      worldH: logicalH / cellPx,
+    };
+  }
+
+  function drawStampOnBleedCanvas(c, cell, color, lod) {
+    const simplified = lod === 'coarse';
+    const m = ringStampMetrics(cell, simplified);
+    const w = cell + 2 * m.pad;
+    const h = m.logicalH + 2 * m.pad;
+    c.canvas.width = w;
+    c.canvas.height = h;
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = color;
+    c.strokeStyle = color;
+    const ox = m.pad;
+    const oy = m.pad;
+    drawRingStampDots(c, ox + cell / 2, oy + cell / 2, m.circleR, simplified);
+    drawRingStampDots(c, ox, oy + m.rowH + cell / 2, m.circleR, simplified);
+    return makeBleedTileEntry(c.canvas, cell, m.pad, m.logicalH);
+  }
+
   function getStampTile(color, lod) {
-    const key = 'stamp|81218u|' + color + '|' + lod;
+    const key = 'stamp|81218p|' + color + '|' + lod;
     const hit = cacheGet(key);
     if (hit) return hit;
-    const rowH = Math.round(TILE_PX * 0.866);
-    const tileH = rowH * 2;
     const canvas = document.createElement('canvas');
-    canvas.width = TILE_PX;
-    canvas.height = tileH;
-    drawStampOnTile(canvas.getContext('2d'), TILE_PX, tileH, color, lod);
-    const entry = { canvas, tileW: TILE_PX, tileH, worldW: 1, worldH: tileH / TILE_PX };
+    const entry = drawStampOnBleedCanvas(canvas.getContext('2d'), TILE_PX, color, lod);
     cacheSet(key, entry);
     return entry;
   }
 
-  function drawStaggeredStippleOnTile(c, w, h, color, lod, dotRatio) {
+  function drawParkDotsOnBleedCanvas(c, cell, color, lod) {
+    const m = dotGridMetrics(cell, lod, null);
+    const w = cell + 2 * m.pad;
+    const h = m.logicalH + 2 * m.pad;
+    c.canvas.width = w;
+    c.canvas.height = h;
     c.clearRect(0, 0, w, h);
     c.fillStyle = color;
-    const dr = Math.max(0.04, Math.min(0.35, Number(dotRatio) || 0.167));
-    const r = w * dr * (lod === 'coarse' ? 0.9 : lod === 'medium' ? 1 : 1.05);
-    const rowH = Math.round(w * 0.866);
+    const ox = m.pad;
+    const oy = m.pad;
     const dot = (cx, cy) => {
       c.beginPath();
-      c.arc(cx, cy, r, 0, Math.PI * 2);
+      c.arc(cx, cy, m.r, 0, Math.PI * 2);
       c.fill();
     };
-    dot(w / 2, w / 2);
-    dot(0, rowH + w / 2);
+    dot(ox + cell / 2, oy + cell / 2);
+    dot(ox, oy + m.rowH + cell / 2);
+    return makeBleedTileEntry(c.canvas, cell, m.pad, m.logicalH);
+  }
+
+  function getParkDotsTile(color, lod) {
+    const key = 'parkDots|bleed|' + color + '|' + lod;
+    const hit = cacheGet(key);
+    if (hit) return hit;
+    const canvas = document.createElement('canvas');
+    const entry = drawParkDotsOnBleedCanvas(canvas.getContext('2d'), TILE_PX, color, lod);
+    cacheSet(key, entry);
+    return entry;
+  }
+
+  function drawStaggeredStippleOnBleedCanvas(c, cell, color, lod, dotRatio) {
+    const m = dotGridMetrics(cell, lod, dotRatio);
+    const w = cell + 2 * m.pad;
+    const h = m.logicalH + 2 * m.pad;
+    c.canvas.width = w;
+    c.canvas.height = h;
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = color;
+    const ox = m.pad;
+    const oy = m.pad;
+    const dot = (cx, cy) => {
+      c.beginPath();
+      c.arc(cx, cy, m.r, 0, Math.PI * 2);
+      c.fill();
+    };
+    dot(ox + cell / 2, oy + cell / 2);
+    dot(ox, oy + m.rowH + cell / 2);
+    return makeBleedTileEntry(c.canvas, cell, m.pad, m.logicalH);
   }
 
   function getStaggeredStippleTile(color, lod, dotRatio) {
     const dr = (Number(dotRatio) || 0.167).toFixed(3);
-    const key = 'staggeredStipple|' + color + '|' + lod + '|' + dr;
+    const key = 'staggeredStipple|bleed|' + color + '|' + lod + '|' + dr;
     const hit = cacheGet(key);
     if (hit) return hit;
-    const rowH = Math.round(TILE_PX * 0.866);
-    const tileH = rowH * 2;
     const canvas = document.createElement('canvas');
-    canvas.width = TILE_PX;
-    canvas.height = tileH;
-    drawStaggeredStippleOnTile(canvas.getContext('2d'), TILE_PX, tileH, color, lod, dotRatio);
-    const entry = { canvas, tileW: TILE_PX, tileH, worldW: 1, worldH: tileH / TILE_PX };
-    cacheSet(key, entry);
-    return entry;
-  }
-
-  function drawParkDotsOnTile(c, w, h, color, lod) {
-    c.clearRect(0, 0, w, h);
-    c.fillStyle = color;
-    const r = w * (lod === 'coarse' ? 0.055 : lod === 'medium' ? 0.065 : 0.07);
-    const rowH = Math.round(w * 0.866);
-    const dot = (cx, cy) => {
-      c.beginPath();
-      c.arc(cx, cy, r, 0, Math.PI * 2);
-      c.fill();
-    };
-    dot(w / 2, w / 2);
-    dot(0, rowH + w / 2);
-  }
-
-  function getParkDotsTile(color, lod) {
-    const key = 'parkDots|circles|' + color + '|' + lod;
-    const hit = cacheGet(key);
-    if (hit) return hit;
-    const rowH = Math.round(TILE_PX * 0.866);
-    const tileH = rowH * 2;
-    const canvas = document.createElement('canvas');
-    canvas.width = TILE_PX;
-    canvas.height = tileH;
-    const c = canvas.getContext('2d');
-    drawParkDotsOnTile(c, TILE_PX, tileH, color, lod);
-    const entry = { canvas, tileW: TILE_PX, tileH, worldW: 1, worldH: tileH / TILE_PX };
+    const entry = drawStaggeredStippleOnBleedCanvas(canvas.getContext('2d'), TILE_PX, color, lod, dotRatio);
     cacheSet(key, entry);
     return entry;
   }
@@ -165,6 +200,30 @@ const HatchWorldSpace = (function () {
     return cacheGet(key);
   }
 
+  /** Bleed kenarlı döşeme — şaşırtmalı damgaların yarım kırpılmasını önler. */
+  function fillBleedTiles(ctx, tileEntry, cellWorld, x0, y0, x1, y1) {
+    const { canvas, cellPx, padPx, logicalH } = tileEntry;
+    const worldH = cellWorld * (logicalH / cellPx);
+    const o = snapOrigin(x0, y0, cellWorld);
+    const oySnap = snapOrigin(x0, y0, worldH).y;
+    const sx = cellWorld / cellPx;
+    const sy = worldH / logicalH;
+    const bw = canvas.width;
+    const bh = canvas.height;
+    const col0 = Math.floor((x0 - o.x) / cellWorld) - 1;
+    const col1 = Math.ceil((x1 - o.x) / cellWorld) + 1;
+    const row0 = Math.floor((y0 - oySnap) / worldH) - 1;
+    const row1 = Math.ceil((y1 - oySnap) / worldH) + 1;
+    for (let row = row0; row <= row1; row++) {
+      for (let col = col0; col <= col1; col++) {
+        const wx = o.x + col * cellWorld;
+        const wy = oySnap + row * worldH;
+        ctx.drawImage(canvas, 0, 0, bw, bh, wx - padPx * sx, wy - padPx * sy, bw * sx, bh * sy);
+      }
+    }
+    return true;
+  }
+
   /** Dünya uzayında pattern fill — origin snap + setTransform. */
   function fillWorldPattern(ctx, tileEntry, cellWorld, ox, oy, x0, y0, x1, y1) {
     const tw = tileEntry.tileW;
@@ -179,7 +238,7 @@ const HatchWorldSpace = (function () {
         .scale(worldW / tw, worldH / th));
     }
     ctx.fillStyle = pat;
-    ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.fillRect(x0, y0, x1 - x0, y1 - y1);
     return true;
   }
 
@@ -192,7 +251,6 @@ const HatchWorldSpace = (function () {
     const y0 = bounds.y0;
     const x1 = bounds.x1;
     const y1 = bounds.y1;
-    const origin = snapOrigin(x0, y0, cellWorld);
 
     let tile;
     if (patternType === 'stamp') tile = getStampTile(color, lod);
@@ -203,7 +261,9 @@ const HatchWorldSpace = (function () {
 
     const prevAlpha = ctx.globalAlpha;
     if (alpha != null) ctx.globalAlpha = alpha;
-    const ok = fillWorldPattern(ctx, tile, cellWorld, origin.x, origin.y, x0, y0, x1, y1);
+    const ok = tile.bleed
+      ? fillBleedTiles(ctx, tile, cellWorld, x0, y0, x1, y1)
+      : fillWorldPattern(ctx, tile, cellWorld, snapOrigin(x0, y0, cellWorld).x, snapOrigin(x0, y0, cellWorld).y, x0, y0, x1, y1);
     ctx.globalAlpha = prevAlpha;
     return ok;
   }
