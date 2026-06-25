@@ -4241,6 +4241,12 @@ const PLAN_GML_DEFAULT_LINE_MM = {
 };
 /** Plan ölçeği → MPYY plan seviyesi (katalog anahtarı). */
 const PLAN_GML_SCALE_TO_LEVEL = { 1000: 'UIP', 5000: 'NIP', 25000: 'NIP', 100000: 'CDP' };
+/** MPYY ring_stamp karolaj aralığı (mm @ kağıt) — ölçeğe göre. */
+const PLAN_GML_STAMP_MM_BY_SCALE = { 1000: 18, 5000: 12, 25000: 12, 100000: 9 };
+const PLAN_GML_TOURISM_STAMP_TIPS = new Set([
+  'TurizmAlani', 'TurizmBolgesi', 'OtelAlani', 'GunubirlikTesisAlani', 'KonaklamaTesisAlani',
+  'EkoTurizmKirsalTurizmTesisAlani', 'GolfTurizmi', 'GolfTurizmTesisAlani',
+]);
 const PLAN_GML_STYLES = {
   _default: { color: '#546e7a', fillColor: 'transparent', strokeWidth: 2, hatchPattern: 'none', noFill: true },
   PlanSiniri: { color: '#0d47a1', fillColor: 'transparent', strokeWidth: 3.5, hatchPattern: 'none', noFill: true },
@@ -4251,15 +4257,15 @@ const PLAN_GML_STYLES = {
   RekreatifAlan: { color: '#43a047', fillColor: 'rgba(102,187,106,0.5)', strokeWidth: 2, hatchPattern: 'parkDots', hatchColor: '#1a1a1a' },
   ParkAlani: { color: '#1b5e20', fillColor: 'rgba(102,187,106,0.58)', strokeWidth: 2, hatchPattern: 'parkDots', hatchColor: '#1a1a1a' },
   KumsalPlaj: { color: '#f9a825', fillColor: 'rgba(255,236,179,0.58)', strokeWidth: 2, hatchPattern: 'diagonal' },
-  TurizmAlani: { color: '#ef6c00', fillColor: 'rgba(255,152,0,0.72)', strokeWidth: 2, hatchPattern: 'stamp', hatchColor: '#212121' },
-  OtelAlani: { color: '#e65100', fillColor: 'rgba(255,111,0,0.84)', strokeWidth: 2, hatchPattern: 'stamp', hatchColor: '#212121' },
-  GunubirlikTesisAlani: { color: '#f57c00', fillColor: 'rgba(255,183,77,0.78)', strokeWidth: 2, hatchPattern: 'stamp', hatchColor: '#212121' },
-  KonaklamaTesisAlani: { color: '#fb8c00', fillColor: 'rgba(255,167,38,0.55)', strokeWidth: 2, hatchPattern: 'stamp', hatchColor: '#212121' },
+  TurizmAlani: { color: '#212121', fillColor: 'rgba(255,115,0,0.55)', strokeWidth: 2, hatchPattern: 'stamp', hatchColor: '#212121' },
+  OtelAlani: { color: '#212121', fillColor: 'rgba(255,115,0,0.55)', strokeWidth: 2, hatchPattern: 'stamp', hatchColor: '#212121' },
+  GunubirlikTesisAlani: { color: '#212121', fillColor: 'rgba(255,115,0,0.55)', strokeWidth: 2, hatchPattern: 'stamp', hatchColor: '#212121' },
+  KonaklamaTesisAlani: { color: '#212121', fillColor: 'rgba(255,115,0,0.55)', strokeWidth: 2, hatchPattern: 'stamp', hatchColor: '#212121' },
   KonutAlani: { color: '#c62828', fillColor: 'rgba(229,57,53,0.58)', strokeWidth: 2, hatchPattern: 'cross', hatchColor: '#212121' },
   TicaretAlani: { color: '#b71c1c', fillColor: 'rgba(229,57,53,0.62)', strokeWidth: 2, hatchPattern: 'cross', hatchColor: '#212121' },
   TicaretTurizmAlani: { color: '#1565c0', fillColor: 'rgba(255,152,0,0.88)', strokeWidth: 2, hatchPattern: 'grid', hatchColor: '#212121' },
   SanayiAlani: { color: '#6d4c41', fillColor: 'rgba(141,110,99,0.52)', strokeWidth: 2, hatchPattern: 'cross', hatchColor: '#212121' },
-  EkoTurizmKirsalTurizmTesisAlani: { color: '#ef6c00', fillColor: 'rgba(255,183,77,0.72)', strokeWidth: 2, hatchPattern: 'stamp', hatchColor: '#212121' },
+  EkoTurizmKirsalTurizmTesisAlani: { color: '#212121', fillColor: 'rgba(255,115,0,0.55)', strokeWidth: 2, hatchPattern: 'stamp', hatchColor: '#212121' },
   TrafoAlani: { color: '#f57f17', fillColor: 'rgba(255,235,59,0.58)', strokeWidth: 2, hatchPattern: 'cross', hatchColor: '#795548' },
   EnerjiDagitimDepolama: { color: '#f9a825', fillColor: 'rgba(255,213,79,0.48)', strokeWidth: 2, hatchPattern: 'cross', hatchColor: '#6d4c41' },
   EgitimTesisAlani: { color: '#5c6bc0', fillColor: 'rgba(92,107,192,0.45)', strokeWidth: 2, hatchPattern: 'none' },
@@ -4274,7 +4280,7 @@ const PLAN_GML_STYLES = {
   AdaKenari: { color: '#546e7a', fillColor: 'transparent', strokeWidth: 1.8, hatchPattern: 'none', lineStyle: 'dashed', noFill: true },
   YolCizgisi: { color: '#37474f', strokeWidth: 2.5, hatchPattern: 'none', noFill: true },
   MeclisKarariAlani: { color: '#1565c0', fillColor: 'rgba(21,101,192,0.15)', strokeWidth: 2, hatchPattern: 'none' },
-  TurizmBolgesi: { color: '#ef6c00', fillColor: 'rgba(255,115,0,0.72)', strokeWidth: 2, hatchPattern: 'staggeredStipple', hatchColor: '#212121', hatchMm: 9, hatchDotMm: 3 },
+  TurizmBolgesi: { color: '#212121', fillColor: 'rgba(255,115,0,0.55)', strokeWidth: 2, hatchPattern: 'stamp', hatchColor: '#212121' },
   Tarim: { color: '#558b2f', fillColor: 'rgba(233,250,190,0.72)', strokeWidth: 2, hatchPattern: 'horizontal', hatchColor: '#33691e' },
   TarimAlani: { color: '#558b2f', fillColor: 'rgba(233,250,190,0.72)', strokeWidth: 2, hatchPattern: 'horizontal', hatchColor: '#33691e' },
   Zeytinlik: { color: '#6d8c3e', fillColor: 'rgba(233,250,190,0.68)', strokeWidth: 2, hatchPattern: 'horizontal', hatchColor: '#33691e' },
@@ -4836,6 +4842,35 @@ function planGmlApplyOutlineOnly(style) {
   };
 }
 
+function planGmlStampMmForScale(scale) {
+  const s = scale || S.projectScale || 1000;
+  if (PLAN_GML_STAMP_MM_BY_SCALE[s]) return PLAN_GML_STAMP_MM_BY_SCALE[s];
+  if (s <= 1000) return 18;
+  if (s <= 25000) return 12;
+  return 9;
+}
+
+function planGmlEnrichMpyyFallback(ps, props, tip) {
+  if (!ps || ps.noFill) return ps;
+  const out = { ...ps };
+  const scale = S.projectScale || 1000;
+  if (!out.strokeWidthPaperMm) out.strokeWidthPaperMm = PLAN_GML_DEFAULT_LINE_MM.area;
+  const tipKey = tip || '';
+  if (PLAN_GML_TOURISM_STAMP_TIPS.has(tipKey) || out.hatchPattern === 'stamp') {
+    if (!out.hatchPattern || out.hatchPattern === 'staggeredStipple') out.hatchPattern = 'stamp';
+    if (!out.hatchColor) out.hatchColor = '#212121';
+    if (!out.hatchMm) out.hatchMm = planGmlStampMmForScale(scale);
+    delete out.hatchDotMm;
+  } else if (!out.hatchMm && out.hatchPattern && PLAN_GML_SCALE_HATCH_PATTERNS.has(out.hatchPattern)) {
+    const code = out.taramaCode || PLAN_GML_PATTERN_TARAMA[out.hatchPattern];
+    if (code && PLAN_GML_TARAMA_MM[code]) out.hatchMm = PLAN_GML_TARAMA_MM[code];
+  }
+  if (!out.hatchColor && out.hatchPattern && out.hatchPattern !== 'none') {
+    out.hatchColor = out.color || '#212121';
+  }
+  return out;
+}
+
 function planGmlResolvePresentation(featureType, props) {
   const ft = planGmlNormalizeFeatureType(featureType);
   const tip = planGmlResolveTip(props, ft);
@@ -4861,7 +4896,7 @@ function planGmlResolvePresentation(featureType, props) {
       if (!rec && tip) rec = MpyyPlanGmlCatalog.lookup('', tip, planLevel);
       if (!rec && props?.Adi) rec = MpyyPlanGmlCatalog.lookupByLabel(props.Adi, planLevel);
       if (!rec && props?.PlanAdi) rec = MpyyPlanGmlCatalog.lookupByLabel(props.PlanAdi, planLevel);
-      if (rec) return MpyyPlanGmlCatalog.presentationFromRecord(rec);
+      if (rec) return planGmlEnrichMpyyFallback(MpyyPlanGmlCatalog.presentationFromRecord(rec), props, tip);
     }
   }
 
@@ -4876,19 +4911,19 @@ function planGmlResolvePresentation(featureType, props) {
     const tarama = PLAN_GML_TIP_TARAMA[tip] || '';
     const base = { ...PLAN_GML_STYLES[tip] };
     if (!base.strokeWidthPaperMm) base.strokeWidthPaperMm = PLAN_GML_DEFAULT_LINE_MM.area;
-    return tarama ? { ...base, taramaCode: tarama } : base;
+    return planGmlEnrichMpyyFallback(tarama ? { ...base, taramaCode: tarama } : base, props, tip);
   }
   if (tip && PLAN_GML_TIP_ALIASES[tip] && PLAN_GML_STYLES[PLAN_GML_TIP_ALIASES[tip]]) {
     const base = { ...PLAN_GML_STYLES[PLAN_GML_TIP_ALIASES[tip]] };
     if (!base.strokeWidthPaperMm) base.strokeWidthPaperMm = PLAN_GML_DEFAULT_LINE_MM.area;
-    return base;
+    return planGmlEnrichMpyyFallback(base, props, tip);
   }
 
   if (PLAN_GML_CONTAINER_TYPES.has(ft) && !tip) {
     return planGmlApplyOutlineOnly(PLAN_GML_STYLES._default);
   }
 
-  if (PLAN_GML_STYLES[ft]) return { ...PLAN_GML_STYLES[ft] };
+  if (PLAN_GML_STYLES[ft]) return planGmlEnrichMpyyFallback({ ...PLAN_GML_STYLES[ft] }, props, tip);
   return planGmlApplyOutlineOnly(PLAN_GML_STYLES._default);
 }
 
@@ -17544,36 +17579,28 @@ function hatchPatternCacheSet(key, pattern) {
   _hatchPatternCache.set(key, { pattern, ts: Date.now() });
 }
 
-/** MPYY patates baskı — merkez + konsantrik halka noktaları (stippleLayout ile uyumlu). */
+/** MPYY ring_stamp — merkez + 3 halka (8 + 12 + 18 nokta), tek nokta çapı. */
 function drawRingStampDotsOnCanvas(c, cx, cy, radius, simplified) {
-  const dotR = Math.max(0.95, radius * 0.085);
+  const dotR = Math.max(0.95, radius * 0.058);
   c.fillStyle = c.strokeStyle;
+  const rings = [
+    { n: 8, r: 0.32, phase: 0 },
+    { n: 12, r: 0.52, phase: Math.PI / 12 },
+    { n: 18, r: 0.72, phase: Math.PI / 18 },
+  ];
   c.beginPath();
-  c.arc(cx, cy, dotR * 1.05, 0, Math.PI * 2);
+  c.arc(cx, cy, dotR, 0, Math.PI * 2);
   c.fill();
   if (simplified) return;
-
-  const ring1R = radius * 0.32;
-  const ring1N = 8;
-  for (let i = 0; i < ring1N; i++) {
-    const a = (i / ring1N) * Math.PI * 2;
-    c.beginPath();
-    c.arc(cx + Math.cos(a) * ring1R, cy + Math.sin(a) * ring1R, dotR, 0, Math.PI * 2);
-    c.fill();
-  }
-  const ring2R = radius * 0.52;
-  for (let i = 0; i < ring1N; i++) {
-    const a = (i / ring1N) * Math.PI * 2 + Math.PI / ring1N;
-    c.beginPath();
-    c.arc(cx + Math.cos(a) * ring2R, cy + Math.sin(a) * ring2R, dotR * 0.82, 0, Math.PI * 2);
-    c.fill();
-  }
-  const ring3R = radius * 0.72;
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2 + Math.PI / 12;
-    c.beginPath();
-    c.arc(cx + Math.cos(a) * ring3R, cy + Math.sin(a) * ring3R, dotR * 0.68, 0, Math.PI * 2);
-    c.fill();
+  for (let ri = 0; ri < rings.length; ri++) {
+    const ring = rings[ri];
+    const rr = radius * ring.r;
+    for (let i = 0; i < ring.n; i++) {
+      const a = (i / ring.n) * Math.PI * 2 + ring.phase;
+      c.beginPath();
+      c.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, dotR, 0, Math.PI * 2);
+      c.fill();
+    }
   }
 }
 
@@ -17581,7 +17608,7 @@ function drawRingStampDotsOnCanvas(c, cx, cy, radius, simplified) {
 function getStampHatchPattern(color, cellPx) {
   const cell = Math.max(8, Math.round(cellPx));
   const simplified = cell < 14;
-  const key = 'stamp|' + color + '|' + cell + '|' + (simplified ? 's' : 'f');
+  const key = 'stamp|81218u|' + color + '|' + cell + '|' + (simplified ? 's' : 'f');
   const cached = hatchPatternCacheGet(key);
   if (cached) return cached;
 

@@ -300,9 +300,17 @@ const MpyyPlanGmlCatalog = (function () {
     };
   }
 
+  function isTourismLanduseRecord(rec) {
+    const cls = normAscii(rec.detailClass || '');
+    const sub = normAscii(rec.detailSubClass || rec.sketchLayerName || '');
+    return /TURIZM/i.test(cls) || /TURIZM/i.test(sub) || /GOLF/i.test(sub);
+  }
+
   function hatchSpacingMm(hatchParams) {
     if (!hatchParams) return null;
-    return hatchParams.karolajMm
+    const km = hatchParams.karolajMm;
+    if (Array.isArray(km) && km.length) return km[0] || km[1] || null;
+    return km
       || hatchParams.karolajSpacingMm
       || hatchParams.pairSpacingMm
       || hatchParams.horizontalSpacingMm
@@ -328,6 +336,10 @@ const MpyyPlanGmlCatalog = (function () {
       else hatchPattern = 'none';
     }
     if (rs === 'solid_fill' || rs === 'none' || rs === 'symbol_only') hatchPattern = 'none';
+
+    if (isTourismLanduseRecord(rec) && (rs === 'staggered_stipple' || hatchPattern === 'staggeredStipple')) {
+      hatchPattern = 'stamp';
+    }
 
     const hatchMm = hatchSpacingMm(hp);
     const hatchDotMm = hp.circleDiameterMm > 0 ? hp.circleDiameterMm : null;

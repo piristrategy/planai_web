@@ -47,38 +47,32 @@ const HatchWorldSpace = (function () {
     drawRingStampDots(c, 0, rowH + cell / 2, circleR, simplified);
   }
 
+  /** MPYY ring_stamp — merkez + 3 halka (8 + 12 + 18 nokta), tek nokta çapı. */
   function drawRingStampDots(c, cx, cy, radius, simplified) {
-    const dotR = Math.max(0.95, radius * 0.085);
+    const dotR = Math.max(0.95, radius * 0.058);
+    const rings = [
+      { n: 8, r: 0.32, phase: 0 },
+      { n: 12, r: 0.52, phase: Math.PI / 12 },
+      { n: 18, r: 0.72, phase: Math.PI / 18 },
+    ];
     c.beginPath();
-    c.arc(cx, cy, dotR * 1.05, 0, Math.PI * 2);
+    c.arc(cx, cy, dotR, 0, Math.PI * 2);
     c.fill();
     if (simplified) return;
-    const ring1R = radius * 0.32;
-    const ring1N = 8;
-    for (let i = 0; i < ring1N; i++) {
-      const a = (i / ring1N) * Math.PI * 2;
-      c.beginPath();
-      c.arc(cx + Math.cos(a) * ring1R, cy + Math.sin(a) * ring1R, dotR, 0, Math.PI * 2);
-      c.fill();
-    }
-    const ring2R = radius * 0.52;
-    for (let i = 0; i < ring1N; i++) {
-      const a = (i / ring1N) * Math.PI * 2 + Math.PI / ring1N;
-      c.beginPath();
-      c.arc(cx + Math.cos(a) * ring2R, cy + Math.sin(a) * ring2R, dotR * 0.82, 0, Math.PI * 2);
-      c.fill();
-    }
-    const ring3R = radius * 0.72;
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2 + Math.PI / 12;
-      c.beginPath();
-      c.arc(cx + Math.cos(a) * ring3R, cy + Math.sin(a) * ring3R, dotR * 0.68, 0, Math.PI * 2);
-      c.fill();
+    for (let ri = 0; ri < rings.length; ri++) {
+      const ring = rings[ri];
+      const rr = radius * ring.r;
+      for (let i = 0; i < ring.n; i++) {
+        const a = (i / ring.n) * Math.PI * 2 + ring.phase;
+        c.beginPath();
+        c.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, dotR, 0, Math.PI * 2);
+        c.fill();
+      }
     }
   }
 
   function getStampTile(color, lod) {
-    const key = 'stamp|' + color + '|' + lod;
+    const key = 'stamp|81218u|' + color + '|' + lod;
     const hit = cacheGet(key);
     if (hit) return hit;
     const rowH = Math.round(TILE_PX * 0.866);
