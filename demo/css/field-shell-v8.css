@@ -1,0 +1,152 @@
+/* PlanAI Field — index8 kabuk + kopya (6) motor entegrasyonu */
+body.field-shell-v8 #work .drawer .tabs {
+  display: none;
+}
+body.field-shell-v8 #planai-engine-root #left-bar,
+body.field-shell-v8 #planai-engine-root #top-bar,
+body.field-shell-v8 #planai-engine-root #field-dock,
+body.field-shell-v8 #planai-engine-root #map-float-controls,
+body.field-shell-v8 #planai-engine-root .panel-toggle,
+body.field-shell-v8 #field-journey-hub-overlay {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+body.field-shell-v8 #planai-engine-root {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+body.field-shell-v8 #planai-engine-root #canvas-wrap {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+body.field-shell-v8 #planai-engine-root #canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+body.field-shell-v8 #work .topbar,
+body.field-shell-v8 #work .leftdock,
+body.field-shell-v8 #work .bottomdock,
+body.field-shell-v8 #work .rightact,
+body.field-shell-v8 #work .drawer-toggle,
+body.field-shell-v8 #work .drawer .drawer-head,
+body.field-shell-v8 #work .drawer .tabs,
+body.field-shell-v8 #work .drawer .drawer-body,
+body.field-shell-v8 #work .fab-finish {
+  z-index: 40;
+  pointer-events: auto;
+}
+
+body.field-shell-v8 #work #map {
+  z-index: 0;
+}
+
+body.field-shell-v8 #work #map .map-overlay,
+body.field-shell-v8 #work #map .marker,
+body.field-shell-v8 #work #map .live-dot {
+  display: none !important;
+}
+
+body.field-shell-v8 #planai-engine-root #right-panel {
+  display: none !important;
+}
+
+body.field-shell-v8 #work .drawer .shell-right-panel-mount {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+body.field-shell-v8 #work .drawer .shell-right-panel-mount #right-panel {
+  display: flex !important;
+  flex-direction: column;
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 100% !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: var(--txt) !important;
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+body.field-shell-v8 #work .drawer .shell-right-panel-mount #right-panel .panel-title {
+  color: var(--txt-strong, #fff) !important;
+}
+
+body.field-shell-v8 #work .drawer .shell-right-panel-mount #right-panel .panel-subtitle,
+body.field-shell-v8 #work .drawer .shell-right-panel-mount #right-panel .p-label {
+  color: var(--muted, #9aa6b4) !important;
+}
+
+body.field-shell-v8 #work .drawer .shell-right-panel-mount #right-panel input,
+body.field-shell-v8 #work .drawer .shell-right-panel-mount #right-panel select,
+body.field-shell-v8 #work .drawer .shell-right-panel-mount #right-panel textarea {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--txt) !important;
+  border-color: var(--hairline-soft, rgba(255, 255, 255, 0.1)) !important;
+}
+
+body.field-shell-v8 #gps-hud,
+body.field-shell-v8 #gpsPanel.engine-gps-hidden {
+  display: none !important;
+}
+
+body.field-shell-v8 #gps-hud.shell-gps-visible {
+  display: block !important;
+  position: absolute;
+  left: calc(var(--dock-w) + 28px);
+  bottom: calc(104px + 26px);
+  width: 322px;
+  z-index: 45;
+  pointer-events: auto;
+}
+
+body.field-shell-v8 #field-draw-fab,
+body.field-shell-v8 #field-note-popup,
+body.field-shell-v8 #field-notes-panel,
+body.field-shell-v8 #project-panel,
+body.field-shell-v8 #field-import-backdrop,
+body.field-shell-v8 #field-import-sheet,
+body.field-shell-v8 #field-export-backdrop,
+body.field-shell-v8 #field-export-sheet,
+body.field-shell-v8 #field-report-viewer,
+body.field-shell-v8 #field-report-viewer-backdrop,
+body.field-shell-v8 #field-photo-viewer,
+body.field-shell-v8 #dataset-health-overlay,
+body.field-shell-v8 #field-security-settings-overlay,
+body.field-shell-v8 #loc-results {
+  pointer-events: auto;
+  z-index: 80;
+}
+
+body.field-shell-v8 #work.drawer-collapsed .shell-right-panel-mount {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  body.field-shell-v8 #gps-hud.shell-gps-visible {
+    left: calc(var(--dock-w) + 12px);
+    right: 10px;
+    width: auto;
+    bottom: calc(74px + 12px);
+  }
+}

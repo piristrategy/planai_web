@@ -163,7 +163,44 @@
     return inner && inner.length > 500 ? inner : html;
   }
 
-  function finishReplayHtml(html, opts) {
+  function buildInspectionContextBarHtml(ctx, lang) {
+    if (!ctx) return '';
+    const tr = lang === 'tr';
+    const loc = [ctx.locationLine1, ctx.locationLine2].filter(v => v && v !== '—').join(' · ') || '—';
+    const temp = ctx.temperature && ctx.temperature !== '—'
+      ? ctx.temperature + (ctx.weatherLabel && !/^(Hava|Weather)$/i.test(ctx.weatherLabel) ? ' · ' + ctx.weatherLabel : '')
+      : '—';
+    const items = [
+      { label: tr ? 'Rakım' : 'Altitude', value: ctx.altitude || '—' },
+      { label: tr ? 'Saat' : 'Time', value: ctx.clock || '—' },
+      { label: tr ? 'Konum' : 'Location', value: loc },
+      { label: tr ? 'Sıcaklık' : 'Temperature', value: temp },
+    ];
+    const css = '<style>#planai-ctx-bar{position:fixed;top:0;left:0;right:0;z-index:99999;display:flex;flex-wrap:wrap;gap:8px 16px;padding:8px 14px;background:rgba(12,18,26,.94);border-bottom:1px solid rgba(64,192,87,.4);font:600 11px/1.35 system-ui,-apple-system,sans-serif;color:#e8eef4;pointer-events:none;box-sizing:border-box}#planai-ctx-bar span{display:inline-flex;gap:6px;align-items:baseline}#planai-ctx-bar b{color:#40c057;font-weight:700;font-size:12px}#planai-ctx-bar i{font-style:normal;color:#8a96a6;font-weight:500;font-size:10px;text-transform:uppercase;letter-spacing:.04em}body.planai-has-ctx-bar{padding-top:44px!important}</style>';
+    const html = '<div id="planai-ctx-bar">' + items.map(it =>
+      '<span><i>' + escapeAttr(it.label) + '</i> <b>' + escapeAttr(it.value) + '</b></span>',
+    ).join('') + '</div>';
+    return css + html;
+  }
+
+  function injectInspectionContextBar(html, prepared) {
+    if (!html || !prepared?.inspectionContext) return html;
+    const bar = buildInspectionContextBarHtml(prepared.inspectionContext, prepared.lang);
+    if (!bar) return html;
+    html = html.replace(/<\/head>/i, bar.slice(0, bar.indexOf('</style>') + 8) + '</head>');
+    const barHtml = bar.slice(bar.indexOf('</style>') + 8);
+    if (/<body[^>]*>/i.test(html)) {
+      html = html.replace(/<body([^>]*)>/i, (m, attrs) => {
+        const cls = /class=["']([^"']*)["']/i.exec(attrs);
+        const merged = cls ? cls[1] + ' planai-has-ctx-bar' : 'planai-has-ctx-bar';
+        if (cls) return '<body' + attrs.replace(/class=["'][^"']*["']/i, 'class="' + merged + '"') + '>' + barHtml;
+        return '<body' + attrs + ' class="planai-has-ctx-bar">' + barHtml;
+      });
+    }
+    return html;
+  }
+
+  function finishReplayHtml(html, opts, prepared) {
     if (!html) return html;
     if (global.FieldSafeReplay?.stripMobileFallback) {
       html = global.FieldSafeReplay.stripMobileFallback(html);
@@ -176,6 +213,7 @@
     if (global.FieldReplaySafariRoute?.injectRouteFix) {
       html = global.FieldReplaySafariRoute.injectRouteFix(html);
     }
+    html = injectInspectionContextBar(html, prepared);
     if (opts && opts.forShare) {
       return wrapOfflineFileLauncher(html);
     }
@@ -298,7 +336,7 @@
     const title = escapeAttr((prepared.projectName || 'PlanAI Field') + ' — Inspection Replay');
     html = html.replace(/<title>[^<]*<\/title>/, '<title>' + title + '</title>');
     html = html.replace(/<html lang="[^"]*">/, '<html lang="' + (prepared.lang || 'en') + '">');
-    return finishReplayHtml(html, opts);
+    return finishReplayHtml(html, opts, prepared);
   }
 
   function buildFromAssets(prepared, safePayload, opts) {
@@ -312,7 +350,7 @@
       '<script>window.__PLANAI_REPORT__=' + safePayload + ';<\/script>' +
       '<script>' + assets.js + '<\/script>' +
       '</body></html>';
-    return finishReplayHtml(html, opts);
+    return finishReplayHtml(html, opts, prepared);
   }
 
   function exposeReplayMapInHtml(html) {

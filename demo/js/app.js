@@ -84,10 +84,14 @@ function setDeleteButtonVisible(show) {
   if (!btn) return;
   if (FIELD_MODE) {
     btn.style.display = 'flex';
-    btn.disabled = !show;
+    btn.disabled = false;
+    btn.classList.toggle('delete-armed', !!show);
+    btn.setAttribute('aria-disabled', show ? 'false' : 'true');
     return;
   }
   btn.disabled = false;
+  btn.classList.remove('delete-armed');
+  btn.setAttribute('aria-disabled', 'false');
   btn.style.display = show ? 'flex' : 'none';
 }
 const FIELD_DISABLED = {
@@ -500,6 +504,12 @@ const PA_I18N = {
     'hub.cardContinueDesc': 'Son yolculuğa devam edin.',
     'hub.continueCta': 'Devam Et',
     'hub.continueInspectionCta': 'İncelemeye Devam Et',
+    'trial.finish': 'İncelemeyi tamamla',
+    'trial.finishCap': 'İncelemeyi<br>Tamamla',
+    'trial.sun': 'Güneş',
+    'trial.sunTitle': 'Güneş modu — araç çubuklarında yüksek kontrast',
+    'trial.locateCoach': 'Canlı konumunuzu görmek için <strong>sağdaki bu butona</strong> dokunun.',
+    'trial.locateBtn': 'Canlı konum',
     'hub.openFailed': 'İnceleme açılamadı. PIN varsa kilidi açın veya yeni inceleme başlatın.',
     'hub.noSavedInspection': 'Kayıtlı inceleme bulunamadı.',
     'hub.snapshotMissing': 'İnceleme verisi eksik veya kilitli.',
@@ -653,6 +663,13 @@ const PA_I18N = {
     'report.doc.cover.user': 'Kullanıcı',
     'report.doc.cover.center': 'Merkez koordinat',
     'report.doc.cover.totalObjects': 'Toplam nesne',
+    'report.doc.context.title': 'Saha koşulları (üst bar)',
+    'report.doc.context.altitude': 'Rakım',
+    'report.doc.context.time': 'Saat',
+    'report.doc.context.location': 'Konum',
+    'report.doc.context.temperature': 'Sıcaklık',
+    'report.doc.context.weather': 'Hava durumu',
+    'report.doc.context.coords': 'Koordinat',
     'report.doc.summary.title': 'Gezi Özeti',
     'report.doc.summary.photos': 'Fotoğraf',
     'report.doc.summary.notes': 'Not',
@@ -873,6 +890,12 @@ const PA_I18N = {
     'hub.cardContinueDesc': 'Resume your latest journey.',
     'hub.continueCta': 'Continue',
     'hub.continueInspectionCta': 'Continue Inspection',
+    'trial.finish': 'Complete Inspection',
+    'trial.finishCap': 'Complete<br>Inspection',
+    'trial.sun': 'Sun',
+    'trial.sunTitle': 'Sun mode — high contrast toolbars',
+    'trial.locateCoach': 'Click <strong>this button on the right</strong> for live location',
+    'trial.locateBtn': 'Live location',
     'hub.openFailed': 'Could not open inspection. Unlock PIN if required, or start a new inspection.',
     'hub.noSavedInspection': 'No saved inspection found.',
     'hub.snapshotMissing': 'Inspection data is missing or locked.',
@@ -1094,6 +1117,12 @@ const PA_I18N = {
     'hub.cardContinueDesc': 'Resume your latest journey.',
     'hub.continueCta': 'Continue',
     'hub.continueInspectionCta': 'Continue Inspection',
+    'trial.finish': 'Complete Inspection',
+    'trial.finishCap': 'Complete<br>Inspection',
+    'trial.sun': 'Sun',
+    'trial.sunTitle': 'Sun mode — high contrast toolbars',
+    'trial.locateCoach': 'Click <strong>this button on the right</strong> for live location',
+    'trial.locateBtn': 'Live location',
     'hub.openFailed': 'Could not open inspection. Unlock PIN if required, or start a new inspection.',
     'hub.noSavedInspection': 'No saved inspection found.',
     'hub.snapshotMissing': 'Inspection data is missing or locked.',
@@ -1248,6 +1277,13 @@ const PA_I18N = {
     'report.doc.cover.user': 'User',
     'report.doc.cover.center': 'Center coordinate',
     'report.doc.cover.totalObjects': 'Total objects',
+    'report.doc.context.title': 'Field conditions (toolbar)',
+    'report.doc.context.altitude': 'Altitude',
+    'report.doc.context.time': 'Time',
+    'report.doc.context.location': 'Location',
+    'report.doc.context.temperature': 'Temperature',
+    'report.doc.context.weather': 'Weather',
+    'report.doc.context.coords': 'Coordinates',
     'report.doc.summary.title': 'Journey Summary',
     'report.doc.summary.photos': 'Photos',
     'report.doc.summary.notes': 'Notes',
@@ -1590,6 +1626,16 @@ function applyFieldPanelsI18n() {
   if (voiceSt && !voiceSt.dataset.hasVoice) voiceSt.textContent = t('photo.noVoice');
 }
 
+function applyTrialFinishI18n() {
+  const cap = document.querySelector('.trial-finish-cap[data-i18n-html]');
+  if (cap) cap.innerHTML = t('trial.finishCap');
+  const btn = document.getElementById('trial-finish-btn');
+  if (btn) {
+    btn.title = t('trial.finish');
+    btn.setAttribute('aria-label', t('trial.finish'));
+  }
+}
+
 function applyFieldI18n() {
   document.documentElement.classList.toggle('lang-en', PA_LANG === 'en');
   document.documentElement.classList.toggle('lang-tr', PA_LANG === 'tr');
@@ -1600,6 +1646,10 @@ function applyFieldI18n() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const k = el.getAttribute('data-i18n');
     if (k) el.textContent = t(k);
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const k = el.getAttribute('data-i18n-html');
+    if (k) el.innerHTML = t(k);
   });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const k = el.getAttribute('data-i18n-placeholder');
@@ -1643,6 +1693,7 @@ function applyFieldI18n() {
   updateProjectTitleUi();
   refreshFieldDrawPanelLabels();
   updateFieldJourneyHubI18n();
+  applyTrialFinishI18n();
   if (_slopeState.stats) renderSlopeStatsPanel(_slopeState.stats);
   refreshSlopeLegends();
   if (_fieldInfoObjId) {
@@ -1658,6 +1709,7 @@ function setAppLanguage(lang) {
   document.getElementById('btn-lang-en')?.classList.toggle('active', PA_LANG === 'en');
   document.getElementById('btn-hub-lang-tr')?.classList.toggle('active', PA_LANG === 'tr');
   document.getElementById('btn-hub-lang-en')?.classList.toggle('active', PA_LANG === 'en');
+  if (typeof window.syncTrialSunWithLanguage === 'function') window.syncTrialSunWithLanguage(PA_LANG);
   applyFieldI18n();
   scheduleRender();
 }
@@ -10319,6 +10371,13 @@ async function fieldSecurityRegenRecovery() {
 window.fieldHubActionNew = fieldHubActionNew;
 window.fieldHubActionContinue = fieldHubActionContinue;
 window.fieldHubOpenJourney = fieldHubOpenJourney;
+window.scheduleProjectSave = scheduleProjectSave;
+window.flushProjectSave = flushProjectSave;
+window.showFieldJourneyHub = showFieldJourneyHub;
+window.reloadFieldHubProjects = reloadFieldHubProjects;
+window.refreshFieldJourneyHubUi = refreshFieldJourneyHubUi;
+window.stopFieldGpsSession = stopFieldGpsSession;
+window.getFieldGpsDisplayFix = getGpsDisplayFix;
 window.fieldHubActionPrevious = fieldHubActionPrevious;
 window.fieldHubActionImport = fieldHubActionImport;
 window.openFieldSecuritySettings = openFieldSecuritySettings;
@@ -11998,6 +12057,103 @@ async function collectReportNotes() {
   }));
 }
 
+function collectFieldInspectionContext() {
+  if (typeof window.getFieldTrialInspectionContext === 'function') {
+    const trialCtx = window.getFieldTrialInspectionContext();
+    if (trialCtx) return trialCtx;
+  }
+  const en = PA_LANG === 'en';
+  const fix = _fieldGpsFix;
+  const lat = fix?.lat ?? S.mapCenter?.lat;
+  const lon = fix?.lon ?? S.mapCenter?.lon;
+  const d = new Date();
+  let altitude = '—';
+  if (fix?.altitude != null && !isNaN(fix.altitude)) altitude = Math.round(fix.altitude) + ' m';
+  else {
+    const hud = document.getElementById('gps-hud-alt')?.textContent?.trim();
+    if (hud && hud !== '—' && hud !== '…') {
+      const m = hud.match(/(-?\d+)/);
+      if (m) altitude = m[1] + ' m';
+    }
+  }
+  return {
+    capturedAt: d.toISOString(),
+    clock: d.toLocaleTimeString(en ? 'en-GB' : 'tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    altitude,
+    temperature: '—',
+    weatherLabel: en ? 'Weather' : 'Hava',
+    locationLine1: lat != null && lon != null ? formatCoord(lat, lon) : '—',
+    locationLine2: '—',
+    lat: lat ?? null,
+    lon: lon ?? null,
+  };
+}
+
+function buildReportInspectionContextSection(meta, lang) {
+  const ctx = meta?.inspectionContext;
+  if (!ctx) return '';
+  const L = (key) => tLang(lang, key);
+  const loc = [ctx.locationLine1, ctx.locationLine2].filter(v => v && v !== '—').join(' · ') || '—';
+  const coords = ctx.lat != null && ctx.lon != null ? formatCoord(ctx.lat, ctx.lon) : '—';
+  return `
+<section class="rpt-page">
+  <h2>${L('report.doc.context.title')}</h2>
+  <div class="rpt-summary">
+    <div class="rpt-stat"><b>${escapeHtml(ctx.altitude || '—')}</b><span>${L('report.doc.context.altitude')}</span></div>
+    <div class="rpt-stat"><b>${escapeHtml(ctx.clock || '—')}</b><span>${L('report.doc.context.time')}</span></div>
+    <div class="rpt-stat"><b>${escapeHtml(ctx.temperature || '—')}</b><span>${L('report.doc.context.temperature')}</span></div>
+    <div class="rpt-stat"><b>${escapeHtml(ctx.weatherLabel || '—')}</b><span>${L('report.doc.context.weather')}</span></div>
+  </div>
+  <h3>${L('report.doc.context.location')}</h3>
+  <p class="rpt-tech">${escapeHtml(loc)}<br/>${L('report.doc.context.coords')}: ${coords}<br/>${L('report.doc.tech.generated')}: ${formatReportDateTime(ctx.capturedAt, lang)}</p>
+</section>`;
+}
+
+function buildReportInspectionContextCoverRows(meta, lang) {
+  const ctx = meta?.inspectionContext;
+  if (!ctx) return '';
+  const L = (key) => tLang(lang, key);
+  const loc = [ctx.locationLine1, ctx.locationLine2].filter(v => v && v !== '—').join(' · ') || '—';
+  const temp = ctx.temperature && ctx.temperature !== '—'
+    ? ctx.temperature + (ctx.weatherLabel && !/^(Hava|Weather)$/i.test(ctx.weatherLabel) ? ' · ' + ctx.weatherLabel : '')
+    : (ctx.weatherLabel || '—');
+  return `
+    <tr><td>${L('report.doc.context.altitude')}</td><td>${escapeHtml(ctx.altitude || '—')}</td></tr>
+    <tr><td>${L('report.doc.context.time')}</td><td>${escapeHtml(ctx.clock || '—')}</td></tr>
+    <tr><td>${L('report.doc.context.location')}</td><td>${escapeHtml(loc)}</td></tr>
+    <tr><td>${L('report.doc.context.temperature')}</td><td>${escapeHtml(temp)}</td></tr>`;
+}
+
+function appendInspectionContextInsights(insights, ctx, tr) {
+  if (!ctx || !Array.isArray(insights)) return insights;
+  const loc = [ctx.locationLine1, ctx.locationLine2].filter(v => v && v !== '—').join(' · ');
+  if (loc) insights.unshift((tr ? 'Konum: ' : 'Location: ') + loc);
+  if (ctx.altitude && ctx.altitude !== '—') insights.unshift((tr ? 'Rakım: ' : 'Altitude: ') + ctx.altitude);
+  if (ctx.temperature && ctx.temperature !== '—') {
+    const wx = ctx.weatherLabel && !/^(Hava|Weather)$/i.test(ctx.weatherLabel) ? ' · ' + ctx.weatherLabel : '';
+    insights.unshift((tr ? 'Sıcaklık: ' : 'Temperature: ') + ctx.temperature + wx);
+  }
+  if (ctx.clock) insights.unshift((tr ? 'Saat: ' : 'Time: ') + ctx.clock);
+  return insights;
+}
+
+function buildInteractiveInspectionContextHtml(ctx, tr) {
+  if (!ctx) return '';
+  const loc = [ctx.locationLine1, ctx.locationLine2].filter(v => v && v !== '—').join(' · ') || '—';
+  const temp = ctx.temperature && ctx.temperature !== '—'
+    ? ctx.temperature + (ctx.weatherLabel && !/^(Hava|Weather)$/i.test(ctx.weatherLabel) ? ' · ' + ctx.weatherLabel : '')
+    : '—';
+  const items = [
+    { label: tr ? 'Rakım' : 'Altitude', value: ctx.altitude || '—' },
+    { label: tr ? 'Saat' : 'Time', value: ctx.clock || '—' },
+    { label: tr ? 'Konum' : 'Location', value: loc },
+    { label: tr ? 'Sıcaklık' : 'Temperature', value: temp },
+  ];
+  return '<div class="ir-context">' + items.map(it =>
+    '<span><i>' + escapeHtml(it.label) + '</i> <b>' + escapeHtml(it.value) + '</b></span>',
+  ).join('') + '</div>';
+}
+
 async function generateProjectReport(onProgress) {
   const prog = (p, s) => { if (onProgress) onProgress(p, s); };
   prog(5, t('report.doc.progress.collect'));
@@ -12051,6 +12207,7 @@ async function generateProjectReport(onProgress) {
     userName: getReportUserName(),
     objectCounts,
     measurements,
+    inspectionContext: collectFieldInspectionContext(),
   };
 
   prog(68, PA_LANG === 'tr' ? 'Marka öğeleri…' : 'Brand assets…');
@@ -12126,6 +12283,8 @@ function buildReportHTML(data) {
     </article>`).join('');
 
   const slopeSection = buildReportSlopeSection(project.slopeAnalysisReport, lang);
+  const contextSection = buildReportInspectionContextSection(meta, lang);
+  const contextCoverRows = buildReportInspectionContextCoverRows(meta, lang);
 
   return `<!DOCTYPE html><html lang="${lang}"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>${name} — ${L('report.doc.titleSuffix')}</title>
@@ -12188,9 +12347,12 @@ ${secureMark}
     <tr><td>${L('report.doc.cover.time')}</td><td>${gen.split(' ')[1] || '—'}</td></tr>
     <tr><td>${L('report.doc.cover.user')}</td><td>${user}</td></tr>
     <tr><td>${L('report.doc.cover.center')}</td><td>${center}</td></tr>
+    ${contextCoverRows}
     <tr><td>${L('report.doc.cover.totalObjects')}</td><td>${meta.objectCounts?.total ?? 0}</td></tr>
   </table>
 </section>
+
+${contextSection}
 
 <section class="rpt-page">
   <h2>${L('report.doc.summary.title')}</h2>
@@ -12516,6 +12678,9 @@ function buildReplayPayloadFromReport(data) {
     ? 'Yolculuk süresi: ' + Math.round(durationMin) + ' dakika.'
     : 'Journey duration: ' + Math.round(durationMin) + ' minutes.');
 
+  const inspectionContext = meta?.inspectionContext || collectFieldInspectionContext();
+  appendInspectionContextInsights(insights, inspectionContext, tr);
+
   return {
     lang,
     projectName: project?.name || (tr ? 'Saha Gezisi' : 'Field Journey'),
@@ -12528,6 +12693,7 @@ function buildReplayPayloadFromReport(data) {
     track,
     project: project ? { id: project.id, name: project.name, objects: project.objects || [] } : null,
     events,
+    inspectionContext,
     stats: {
       routeKm,
       durationMin,
@@ -12801,11 +12967,16 @@ ${cspTag}
 .ir-time{display:block;color:#7a8a9a;font-size:10px;margin-top:2px}
 .ir-journey{padding:10px 14px;background:linear-gradient(135deg,#e8f0fe,#f3e8fd);border-bottom:1px solid #dde3ea;font-size:12px;line-height:1.5}
 .ir-journey b{color:#1a3358}
+.ir-context{display:flex;flex-wrap:wrap;gap:8px 18px;padding:10px 16px;background:#0f1a28;border-bottom:2px solid #40c057;color:#e8eef4;font-size:12px;line-height:1.4}
+.ir-context span{display:inline-flex;gap:6px;align-items:baseline}
+.ir-context i{font-style:normal;color:#8a96a6;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.ir-context b{color:#40c057;font-weight:700}
 .ir-map{transition:opacity .35s ease}
 .ir-map.ir-map-focus{opacity:1}
 #ir-replay-dot{filter:drop-shadow(0 2px 5px rgba(0,0,0,.35))}
 </style></head><body>
 <header class="ir-head"><h1>${name}</h1><span>${formatReportDateTime(meta.generatedAt)}</span></header>
+${buildInteractiveInspectionContextHtml(meta.inspectionContext, tr)}
 <div class="ir-journey"><b>${tr ? 'Saha yolculuğu' : 'Field journey'}</b> — ${feats.filter(f=>f.kind==='track').length ? (tr ? 'Rota otomatik oynatılır' : 'Route auto-plays') : ''} · ${photos.length} ${tr ? 'foto' : 'photos'} · ${notes.length} ${tr ? 'not' : 'notes'}</div>
 <div class="ir-layout">
 <aside class="ir-side">
@@ -13086,8 +13257,8 @@ function updateGpsHud() {
   setVal('gps-hud-lon', disp ? disp.lon.toFixed(5) + '°' : '—');
   setVal('gps-hud-speed', spd != null ? formatGpsHudSpeed(spd) : '—');
   setVal('gps-hud-heading', hdg != null ? gpsHudHeadingArrow(hdg) : '—');
-  const alt = _fieldGpsFix?.altitude;
-  setVal('gps-hud-alt', alt != null && !isNaN(alt) ? Math.round(alt) + ' m' : '—');
+  const altSrc = _fieldGpsFix?.altitude ?? _fieldGpsDisplay?.altitude;
+  setVal('gps-hud-alt', altSrc != null && !isNaN(altSrc) ? Math.round(altSrc) + ' m' : '—');
   setVal('gps-hud-acc', acc != null ? Math.round(acc) + ' m' : (_fieldGpsOn ? '…' : '—'));
   if (primaryBtn) {
     const routeActive = _gpsTrack.state === 'recording' || _gpsTrack.state === 'paused';
@@ -19531,12 +19702,19 @@ function renderPaftaGrid() {
 }
 
 // ── Toggle functions ──────────────────────────────────────────
-const FIELD_DOCK_BASEMAP_SVG = {
-  none: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#888" stroke-width="1.8"/><path d="M8 8l8 8M16 8l-8 8" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round"/></svg>',
-  osm: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" fill="#a8d4f5" stroke="#1a6fb5" stroke-width="1.4"/><path d="M6 9h5M6 12h8M6 15h6" stroke="#1a6fb5" stroke-width="1.3" stroke-linecap="round"/><path d="M14 8l3 2-3 2" stroke="#1a6fb5" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  satellite: '<svg viewBox="0 0 24 24" fill="none"><path d="M5 5.5l2.5 6.5h1.8l.9-2.8 3.5 1-.9 2.8h1.7L12.5 5.5H5z" fill="#e8ecf0" stroke="#1a1a1a" stroke-width="1.2" stroke-linejoin="round"/><path d="M3.5 13.5c1.8.3 3 1.2 3.4 2.5" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/><path d="M12 19.5a5.5 5.5 0 1 0 0-.01" stroke="#1a1a1a" stroke-width="1.5"/><path d="M9.5 17.5h5" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/></svg>',
-  topo: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 18l4-6 4 4 4-7 4 9" stroke="#6d4c2e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="#c9a66b" fill-opacity=".35"/><path d="M3 19h18" stroke="#6d4c2e" stroke-width="1.3"/></svg>',
+const FIELD_DOCK_BASEMAP_SVG_FALLBACK = {
+  none: '<svg viewBox="0 0 24 24" fill="none" class="field-dock-lucide" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="m4.9 4.9 14.2 14.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  osm: '<svg viewBox="0 0 24 24" fill="none" class="field-dock-lucide" xmlns="http://www.w3.org/2000/svg"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 5.764v15" stroke="currentColor" stroke-width="2"/><path d="M9 3.236v15" stroke="currentColor" stroke-width="2"/></svg>',
+  satellite: '<svg viewBox="0 0 24 24" fill="none" class="field-dock-lucide" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" stroke="currentColor" stroke-width="2"/><path d="M2 12h20" stroke="currentColor" stroke-width="2"/></svg>',
+  topo: '<svg viewBox="0 0 24 24" fill="none" class="field-dock-lucide" xmlns="http://www.w3.org/2000/svg"><path d="m8 3 4 8 5-5 5 15H2L8 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
+
+function getDockBasemapIconHtml(mode) {
+  if (typeof FieldDockIcons !== 'undefined' && FieldDockIcons.getBasemapIcon) {
+    return FieldDockIcons.getBasemapIcon(mode);
+  }
+  return FIELD_DOCK_BASEMAP_SVG_FALLBACK[mode] || FIELD_DOCK_BASEMAP_SVG_FALLBACK.satellite;
+}
 
 function updateBasemapDockUi() {
   const dockBtn = document.getElementById('btn-dock-basemap');
@@ -19547,7 +19725,7 @@ function updateBasemapDockUi() {
     const labelEl = document.getElementById('btn-dock-basemap-label');
     const iconEl = document.getElementById('btn-dock-basemap-icon');
     if (labelEl) labelEl.textContent = short[mode] || t('basemap.osm');
-    if (iconEl) iconEl.innerHTML = FIELD_DOCK_BASEMAP_SVG[mode] || FIELD_DOCK_BASEMAP_SVG.osm;
+    if (iconEl) iconEl.innerHTML = getDockBasemapIconHtml(mode);
     dockBtn.classList.toggle('active', mode !== 'none');
   }
   if (leftBtn) leftBtn.classList.toggle('active', mode !== 'none');
@@ -21167,8 +21345,10 @@ function redo() {
   updateHistBtns(); buildFieldNotesList(); scheduleProjectSave(); scheduleRender();
 }
 function updateHistBtns() {
-  document.getElementById('btn-undo').disabled = S.histIdx <= 0;
-  document.getElementById('btn-redo').disabled = S.histIdx >= S.history.length-1;
+  const undoBtn = document.getElementById('btn-undo');
+  const redoBtn = document.getElementById('btn-redo');
+  if (undoBtn) undoBtn.disabled = S.histIdx <= 0;
+  if (redoBtn) redoBtn.disabled = S.histIdx >= S.history.length - 1;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -21403,7 +21583,10 @@ function toggleSnap() {
 }
 function resetView()    { S.tx=0;S.ty=0;S.scale=1;scheduleRender(); }
 async function deleteSelected() {
-  if (!S.selectedIds.length) return;
+  if (!S.selectedIds.length) {
+    showHint(FIELD_MODE ? 'Önce silmek istediğinizi haritada seçin' : 'Seçili öğe yok');
+    return;
+  }
   const photos = S.selectedIds.filter(id => S.objects.find(o => o.id === id)?.type === 'field_photo');
   if (photos.length === 1) {
     await deleteFieldPhotoById(photos[0]);

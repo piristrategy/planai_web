@@ -23,13 +23,14 @@
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="stylesheet" href="css/app.css?v=1.0.5">
+<link rel="stylesheet" href="css/field-trial-shell.css?v=1.4.0">
 <script src="libs/jszip.min.js"></script>
 <script src="libs/exif.min.js"></script>
 <script src="libs/proj4.js"></script>
 <script src="libs/geotiff.min.js"></script>
 <script src="libs/html2pdf.bundle.min.js"></script>
 </head>
-<body class="field-mode render-vertex-touch walk-production">
+<body class="field-mode field-trial-ui render-vertex-touch walk-production">
 <div id="app">
   <!-- ── Left toolbar ── -->
   <div id="left-bar">
@@ -90,16 +91,11 @@
       <span class="tooltip">Katmanlar</span>
     </div>
     <div class="tool-btn field-main-tool field-dock-only" id="btn-field-gps-tb" onclick="toggleFieldGps()" title="GPS">
-      <span style="font-size:17px;line-height:1">📍</span>
+      <svg class="field-gps-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 19.5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 19.5V16.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 16.5 15 8.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M9 14.5c4.8-1 8.5-4.5 10-9.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M13.5 9.5c1.3 1.3 2.2 2.8 2.6 4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M16 7c1.9 1.9 3.2 4.2 3.7 6.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M18.5 4.5c2.6 2.6 4.5 5.7 5 9.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       <span class="tooltip">GPS</span>
     </div>
 
     <div class="tool-sep field-only"></div>
-    <button type="button" class="action-btn field-toolbar-action" id="btn-undo" onclick="undo()" title="Geri Al (Ctrl+Z)">
-      <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M2 7a5 5 0 1 1 5 5H4M2 7L4.5 4.5M2 7l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span class="tool-label" data-i18n="tlbl.undo">Geri</span>
-      <span class="tooltip">Geri Al <kbd>Ctrl+Z</kbd></span>
-    </button>
     <button type="button" class="action-btn field-toolbar-action" id="btn-delete" onclick="deleteSelected()" title="Seçileni sil (Del)">
       <svg width="16" height="16" viewBox="0 0 13 13" fill="none"><path d="M2 3.5h9M5 3.5V2.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1M3.5 3.5l.8 8h4.4l.8-8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       <span class="tool-label" data-i18n="tlbl.delete">Sil</span>
@@ -213,11 +209,7 @@
 
     <!-- OSM Basemap toggle -->
     <div class="tool-btn field-main-tool" id="btn-osm" onclick="toggleOSM()" style="order:1;">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/>
-        <ellipse cx="8" cy="8" rx="3" ry="6" stroke="currentColor" stroke-width="1"/>
-        <path d="M2 8h12M3 5h10M3 11h10" stroke="currentColor" stroke-width="0.8"/>
-      </svg>
+      <svg class="field-osm-icon field-osm-icon-sm" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 6.2 9 4.2l6 2 6-2v13.6l-6 2-6-2-6 2V6.2z" stroke="#40C057" stroke-width="1.9" stroke-linejoin="round"/><path d="M9 4.2v15.6" stroke="#40C057" stroke-width="1.9"/><path d="M15 6.2v13.6" stroke="#40C057" stroke-width="1.9"/></svg>
       <span class="tooltip">Altlık: OSM → Uydu → Topo</span>
     </div>
 
@@ -287,18 +279,54 @@
     <!-- Panel toggle buttons -->
     <div class="panel-toggle" id="left-toggle" style="left:0;" onclick="toggleLeftPanel()">◀</div>
     <div class="panel-toggle right" id="right-toggle" style="right:0;" onclick="toggleRightPanel()">◀</div>
+    <div id="trial-finish-wrap">
+      <button type="button" id="trial-finish-btn" class="trial-finish-circle" data-i18n-title="trial.finish" data-i18n-aria="trial.finish" title="İncelemeyi tamamla" aria-label="İncelemeyi tamamla">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 21V4M5 4h11l-1.5 3L16 10H5"/></svg>
+      </button>
+      <span class="trial-finish-cap" data-i18n-html="trial.finishCap">İncelemeyi<br>Tamamla</span>
+    </div>
     <div id="top-bar">
-      <span class="brand planning-only">PLANAI FIELD</span>
-      <button type="button" id="btn-project-menu" class="field-top-project top-pri-high" onclick="openProjectPanel()">📁 Gezi</button>
-      <div id="field-mode-chip" class="field-mode-chip top-pri-high" data-i18n-title="mode.chipTitle" title="Parmak / Kalem modu">
-        <button type="button" id="btn-finger-mode" class="active" onclick="setFieldInteractionMode('finger')">👆</button>
-        <button type="button" id="btn-pen-mode" onclick="setFieldInteractionMode('pen')">✏️</button>
+      <div id="trial-inspection-chrome" aria-live="polite">
+        <div class="trial-badge rec paused"><span class="dot"></span><span class="lbl"><span class="l1">REC</span><span class="l2" id="trial-rec-time">00:00:00</span></span></div>
+        <div class="trial-badge gps off"><span class="dot"></span><span class="lbl"><span class="l1">GPS</span><span class="l2" id="trial-gps-acc">—</span></span></div>
+        <span class="trial-tb-sep" aria-hidden="true"></span>
+        <div class="trial-stat">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <span class="txt"><span class="t1" id="trial-loc-line1">—</span><span class="t2" id="trial-loc-line2">GPS bekleniyor…</span></span>
+        </div>
+        <div class="trial-stat trial-stat-wx">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.2M12 19.8V22M2 12h2.2M19.8 12H22M5 5l1.6 1.6M17.4 17.4l1.6 1.6M19 5l-1.6 1.6M7.6 17.4 6 19" stroke-linecap="round"/></svg></span>
+          <span class="txt"><span class="t1" id="trial-wx-temp">—</span><span class="t2" id="trial-wx-label">Hava</span></span>
+        </div>
+        <div class="trial-stat trial-stat-alt">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20l5.5-9 4 5 3-4L21 20z"/></svg></span>
+          <span class="txt"><span class="t1" id="trial-alt-value">—</span><span class="t2" id="trial-alt-label">Rakım</span></span>
+        </div>
+        <div class="trial-stat trial-stat-clock">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.2l3.2 2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="txt"><span class="t1" id="trial-clock-time">—</span><span class="t2" id="trial-clock-label">Saat</span></span>
+        </div>
       </div>
-      <span id="field-mode-label" class="field-top-stat top-pri-low">Parmak</span>
-      <div id="field-lang-switch" class="top-pri-high" data-i18n-title="lang.title" title="Dil">
+      <div id="trial-top-tools" class="trial-top-tools top-pri-high" aria-label="Etkileşim ve görünüm">
+        <button type="button" id="btn-finger-mode" class="trial-tool-toggle active" onclick="setFieldInteractionMode('finger')" title="Parmak modu" aria-pressed="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 11V5a2 2 0 1 1 4 0v6m0-2a2 2 0 1 1 4 0v3m0-1a2 2 0 1 1 4 0v4a6 6 0 0 1-6 6h-2a6 6 0 0 1-5.2-3l-2.3-4a2 2 0 0 1 3.4-2L9 13"/></svg>
+          <span data-i18n="mode.finger">Parmak</span>
+        </button>
+        <button type="button" id="btn-pen-mode" class="trial-tool-toggle" onclick="setFieldInteractionMode('pen')" title="Kalem modu" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 19l7-7-4-4-7 7-1 5 5-1z"/><path d="M15 8l4 4"/></svg>
+          <span data-i18n="mode.pen">Kalem</span>
+        </button>
+        <button type="button" id="btn-trial-sun" class="trial-tool-toggle" data-i18n-title="trial.sunTitle" title="Güneş modu — araç çubuklarında yüksek kontrast" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" stroke-linecap="round"/></svg>
+          <span data-i18n="trial.sun">Güneş</span>
+        </button>
+      </div>
+      <div id="field-lang-switch" class="trial-lang-switch top-pri-high" data-i18n-title="lang.title" title="Dil">
         <button type="button" id="btn-lang-tr" class="active" onclick="setAppLanguage('tr')">TR</button>
         <button type="button" id="btn-lang-en" onclick="setAppLanguage('en')">EN</button>
       </div>
+      <span class="brand planning-only">PLANAI FIELD</span>
+      <button type="button" id="btn-project-menu" class="field-top-project top-pri-high" onclick="openProjectPanel()">📁 Gezi</button>
       <span id="gps-status-pill" class="gps-status-pill off top-pri-high" onclick="toggleGpsHudExpand()" title="GPS durumu">GPS</span>
       <span id="field-offline-pill" class="field-offline-pill top-pri-med" style="display:none;" data-i18n="offline.badge">Çevrimdışı</span>
       <span id="project-save-indicator" class="field-top-stat top-pri-med autosave-idle" data-i18n-title="autosave.idle" title="Otomatik kayıt"><span class="autosave-long" data-i18n="autosave.idle">Otomatik kayıt</span></span>
@@ -436,9 +464,10 @@
       <div class="note-pin-msg">Haritada konuma dokunun — raptiye yerleşecek</div>
       <button type="button" class="note-pin-cancel" onclick="cancelFieldNotePinMode()">✕ İptal</button>
     </div>
+    <div id="trial-locate-coach" class="trial-locate-coach" data-i18n-html="trial.locateCoach" aria-live="polite" hidden>Canlı konumunuzu görmek için <strong>sağdaki bu butona</strong> dokunun.</div>
     <div id="map-float-controls">
-      <button type="button" id="btn-map-locate" onclick="mapControlLocate()" title="Canlı konum" aria-label="Canlı konum">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor"/><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <button type="button" id="btn-map-locate" class="trial-locate-btn" onclick="mapControlLocate()" data-i18n-title="trial.locateBtn" data-i18n-aria="trial.locateBtn" title="Canlı konum" aria-label="Canlı konum">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.75"/><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/><path d="M12 4v2.2M12 17.8V20M4 12h2.2M17.8 12H20" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
       </button>
       <div class="map-zoom-stack">
         <button type="button" onclick="mapZoomStep(1.25)" aria-label="Yakınlaştır">+</button>
@@ -453,27 +482,27 @@
     <div id="field-more-menu" onclick="event.stopPropagation()"></div>
     <div id="field-dock">
       <button type="button" class="field-dock-btn" id="btn-dock-projects" onclick="openProjectPanel()" data-i18n-aria="dock.projects" aria-label="Geziler">
-        <span class="field-dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 8h6.2l1.8 1.8H20v9.2H4V8z" fill="#f4c95d" stroke="#1a3358" stroke-width="1.5"/><path d="M4 8V6h5.5l1.8 1.8" stroke="#1a3358" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
+        <span class="field-dock-icon field-dock-icon-journeys" aria-hidden="true"></span>
         <span class="field-dock-label" data-i18n="dock.projects">Geziler</span>
       </button>
       <button type="button" class="field-dock-btn" id="btn-dock-import" onclick="onFieldImportClick()" title="Dosya içe aktar">
-        <span class="field-dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path fill="#1a1a1a" d="M10.25 2.5h3.5v8.25H16L12 15.75 8 10.75h2.25V2.5z"/><path fill="#1a1a1a" d="M4.5 17.25h15v2.25H4.5v-2.25zm0 0v-2.75h2.75v2.75H4.5zm12.25 0v-2.75H19.5v2.75h-2.75z"/></svg></span>
+        <span class="field-dock-icon field-dock-icon-import" aria-hidden="true"></span>
         <span class="field-dock-label" data-i18n="dock.import">İçe Aktar</span>
       </button>
       <button type="button" class="field-dock-btn" id="btn-field-gps" onclick="toggleFieldGps()">
-        <span class="field-dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3 17.5a9 9 0 0 1 18 0" stroke="#1a1a1a" stroke-width="1.6"/><ellipse cx="12" cy="17.5" rx="9" ry="3" stroke="#1a1a1a" stroke-width="1.6"/><path d="M12 5.5c2 0 3.6 1.6 3.6 3.6 0 2.8-3.6 6.4-3.6 6.4S8.4 12 8.4 9.1c0-2 1.6-3.6 3.6-3.6z" fill="#1a1a1a"/><circle cx="12" cy="9.2" r="1.3" fill="#fff"/><path d="M4.5 4.5l2.2 5.2M6 4h2.8v2.2" stroke="#1a1a1a" stroke-width="1.3" stroke-linecap="round"/><path d="M3.5 10.5c1.2.2 2 .8 2.2 1.8" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+        <span class="field-dock-icon field-dock-icon-gps" aria-hidden="true"></span>
         <span class="field-dock-label" data-i18n="dock.gps">GPS</span>
       </button>
       <button type="button" class="field-dock-btn" id="btn-dock-photo" onclick="activateFieldPhotoTool()">
-        <span class="field-dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2" fill="#5dade2" stroke="#1a1a1a" stroke-width="1.4"/><path d="M3 12h18" stroke="#1a1a1a" stroke-width="1.3"/><circle cx="12" cy="15" r="3.8" fill="#fff" stroke="#1a1a1a" stroke-width="1.4"/><circle cx="12" cy="15" r="2" fill="#2c3e50"/><path d="M7 6h3.5l1.5-2h2l1.5 2H21v2H3" fill="#8b5a2b" stroke="#1a1a1a" stroke-width="1.2" stroke-linejoin="round"/></svg></span>
+        <span class="field-dock-icon field-dock-icon-photo" aria-hidden="true"></span>
         <span class="field-dock-label" data-i18n="dock.photo">Foto</span>
       </button>
       <button type="button" class="field-dock-btn" id="btn-dock-notes" onclick="openFieldNotes()">
-        <span class="field-dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round"><rect x="5" y="4" width="11" height="16" rx="1.5"/><path d="M8 4h5v3.5H8z"/><circle cx="8.3" cy="11" r=".9" fill="#1a1a1a" stroke="none"/><line x1="10.5" y1="11" x2="13.5" y2="11"/><circle cx="8.3" cy="14.2" r=".9" fill="#1a1a1a" stroke="none"/><line x1="10.5" y1="14.2" x2="13.5" y2="14.2"/><path d="M14.5 16.5l3.5 3.5"/><path d="M16 15l2 2" stroke-width="1.8"/></svg></span>
+        <span class="field-dock-icon field-dock-icon-notes" aria-hidden="true"></span>
         <span class="field-dock-label" data-i18n="dock.notes">Notlar</span>
       </button>
       <button type="button" class="field-dock-btn active" id="btn-dock-basemap" onclick="toggleOSM()" title="Altlık değiştir">
-        <span class="field-dock-icon" aria-hidden="true" id="btn-dock-basemap-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 5.5l2.5 6.5h1.8l.9-2.8 3.5 1-.9 2.8h1.7L12.5 5.5H5z" fill="#e8ecf0" stroke="#1a1a1a" stroke-width="1.2" stroke-linejoin="round"/><path d="M3.5 13.5c1.8.3 3 1.2 3.4 2.5" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/><path d="M12 19.5a5.5 5.5 0 1 0 0-.01" stroke="#1a1a1a" stroke-width="1.5"/><path d="M9.5 17.5h5" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+        <span class="field-dock-icon field-dock-icon-basemap" aria-hidden="true" id="btn-dock-basemap-icon" data-dynamic-basemap="1"></span>
         <span class="field-dock-label" id="btn-dock-basemap-label" data-i18n="basemap.satellite">Uydu</span>
       </button>
     </div>
@@ -560,7 +589,7 @@
         <header class="fjh-header">
           <div class="fjh-header-top">
             <div class="fjh-toolbar-brand">
-              <img class="field-journey-hub-logo" src="assets/planai-field-logo.png" alt="" width="32" height="32" decoding="async" aria-hidden="true">
+              <img class="field-journey-hub-logo" src="assets/planai-field-logo.png?v=4" alt="" width="52" height="52" decoding="async" aria-hidden="true">
               <span id="field-journey-hub-brand-text" class="field-journey-hub-brand">PlanAI Field</span>
             </div>
             <div id="field-journey-hub-lang" class="field-journey-hub-lang" data-i18n-title="lang.title" title="Dil">
@@ -1432,7 +1461,7 @@
 <script src="js/replay/FieldSafeReplay.js?v=1.0.3"></script>
 <script src="js/replay/FieldReplaySafariRoute.js?v=1.3.5"></script>
 <script src="js/replay/FieldReplayPreviewDiagnostics.js?v=1.0.1"></script>
-<script src="js/replay/FieldCinematicReport.js?v=1.3.16"></script>
+<script src="js/replay/FieldCinematicReport.js?v=1.3.17"></script>
 <script>
 (function () {
   var paths = [
@@ -1465,6 +1494,8 @@ window.pdfjsLib = pdfjs;
 <script src="js/security/FieldAccessGate.js?v=1.4.0"></script>
 <script src="js/security/FieldDbCrypto.js?v=1.2.2"></script>
 <script src="js/ui/LegacyClickBridge.js?v=1.2.0"></script>
-<script src="js/app.js?v=1.1.75"></script>
+<script src="js/ui/FieldDockIcons.js?v=1.0.0"></script>
+<script src="js/app.js?v=1.1.85"></script>
+<script src="js/ui/FieldTrialShell.js?v=1.0.14"></script>
 </body>
 </html>

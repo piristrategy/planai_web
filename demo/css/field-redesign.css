@@ -1,0 +1,528 @@
+/* ============================================================================
+   PlanAI Field — Koyu Cam (Dark Glass) Yeniden Tasarım Teması  v1
+   ----------------------------------------------------------------------------
+   Bu dosya MEVCUT uygulamanın ÜZERİNE giydirilir. Hiçbir motor bağlantısına,
+   ID'ye veya onclick fonksiyonuna dokunmaz — yalnızca görünümü değiştirir.
+   KULLANIM: index.html içinde app.css satırından SONRA tek satır ekleyin:
+     <link rel="stylesheet" href="css/field-redesign.css?v=1">
+   ============================================================================ */
+
+/* ---- 1) Tasarım jetonlarını koyu paletle ezer (geniş etki, düşük risk) ---- */
+:root{
+  --bg:#070a0e;
+  --panel-bg:rgba(15,21,30,.72); --panel:rgba(15,21,30,.72);
+  --panel-2:rgba(20,27,37,.86);
+  --border:rgba(255,255,255,.10); --border-2:rgba(255,255,255,.06);
+  --muted:#9aa6b4; --text:#f4f7fb; --fg:#f4f7fb;
+  --accent:#22c55e; --accent-2:#1f9d52; --green:#1f9d52;
+  --glass-shadow:0 10px 34px rgba(0,0,0,.50),0 2px 8px rgba(0,0,0,.35);
+}
+html,body,#app,#canvas-wrap{background:#070a0e !important;color:var(--text);}
+
+/* Ortak cam yüzey yardımcı tanımı (sınıf yok; aşağıda tek tek uygulanır) */
+/* glass = blur + koyu yarı saydam + ince beyaz hat + yumuşak gölge */
+
+/* ============================================================================
+   2) SOL ARAÇ ÇUBUĞU
+   ============================================================================ */
+#left-bar{
+  background:var(--panel-bg) !important;
+  -webkit-backdrop-filter:blur(26px) saturate(150%);backdrop-filter:blur(26px) saturate(150%);
+  border:1px solid var(--border) !important;border-radius:22px !important;
+  box-shadow:var(--glass-shadow) !important;
+  margin:12px 0 12px 12px !important;
+}
+.left-bar-inner{gap:6px !important;}
+
+/* Marka: P logosu büyür, "PlanAI Field" iki satıra sarar ve yeşil olur */
+.field-brand-block{padding:4px 0 8px !important;}
+.field-brand-block .logo{background:#fff !important;border-radius:16px !important;
+  padding:6px !important;box-shadow:0 6px 18px rgba(0,0,0,.35) !important;}
+#field-brand-logo{width:52px !important;height:52px !important;}
+.field-brand-title{
+  max-width:54px;margin:6px auto 0 !important;
+  color:#7fe0a6 !important;font-weight:800 !important;font-size:12px !important;
+  line-height:1.1 !important;text-align:center !important;white-space:normal !important;
+}
+
+.tool-group-label{color:var(--muted) !important;letter-spacing:.6px !important;}
+
+/* Araç butonları: yuvarlatılmış, hover camı, seçili = yeşil */
+#left-bar .tool-btn{
+  color:#cdd6e2 !important;border:1px solid transparent !important;border-radius:15px !important;
+  background:transparent !important;transition:background .15s,color .15s,box-shadow .15s !important;
+}
+#left-bar .tool-btn:hover{background:rgba(255,255,255,.06) !important;color:#fff !important;}
+#left-bar .tool-btn.active,#left-bar .tool-btn[aria-pressed="true"]{
+  background:rgba(34,197,94,.18) !important;color:#5fe39a !important;
+  box-shadow:inset 0 0 0 1px rgba(34,197,94,.45) !important;
+}
+#left-bar .tool-btn svg [stroke="currentColor"]{stroke:currentColor;}
+#left-bar .tool-label{color:inherit !important;font-weight:600 !important;}
+/* "Geri / Sil" gibi pasif öğeler okunur ama soluk kalsın */
+#left-bar .tool-btn:disabled,#left-bar .tool-btn.disabled{opacity:.42 !important;}
+.tooltip{background:var(--panel-2) !important;color:#fff !important;border:1px solid var(--border) !important;}
+
+/* ============================================================================
+   3) ÜST ARAÇ ÇUBUĞU
+   ============================================================================ */
+#top-bar{
+  background:var(--panel-bg) !important;
+  -webkit-backdrop-filter:blur(26px) saturate(150%);backdrop-filter:blur(26px) saturate(150%);
+  border:1px solid var(--border) !important;border-radius:18px !important;
+  box-shadow:var(--glass-shadow) !important;
+  margin:12px 12px 0 0 !important;gap:8px !important;color:var(--text) !important;
+}
+#top-bar .stat,#top-bar .field-top-stat,#top-bar .brand{color:var(--text) !important;}
+#btn-project-menu{
+  background:rgba(255,255,255,.05) !important;color:#fff !important;
+  border:1px solid var(--border-2) !important;border-radius:12px !important;font-weight:600 !important;
+}
+#btn-project-menu:hover{background:rgba(255,255,255,.09) !important;}
+
+/* Parmak/Kalem ve TR/EN çipleri */
+#field-mode-chip,#field-lang-switch{
+  background:rgba(255,255,255,.04) !important;border:1px solid var(--border-2) !important;border-radius:12px !important;
+}
+#field-mode-chip button,#field-lang-switch button{color:var(--muted) !important;border-radius:9px !important;background:transparent !important;}
+#field-mode-chip button.active,#field-lang-switch button.active{
+  background:rgba(34,197,94,.16) !important;color:#5fe39a !important;
+}
+
+/* GPS durum pili */
+#gps-status-pill{background:rgba(255,255,255,.05) !important;color:var(--muted) !important;
+  border:1px solid var(--border-2) !important;border-radius:11px !important;}
+#gps-status-pill.on,#gps-status-pill.live{color:#5fe39a !important;border-color:rgba(34,197,94,.4) !important;}
+
+/* Konum arama — koyu, üst çubuğa sığacak şekilde */
+#loc-search{background:rgba(255,255,255,.05) !important;border:1px solid var(--border-2) !important;
+  border-radius:12px !important;overflow:hidden;}
+#loc-input{background:transparent !important;color:var(--text) !important;border:none !important;}
+#loc-input::placeholder{color:var(--muted) !important;}
+#loc-search button{background:rgba(255,255,255,.08) !important;color:#fff !important;border:none !important;}
+#loc-results{background:var(--panel-2) !important;border:1px solid var(--border) !important;
+  border-radius:14px !important;color:var(--text) !important;box-shadow:var(--glass-shadow) !important;}
+
+/* Panel aç/kapa okları (sağ panel açılır-kapanır) */
+.panel-toggle{background:var(--panel-2) !important;color:#cdd6e2 !important;
+  border:1px solid var(--border) !important;border-radius:0 12px 12px 0 !important;}
+.panel-toggle.right{border-radius:12px 0 0 12px !important;}
+
+/* ============================================================================
+   4) ALT ARAÇ ÇUBUĞU (field-dock)
+   ============================================================================ */
+#field-dock{
+  background:var(--panel-bg) !important;
+  -webkit-backdrop-filter:blur(26px) saturate(150%);backdrop-filter:blur(26px) saturate(150%);
+  border:1px solid var(--border) !important;border-radius:22px !important;
+  box-shadow:var(--glass-shadow) !important;gap:10px !important;
+  margin:0 12px 12px 12px !important;padding:12px !important;
+}
+.field-dock-btn{
+  background:rgba(255,255,255,.04) !important;border:1px solid var(--border-2) !important;
+  border-radius:16px !important;color:var(--text) !important;transition:background .15s,transform .12s !important;
+}
+.field-dock-btn:hover{background:rgba(255,255,255,.08) !important;}
+.field-dock-btn:active{transform:scale(.98);}
+.field-dock-label{color:var(--text) !important;font-weight:600 !important;}
+/* Seçili altlık / aktif GPS yeşil vurgulu */
+.field-dock-btn.active{
+  background:rgba(34,197,94,.16) !important;border-color:rgba(34,197,94,.40) !important;color:#5fe39a !important;
+}
+.field-dock-btn.active .field-dock-label{color:#5fe39a !important;}
+
+/* Koyu temada görünür kalsın: ikonların koyu (#1a1a1a) çizgi/dolgularını açığa çevir */
+#field-dock .field-dock-icon svg [stroke="#1a1a1a"]{stroke:#e3eaf2 !important;}
+#field-dock .field-dock-icon svg [fill="#1a1a1a"]{fill:#e3eaf2 !important;}
+.field-dock-btn.active .field-dock-icon svg [stroke="#1a1a1a"]{stroke:#5fe39a !important;}
+.field-dock-btn.active .field-dock-icon svg [fill="#1a1a1a"]{fill:#5fe39a !important;}
+
+/* İÇE AKTAR: ok yönünü SAĞA çevir (aşağı-ok yerine sağa-import oku) + yeşil */
+#btn-dock-import{color:#5fe39a !important;}
+#btn-dock-import .field-dock-label{color:#5fe39a !important;}
+#btn-dock-import .field-dock-icon svg{display:none !important;}
+#btn-dock-import .field-dock-icon{
+  width:27px;height:27px;display:inline-block;background:#5fe39a;
+  -webkit-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'><path d='M3 12h11'/><path d='M10 8l4 4-4 4'/><path d='M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4'/></svg>") center/contain no-repeat;
+          mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'><path d='M3 12h11'/><path d='M10 8l4 4-4 4'/><path d='M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4'/></svg>") center/contain no-repeat;
+}
+
+/* ============================================================================
+   5) SAĞ PANEL — Saha Defteri (notlar) + sesli notu kaldır
+   ============================================================================ */
+#field-notes-panel,#gps-hud,#field-photo-viewer,#field-more-menu,#field-map-menu{
+  background:var(--panel-bg) !important;
+  -webkit-backdrop-filter:blur(24px) saturate(140%);backdrop-filter:blur(24px) saturate(140%);
+  border:1px solid var(--border) !important;border-radius:20px !important;
+  box-shadow:var(--glass-shadow) !important;color:var(--text) !important;
+}
+#field-notes-panel .fn-title,#field-notes-panel textarea,#field-notes-panel .fn-tab{color:var(--text) !important;}
+#field-notes-panel textarea{background:rgba(255,255,255,.04) !important;border:1px solid var(--border-2) !important;}
+#field-notes-panel .fn-tab.active{color:#5fe39a !important;}
+#field-notes-panel .fn-save{background:var(--accent-2) !important;color:#fff !important;}
+/* İSTENEN: sağ paneldeki sesli not (dikte) butonunu kaldır */
+#field-notes-panel .field-dictate-bar,#field-notes-panel #btn-dictate-note{display:none !important;}
+
+/* ============================================================================
+   6) AÇILIŞ / GEZİ HUB ekranı (light kart) — koyu camla uyumlu hale getir
+   ============================================================================ */
+#field-journey-hub-panel{
+  background:var(--panel-2) !important;border:1px solid var(--border) !important;
+  border-radius:24px !important;box-shadow:var(--glass-shadow) !important;color:var(--text) !important;
+}
+#field-journey-hub-panel,.field-journey-hub-brand{color:var(--text) !important;}
+
+/* ============================================================================
+   7) Geçişler — çok ince, ease-out
+   ============================================================================ */
+#left-bar .tool-btn,.field-dock-btn,#btn-project-menu,.panel-toggle{transition-timing-function:cubic-bezier(.22,.61,.36,1) !important;}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important;}}
+
+/* ============================================================================
+   v2 — GPS HUD iç öğeleri + Gezi/İçe Aktar/Foto ve diğer pop-up'lar
+   ============================================================================ */
+
+/* ---- 8) GPS HUD iç öğeleri ---- */
+.gps-field-chip{background:transparent !important;color:var(--text) !important;}
+.gps-field-chip-line1{color:#fff !important;font-weight:700 !important;}
+.gps-field-chip-line2,.gps-inst-conf,.gps-inst-move{color:var(--muted) !important;}
+.gps-inst-grid{gap:8px !important;}
+.gps-inst-cell{
+  background:rgba(255,255,255,.04) !important;border:1px solid var(--border-2) !important;
+  border-radius:12px !important;
+}
+.gps-inst-cell .lbl{color:var(--muted) !important;letter-spacing:.4px !important;}
+.gps-inst-cell .val{color:var(--text) !important;font-weight:700 !important;}
+.gps-inst-route{color:var(--muted) !important;}
+/* Birincil rota butonu: DUR kırmızı, BAŞLAT yeşil */
+.gps-btn-primary{border-radius:13px !important;font-weight:800 !important;letter-spacing:.5px !important;border:none !important;}
+.gps-btn-primary.stop{background:linear-gradient(160deg,#c0392b,#9d2519) !important;color:#fff !important;}
+.gps-btn-primary.start,.gps-btn-primary:not(.stop){background:linear-gradient(160deg,#1fb455,#15913f) !important;color:#fff !important;}
+.gps-btn-secondary{background:rgba(255,255,255,.06) !important;color:#fff !important;
+  border:1px solid var(--border) !important;border-radius:12px !important;}
+.gps-field-secondary button{background:rgba(255,255,255,.05) !important;color:#cdd6e2 !important;
+  border:1px solid var(--border-2) !important;border-radius:12px !important;font-weight:600 !important;}
+.gps-field-secondary button:hover{background:rgba(255,255,255,.09) !important;color:#fff !important;}
+
+/* ---- 9) Ortak overlay/backdrop ---- */
+#project-overlay,#field-import-backdrop,#field-export-backdrop,#field-photo-sheet-backdrop,
+#field-report-viewer-backdrop,#field-permissions-backdrop,#field-notes-sheet-backdrop{
+  background:rgba(4,7,11,.55) !important;
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+}
+
+/* ---- 10) Ortak pop-up kartları (cam) ---- */
+#project-panel,#field-import-sheet,#field-export-sheet,#field-photo-sheet,
+#field-report-viewer,#field-permissions-sheet,#field-note-popup,#field-photo-voice-sheet,
+#field-camera-bar{
+  background:var(--panel-2) !important;border:1px solid var(--border) !important;
+  border-radius:22px !important;box-shadow:var(--glass-shadow) !important;color:var(--text) !important;
+  -webkit-backdrop-filter:blur(24px) saturate(140%);backdrop-filter:blur(24px) saturate(140%);
+}
+#project-panel-head,.fex-title,.fps-btn,.frv-title,.fnp-title,.fperm-title,
+.proj-recent-label,.proj-new-label{color:var(--text) !important;}
+.fex-fname,.fex-formats-hint,.proj-autosave-note,.fperm-intro,.fnp-num{color:var(--muted) !important;}
+
+/* ---- 11) Pop-up butonları ---- */
+.proj-btn,.fex-btn,.fps-btn,.fex-chip,.fnp-guide,.fnp-edit,.fps-btn.secondary{
+  background:rgba(255,255,255,.05) !important;border:1px solid var(--border-2) !important;
+  color:var(--text) !important;border-radius:13px !important;transition:background .15s !important;
+}
+.proj-btn:hover,.fex-btn:hover,.fps-btn:hover,.fex-chip:hover,.fnp-guide:hover,.fnp-edit:hover{
+  background:rgba(255,255,255,.10) !important;
+}
+.proj-btn small,.fex-btn small{color:var(--muted) !important;}
+
+/* Birincil (yeşil) eylemler */
+.proj-btn.primary,.fps-btn.primary,.fex-btn.fex-send,.fnp-guide{
+  background:linear-gradient(160deg,#1fb455,#15913f) !important;color:#fff !important;border-color:transparent !important;
+}
+/* Rapor eylemleri (PDF Rapor / Saha Yolculuğunu Başlat) — yeşil çerçeveli vurgulu */
+.proj-btn.report{
+  background:rgba(34,197,94,.10) !important;border:1px solid rgba(34,197,94,.35) !important;color:#7fe0a6 !important;
+}
+/* İptal / nötr */
+.fex-cancel,.fps-btn.secondary[data-i18n="photo.cancelSheet"],.proj-btn[data-i18n="project.cancel"]{
+  color:var(--muted) !important;
+}
+/* Girdiler */
+.proj-new-input,#project-new-name,#loc-input,textarea,input[type="text"],input[type="password"]{
+  background:rgba(255,255,255,.05) !important;border:1px solid var(--border-2) !important;
+  color:var(--text) !important;border-radius:10px !important;
+}
+.proj-new-input::placeholder,textarea::placeholder{color:var(--muted) !important;}
+
+/* Son geziler kayıtları */
+#project-recent>*{background:rgba(255,255,255,.04) !important;border:1px solid var(--border-2) !important;
+  border-radius:12px !important;color:var(--text) !important;}
+
+/* Rapor görüntüleyici başlığı */
+.frv-head{border-bottom:1px solid var(--border) !important;}
+.frv-share{background:rgba(34,197,94,.16) !important;color:#7fe0a6 !important;border-radius:11px !important;}
+.frv-close,.fnp-close,.fperm-close,.fn-close{color:var(--muted) !important;}
+.frv-close:hover,.fnp-close:hover,.fperm-close:hover{color:#fff !important;}
+
+/* Export paylaşım çipleri ikon hizası */
+.fex-chip-ico{filter:none !important;}
+
+/* ============================================================================
+   v3 — AÇILIŞ / GEZİ HUB ekranı (Yeni İnceleme / İncelemeye Devam Et)
+   ============================================================================ */
+#field-journey-hub-overlay{background:rgba(4,7,11,.62) !important;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+#field-journey-hub-panel{
+  background:var(--panel-2) !important;border:1px solid var(--border) !important;
+  border-radius:26px !important;box-shadow:var(--glass-shadow) !important;color:var(--text) !important;
+  -webkit-backdrop-filter:blur(26px) saturate(150%);backdrop-filter:blur(26px) saturate(150%);
+}
+
+/* Başlık + marka */
+.field-journey-hub-brand{color:#fff !important;font-weight:800 !important;}
+.field-journey-hub-logo{background:#fff !important;border-radius:9px !important;padding:3px !important;}
+.fjh-tagline{color:var(--muted) !important;}
+#field-journey-hub-lang{background:rgba(255,255,255,.04) !important;border:1px solid var(--border-2) !important;border-radius:11px !important;}
+#field-journey-hub-lang button{color:var(--muted) !important;background:transparent !important;border-radius:8px !important;}
+#field-journey-hub-lang button.active{background:rgba(34,197,94,.16) !important;color:#5fe39a !important;}
+
+/* Özet şeridi (Journeys / Photos / Notes / Distance) */
+.fjh-summary-bar{border-top:1px solid var(--border) !important;border-bottom:1px solid var(--border) !important;}
+.fjh-summary-item+.fjh-summary-item{border-left:1px solid var(--border-2) !important;}
+.fjh-summary-val{color:#fff !important;font-weight:800 !important;}
+.fjh-summary-lbl{color:var(--muted) !important;letter-spacing:.5px !important;}
+
+/* Görev kartları — yeşil çerçeveli cam */
+.fjh-mission-active,.fjh-mission-new{
+  background:linear-gradient(180deg,rgba(34,197,94,.07),rgba(34,197,94,.03)) !important;
+  border:1px solid rgba(34,197,94,.30) !important;border-radius:18px !important;
+}
+.fjh-mission-footer{
+  background:rgba(255,255,255,.03) !important;border:1px dashed var(--border) !important;border-radius:18px !important;
+}
+.fjh-op-label{color:#5fe39a !important;font-weight:800 !important;letter-spacing:1px !important;}
+.fjh-op-label-muted{color:var(--muted) !important;}
+.fjh-journey-name,.fjh-new-title{color:#fff !important;font-weight:800 !important;}
+.fjh-journey-meta,.fjh-metrics-line{color:var(--muted) !important;}
+.fjh-mission-feats li{color:#dfe6ee !important;}
+
+/* Büyük yeşil CTA'lar */
+.fjh-cta-mission,.fjh-cta-active,.fjh-cta-start{
+  background:linear-gradient(160deg,#1fb455,#15913f) !important;color:#fff !important;
+  border:none !important;border-radius:14px !important;font-weight:800 !important;letter-spacing:.4px !important;
+  box-shadow:0 8px 20px rgba(31,157,82,.30) !important;
+}
+.fjh-cta-mission:hover,.fjh-cta-active:hover,.fjh-cta-start:hover{filter:brightness(1.06) !important;}
+/* İçe aktar CTA — outline */
+.fjh-cta-outline,.fjh-cta-import{
+  background:transparent !important;color:#dfe6ee !important;
+  border:1.5px solid var(--border) !important;border-radius:13px !important;font-weight:700 !important;
+}
+.fjh-cta-outline:hover{background:rgba(255,255,255,.06) !important;}
+
+/* Format çipleri */
+.fjh-format-chip{background:rgba(255,255,255,.06) !important;color:var(--muted) !important;
+  border:1px solid var(--border-2) !important;border-radius:7px !important;}
+
+/* "Tüm Yolculukları Gör" linki */
+.fjh-archive-link{background:transparent !important;color:#5fe39a !important;font-weight:700 !important;}
+.fjh-archive-link:hover{color:#7fe0a6 !important;}
+
+/* ============================================================================
+   v4 — Güvenlik · PIN/Erişim Kapısı · Onboarding · Rapor ilerleme
+   ============================================================================ */
+#field-security-settings-overlay,#field-access-gate-overlay,#field-onboard-dim,
+#report-progress-overlay{
+  background:rgba(4,7,11,.62) !important;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+}
+#field-security-settings-panel,#field-access-gate-panel,#field-onboard-card,#report-progress-panel{
+  background:var(--panel-2) !important;border:1px solid var(--border) !important;
+  border-radius:24px !important;box-shadow:var(--glass-shadow) !important;color:var(--text) !important;
+  -webkit-backdrop-filter:blur(26px) saturate(150%);backdrop-filter:blur(26px) saturate(150%);
+}
+
+/* Başlık / metin renkleri */
+#field-security-settings-title,#field-access-gate-title,#field-onboard-title,
+#report-progress-title,.field-access-gate-offer-title{color:#fff !important;font-weight:800 !important;}
+.field-security-label,.field-onboard-badge{color:var(--text) !important;}
+.field-security-hint,.field-access-gate-sub,.field-access-gate-note,#field-onboard-body,
+.field-onboard-step{color:var(--muted) !important;}
+
+/* Satırlar / kartçıklar */
+.field-security-row{background:rgba(255,255,255,.04) !important;border:1px solid var(--border-2) !important;
+  border-radius:14px !important;}
+.field-security-badge{background:rgba(255,255,255,.08) !important;color:var(--muted) !important;border-radius:8px !important;}
+.field-security-badge.off{color:#e08a8a !important;}
+.field-security-badge.on{color:#5fe39a !important;}
+
+/* Butonlar — birincil yeşil, ghost soluk */
+.field-security-btn,.field-access-gate-btn,.field-onboard-btn{
+  background:rgba(255,255,255,.05) !important;border:1px solid var(--border-2) !important;
+  color:var(--text) !important;border-radius:13px !important;
+}
+.field-security-btn.primary,.field-access-gate-btn.primary,.field-onboard-btn.primary{
+  background:linear-gradient(160deg,#1fb455,#15913f) !important;color:#fff !important;border-color:transparent !important;font-weight:800 !important;
+}
+.field-access-gate-btn.ghost,.field-onboard-btn.ghost{background:transparent !important;color:var(--muted) !important;}
+.field-access-gate-link{color:#5fe39a !important;background:transparent !important;}
+.field-access-gate-error{color:#ef9a9a !important;}
+.field-access-recovery-code-display{background:rgba(255,255,255,.06) !important;color:#7fe0a6 !important;
+  border:1px dashed var(--border) !important;border-radius:12px !important;letter-spacing:2px !important;}
+.field-access-gate-bullets{color:var(--muted) !important;}
+
+/* Onboarding spot (vurgu halkası) — koyu temada görünür kalsın */
+#field-onboard-spot{box-shadow:0 0 0 9999px rgba(4,7,11,.55) !important;border-radius:16px !important;}
+.field-onboard-badge{background:rgba(34,197,94,.16) !important;color:#5fe39a !important;border-radius:9px !important;}
+
+/* Kapat (✕) butonları */
+.field-security-close{color:var(--muted) !important;}
+.field-security-close:hover{color:#fff !important;}
+
+/* ============================================================================
+   v5 — app.css FARKINDALIKLI KESİN DÜZELTME
+   app.css'in gerçek jeton adları ve sabit (token olmayan) beyaz değerleri
+   görüldükten sonra yazıldı. Kaynak sırası gereği v1-v4'ü de düzeltir.
+   ============================================================================ */
+
+/* ---- A) Tüm tasarım jetonları: birebir isimlerle koyu palet ---- */
+:root{
+  --bg:#070a0e;
+  --panel-bg:rgba(16,22,30,.78);
+  --panel-bg2:rgba(26,33,44,.92);
+  --border:rgba(255,255,255,.10);
+  --border-active:rgba(255,255,255,.22);
+  --text:#eef2f7;
+  --text-strong:#ffffff;
+  --muted:#9aa6b4;
+  --accent:#22c55e;
+  --accent-light:rgba(34,197,94,.14);
+  --accent-hover:rgba(34,197,94,.10);
+  --blue:#4f8bff;
+  --green:#22c55e;
+  --red:#ef6a5a;
+  --active-green:#22c55e;
+  --active-green-fill:rgba(34,197,94,.16);
+  --active-green-ring:rgba(34,197,94,.40);
+  --canvas-bg:#070a0e;
+  --field-icon:#e3eaf2;          /* KRİTİK: koyu (#0a1520) → açık, yoksa ikonlar kaybolur */
+  --field-border-strong:rgba(255,255,255,.16);
+  --shadow:0 8px 24px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.05);
+  --shadow-md:0 16px 42px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06);
+}
+
+/* ---- B) Sol çubuk: yüzen değil, GÖMÜLÜ koyu (v1'in margin/radius'unu geri al) ---- */
+#left-bar{margin:0 !important;border:none !important;border-radius:0 !important;
+  box-shadow:none !important;background:transparent !important;}
+body.field-mode .left-bar-inner{
+  background:var(--panel-bg) !important;
+  -webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);
+  border-right:1px solid var(--border) !important;
+  box-shadow:2px 0 18px rgba(0,0,0,.40) !important;
+}
+.field-brand-block .logo{background:#fff !important;border-radius:12px !important;padding:5px !important;}
+#field-brand-logo{width:50px !important;height:50px !important;}
+.field-brand-title{max-width:56px;color:#7fe0a6 !important;font-weight:800 !important;
+  font-size:12px !important;line-height:1.1 !important;text-align:center !important;white-space:normal !important;}
+body.field-mode .tool-sep{background:var(--border) !important;}
+
+/* Sol çubuktaki beyaz Geri/Sil + araç aksiyon butonları → koyu cam */
+body.field-mode .action-btn,
+body.field-mode .field-toolbar-action{
+  background:rgba(255,255,255,.05) !important;color:var(--field-icon) !important;
+  border:1px solid var(--border) !important;
+}
+body.field-mode .action-btn:hover,
+body.field-mode .field-toolbar-action:hover{background:rgba(255,255,255,.10) !important;border-color:var(--border-active) !important;}
+body.field-mode #btn-delete.field-toolbar-action{color:var(--red) !important;border-color:rgba(239,106,90,.45) !important;}
+
+/* Seçili sol araç (gold yerine yeşil) */
+body.field-mode .tool-btn.active,#left-bar .tool-btn.active{
+  background:rgba(34,197,94,.18) !important;color:#5fe39a !important;
+  box-shadow:inset 0 0 0 1px rgba(34,197,94,.45) !important;
+}
+body.field-mode .tool-btn.active svg{stroke:#5fe39a !important;color:#5fe39a !important;}
+
+/* ---- C) Üst çubuk: sabit #fff → koyu cam (hafif yüzen) ---- */
+#top-bar{
+  background:var(--panel-bg) !important;
+  -webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);
+  border-bottom:1px solid var(--border) !important;box-shadow:var(--shadow) !important;
+  color:var(--text) !important;
+}
+#top-bar .stat,#top-bar .field-top-stat{color:var(--muted) !important;}
+#top-bar .field-top-tool,#stat-objs,#stat-zoom{color:var(--text) !important;}
+
+/* ---- D) Alt çubuk butonları: sabit beyaz → koyu cam (field-mode özgüllüğüyle) ---- */
+body.field-mode .field-dock-btn{
+  background:rgba(255,255,255,.05) !important;color:var(--text) !important;
+  border:1px solid var(--border) !important;border-radius:16px !important;
+}
+body.field-mode .field-dock-btn:hover{background:rgba(255,255,255,.10) !important;border-color:var(--border-active) !important;}
+body.field-mode .field-dock-btn.active{
+  background:rgba(34,197,94,.16) !important;border-color:rgba(34,197,94,.45) !important;color:#5fe39a !important;
+  box-shadow:inset 0 0 0 1px rgba(34,197,94,.40),0 2px 10px rgba(0,0,0,.25) !important;
+}
+body.field-mode .field-dock-btn.active .field-dock-label{color:#5fe39a !important;}
+body.field-mode .field-dock-label{color:var(--text) !important;}
+
+/* ---- E) Notlar paneli sabit açık tonları ---- */
+.fn-pin-banner{background:rgba(34,197,94,.14) !important;color:#7fe0a6 !important;
+  border-bottom:1px solid rgba(34,197,94,.25) !important;}
+.fn-tab{background:var(--panel-bg2) !important;border:2px solid var(--border) !important;color:var(--text) !important;}
+.fn-tab.active{background:rgba(34,197,94,.16) !important;border-color:rgba(34,197,94,.45) !important;color:#7fe0a6 !important;}
+.fn-close{background:var(--panel-bg2) !important;border:1px solid var(--border) !important;color:var(--muted) !important;}
+.fn-title{color:var(--text-strong) !important;}
+
+/* ---- F) Geziler paneli sabit açık tonları ---- */
+.proj-new-form{background:rgba(255,255,255,.04) !important;border:1px solid var(--border) !important;}
+.proj-row{background:rgba(255,255,255,.04) !important;border:1px solid var(--border) !important;color:var(--text) !important;}
+.proj-row:hover{border-color:rgba(34,197,94,.4) !important;background:rgba(34,197,94,.08) !important;}
+.proj-empty{color:var(--muted) !important;}
+
+/* ============================================================================
+   v6 — Sol çubuk nefes payı · okunabilir marka · canlı konum uyarısı
+   (Masaüstü/fare medya sorgusu sol çubuğu 50px+gap:1px yapıyordu; !important ezer)
+   ============================================================================ */
+
+/* Sol çubuğu genişlet + ikonları ferahlat (tüm ekranlarda) */
+body.field-mode{--panel-w:76px !important;}
+body.field-mode .left-bar-inner{
+  padding:10px 6px max(10px,var(--safe-bottom)) 6px !important;
+  gap:7px !important;scrollbar-gutter:stable;
+}
+body.field-mode .field-brand-block{padding:8px 4px 8px !important;margin-bottom:2px !important;}
+body.field-mode .logo{
+  width:56px !important;height:56px !important;padding:5px !important;
+  border-radius:15px !important;border:none !important;background:#fff !important;
+  box-shadow:0 6px 16px rgba(0,0,0,.35) !important;
+}
+/* "PlanAI" üstte, "Field" altta — büyük, yeşil, okunabilir */
+.field-brand-title{
+  display:block !important;max-width:62px !important;margin:7px auto 0 !important;
+  color:#7fe0a6 !important;font-weight:800 !important;font-size:13px !important;
+  line-height:1.12 !important;text-align:center !important;white-space:normal !important;letter-spacing:.2px !important;
+}
+/* Araç butonları: daha büyük dokunma + ferah aralık + net etiket */
+body.field-mode .tool-btn.field-main-tool{
+  min-height:56px !important;width:100% !important;border-radius:15px !important;
+  margin:1px 0 !important;padding:7px 2px !important;
+}
+body.field-mode .tool-btn svg,body.field-mode .tool-btn .slope-analysis-icon{transform:scale(1.08);}
+body.field-mode .tool-label{font-size:11px !important;margin-top:3px !important;}
+body.field-mode .action-btn,body.field-mode .field-toolbar-action{min-height:54px !important;border-radius:14px !important;}
+
+/* ---- Canlı konum uyarısı (coachmark) ---- */
+#redesign-coach{
+  position:fixed;top:78px;right:96px;z-index:1900;max-width:300px;display:none;
+  background:var(--panel-bg2);border:1px solid var(--border);border-radius:16px;
+  padding:13px 16px;color:var(--text);font-size:15px;line-height:1.4;font-family:var(--font);
+  box-shadow:var(--shadow-md);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
+  animation:rc-in .22s cubic-bezier(.22,.61,.36,1);
+}
+#redesign-coach.show{display:block;}
+#redesign-coach b{color:#7fe0a6;}
+#redesign-coach .rc-arrow{position:absolute;right:-11px;top:20px;width:0;height:0;
+  border-top:9px solid transparent;border-bottom:9px solid transparent;border-left:11px solid var(--panel-bg2);}
+@keyframes rc-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+/* locate butonunu uyarı sırasında vurgula */
+#btn-map-locate{border:1.5px solid var(--border) !important;}
