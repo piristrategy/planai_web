@@ -1,19 +1,30 @@
 /* PlanAI Field — index-trial.html deneme arayüzü (üst bar + incelemeyi tamamla) */
 body.field-trial-ui.field-mode {
+  --field-topbar-h: 58px;
   --trial-edge: max(10px, var(--safe-left));
   --trial-edge-r: max(10px, var(--safe-right));
   --trial-edge-b: max(10px, var(--safe-bottom));
   --trial-gap: 8px;
   --trial-gps-dock-gap: 14px;
   --trial-gps-left-gap: 8px;
-  --trial-left-w: 72px;
+  --trial-left-w: 68px;
+  --trial-left-btn-w: 60px;
+  --trial-left-btn-h: 66px;
   --trial-chrome-left: calc(var(--trial-edge) + var(--trial-left-w) + var(--trial-gap));
-  --trial-glass-bg: rgba(10, 16, 26, 0.46);
-  --trial-glass-blur: blur(26px) saturate(165%);
+  --trial-glass-bg: rgba(7, 12, 20, 0.78);
+  --trial-glass-blur: blur(22px) saturate(155%);
   --trial-glass-border: rgba(255, 255, 255, 0.16);
-  --trial-glass-shadow: 0 8px 30px rgba(0, 0, 0, 0.24);
+  --trial-glass-shadow: 0 10px 32px rgba(0, 0, 0, 0.38);
+  --trial-tb-text: #f8fafc;
+  --trial-tb-muted: #b8c8d8;
+  --trial-tb-label-shadow: 0 1px 2px rgba(0, 0, 0, 0.62);
   --trial-finish-locate-gap: 12px;
   --trial-map-col-inset: 56px;
+  --trial-green-border: rgba(34, 197, 94, 0.50);
+  --trial-green-border-hover: rgba(34, 197, 94, 0.62);
+  --trial-green-border-active: rgba(34, 197, 94, 0.68);
+  --trial-card-bg: rgba(8, 14, 20, 0.90);
+  --trial-card-shadow: 0 8px 22px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
 body.field-trial-ui.field-mode #top-bar {
@@ -22,18 +33,21 @@ body.field-trial-ui.field-mode #top-bar {
   right: var(--trial-edge-r);
   width: auto;
   margin: 0;
+  height: auto !important;
   background: var(--trial-glass-bg) !important;
   -webkit-backdrop-filter: var(--trial-glass-blur);
   backdrop-filter: var(--trial-glass-blur);
-  border: 1px solid var(--trial-glass-border);
+  border: 2px solid var(--trial-green-border) !important;
   border-radius: 18px;
   min-height: 58px;
   padding: 6px 10px;
   gap: 6px;
   box-shadow: var(--trial-glass-shadow);
   color: #f4f7fb;
-  overflow-x: auto;
+  overflow-x: hidden;
+  overflow-y: hidden;
   flex-wrap: nowrap;
+  align-items: center;
 }
 body.field-trial-ui.field-mode #top-bar::-webkit-scrollbar { display: none; }
 
@@ -66,14 +80,129 @@ body.field-trial-ui.field-journey-hub-active #trial-inspection-chrome {
   pointer-events: none;
 }
 
+/* Üst bar içi — eski ince cam; yeşil kontur yalnızca #top-bar dış çerçevesinde */
+body.field-trial-ui.field-mode #top-bar .trial-badge {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body.field-trial-ui.field-mode #top-bar .trial-stat {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body.field-trial-ui.field-mode #top-bar .trial-tool-toggle {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body.field-trial-ui.field-mode #top-bar .trial-tool-toggle:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+body.field-trial-ui.field-mode #top-bar .trial-tool-toggle.active {
+  background: rgba(255, 255, 255, 0.10) !important;
+  border-color: rgba(255, 255, 255, 0.30) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+}
+
+body.field-trial-ui.field-mode #top-bar #btn-trial-sun.active {
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22) !important;
+}
+
+/* Üst bar içi — öğeler yeşil çerçeve içinde kalsın */
+body.field-trial-ui.field-mode #top-bar #trial-inspection-chrome {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+body.field-trial-ui.field-mode #top-bar .trial-badge {
+  padding: 4px 8px;
+}
+body.field-trial-ui.field-mode #top-bar .trial-stat {
+  padding: 2px 4px;
+}
+body.field-trial-ui.field-mode #top-bar .trial-stat-alt .ico,
+body.field-trial-ui.field-mode #top-bar .trial-stat-clock .ico {
+  width: 28px;
+  height: 28px;
+}
+body.field-trial-ui.field-mode #top-bar .trial-stat-alt .ico svg,
+body.field-trial-ui.field-mode #top-bar .trial-stat-clock .ico svg {
+  width: 18px;
+  height: 18px;
+}
+body.field-trial-ui.field-mode #top-bar .trial-tool-toggle {
+  min-width: 46px;
+  padding: 3px 7px 2px;
+  gap: 1px;
+  border-radius: 10px;
+}
+body.field-trial-ui.field-mode #top-bar .trial-tool-toggle svg {
+  width: 17px;
+  height: 17px;
+}
+body.field-trial-ui.field-mode #top-bar .trial-tool-toggle span {
+  font-size: 9px;
+  line-height: 1;
+}
+body.field-trial-ui.field-mode #top-bar #field-lang-switch.trial-lang-switch {
+  padding: 2px;
+}
+body.field-trial-ui.field-mode #top-bar #field-lang-switch.trial-lang-switch button {
+  min-height: 30px;
+  padding: 4px 8px;
+}
+body.field-trial-ui.field-mode #top-bar #loc-search {
+  flex: 1 1 72px;
+  min-width: 0;
+  max-width: 200px;
+  padding: 2px 4px 2px 8px;
+  max-height: 38px;
+  overflow: hidden;
+}
+body.field-trial-ui.field-mode #top-bar #loc-search input {
+  padding: 4px 2px !important;
+  min-width: 0;
+}
+body.field-trial-ui.field-mode #top-bar #loc-search button {
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+}
+
+body.field-trial-ui.field-mode #top-bar #field-lang-switch.trial-lang-switch {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body.field-trial-ui.field-mode #top-bar #loc-search {
+  background: rgba(255, 255, 255, 0.10) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
 .trial-badge {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
   flex: 0 0 auto;
 }
 .trial-badge .dot {
@@ -181,7 +310,7 @@ body.field-trial-ui.field-mode #top-bar #trial-top-tools {
 }
 #btn-trial-sun.active {
   border-color: rgba(255, 255, 255, 0.55);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
   color: #fff;
 }
 
@@ -235,6 +364,81 @@ body.field-trial-ui.field-mode #loc-search::before {
   background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8edf3' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16.5 16.5 20 20'/%3E%3C/svg%3E");
 }
 
+/* Normal mod — üst bar okunurluğu (güneş modu hariç) */
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar {
+  box-shadow: var(--trial-glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar .trial-badge {
+  background: rgba(0, 0, 0, 0.24) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar .trial-badge .l1,
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar .trial-stat .t1 {
+  color: var(--trial-tb-text);
+  font-weight: 700;
+  text-shadow: var(--trial-tb-label-shadow);
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar .trial-badge.gps.off .l1 {
+  color: #c5d0dc;
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar .trial-badge .l2,
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar .trial-stat .t2 {
+  color: var(--trial-tb-muted) !important;
+  font-size: 11px;
+  font-weight: 600;
+  text-shadow: var(--trial-tb-label-shadow);
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar .trial-stat .ico {
+  color: #c8d6e4;
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar .trial-stat-alt .ico {
+  background: rgba(34, 197, 94, 0.18);
+  color: #7ef0ae;
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar .trial-tb-sep {
+  background: rgba(255, 255, 255, 0.18);
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar .trial-tool-toggle {
+  color: #c5d2e0;
+  background: rgba(0, 0, 0, 0.20) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar .trial-tool-toggle span {
+  color: #d2dce8;
+  font-weight: 800;
+  text-shadow: var(--trial-tb-label-shadow);
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar .trial-tool-toggle.active span {
+  color: #ffffff;
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar #field-lang-switch.trial-lang-switch {
+  background: rgba(0, 0, 0, 0.22) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar #field-lang-switch.trial-lang-switch button {
+  color: #b8c8d8;
+  font-weight: 800;
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar #loc-search {
+  background: rgba(0, 0, 0, 0.30) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar #loc-search input,
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar #loc-search input::placeholder {
+  text-shadow: var(--trial-tb-label-shadow);
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar #loc-search input::placeholder {
+  color: #c8d6e4 !important;
+  font-weight: 600 !important;
+}
+body.field-trial-ui.field-mode:not(.field-trial-sun) #top-bar #loc-search button {
+  background: rgba(34, 197, 94, 0.28) !important;
+  border-color: rgba(34, 197, 94, 0.55) !important;
+  color: #8af5b8 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
 /* Güneş modu — üst/sol cam karartılır; diğer paneller opak kontrast */
 body.field-trial-ui.field-trial-sun.field-mode {
   --trial-glass-bg: rgba(4, 7, 11, 0.88);
@@ -247,40 +451,56 @@ body.field-trial-ui.field-trial-sun.field-mode {
   --trial-sun-muted: #d0dae6;
 }
 
-body.field-trial-ui.field-trial-sun.field-mode #top-bar,
-body.field-trial-ui.field-trial-sun.field-mode .left-bar-inner {
+body.field-trial-ui.field-trial-sun.field-mode #top-bar {
   background: var(--trial-glass-bg) !important;
-  border-color: var(--trial-glass-border) !important;
+  border: 2px solid var(--trial-green-border) !important;
   -webkit-backdrop-filter: var(--trial-glass-blur) !important;
   backdrop-filter: var(--trial-glass-blur) !important;
   box-shadow: var(--trial-glass-shadow) !important;
+  align-items: center;
+}
+body.field-trial-ui.field-trial-sun.field-mode #top-bar .trial-tool-toggle.active,
+body.field-trial-ui.field-trial-sun.field-mode #top-bar #btn-trial-sun.active {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22) !important;
 }
 
 body.field-trial-ui.field-trial-sun.field-mode .field-dock-btn,
+body.field-trial-ui.field-trial-sun.field-mode #left-bar .tool-btn,
+body.field-trial-ui.field-trial-sun.field-mode #left-bar .field-toolbar-action,
+body.field-trial-ui.field-trial-sun.field-mode .field-brand-block,
 body.field-trial-ui.field-trial-sun.field-mode #gps-hud .gps-field-chip,
 body.field-trial-ui.field-trial-sun.field-mode #gps-hud .gps-field-body,
 body.field-trial-ui.field-trial-sun.field-mode .trial-locate-coach {
   background: var(--trial-sun-glass) !important;
-  border-color: var(--trial-sun-border) !important;
+  border-color: var(--trial-green-border) !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.78) !important;
 }
 
-body.field-trial-ui.field-trial-sun.field-mode #map-float-controls {
-  background: var(--trial-glass-bg) !important;
-  border-color: var(--trial-glass-border) !important;
-  -webkit-backdrop-filter: var(--trial-glass-blur) !important;
-  backdrop-filter: var(--trial-glass-blur) !important;
-  box-shadow: var(--trial-glass-shadow) !important;
-}
-
-body.field-trial-ui.field-trial-sun .trial-badge,
-body.field-trial-ui.field-trial-sun .trial-stat,
-body.field-trial-ui.field-trial-sun .trial-tool-toggle,
-body.field-trial-ui.field-trial-sun #field-lang-switch.trial-lang-switch {
+body.field-trial-ui.field-trial-sun.field-mode #top-bar .trial-badge,
+body.field-trial-ui.field-trial-sun.field-mode #top-bar .trial-tool-toggle,
+body.field-trial-ui.field-trial-sun.field-mode #top-bar #field-lang-switch.trial-lang-switch {
   background: rgba(255, 255, 255, 0.08) !important;
   border-color: var(--trial-sun-border) !important;
+  box-shadow: none !important;
+}
+
+body.field-trial-ui.field-trial-sun.field-mode #map-float-controls {
+  background: transparent !important;
+  border: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+body.field-trial-ui.field-trial-sun.field-mode #btn-map-locate.trial-locate-btn,
+body.field-trial-ui.field-trial-sun.field-mode #map-float-controls .map-zoom-stack {
+  background: var(--trial-sun-glass) !important;
+  border-color: var(--trial-green-border) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.78) !important;
 }
 
 body.field-trial-ui.field-trial-sun .trial-badge .l1,
@@ -369,25 +589,30 @@ body.field-trial-ui.field-mode .panel-toggle.right {
   z-index: 132;
 }
 
+/* Sağ sütun (canlı konum + zoom) — ortak cam şerit yok, alt dock gibi yüzen kartlar */
 body.field-trial-ui.field-mode #map-float-controls {
   position: absolute !important;
   right: auto !important;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 6px;
-  background: var(--trial-glass-bg);
-  -webkit-backdrop-filter: var(--trial-glass-blur);
-  backdrop-filter: var(--trial-glass-blur);
-  border: 1px solid var(--trial-glass-border);
-  border-radius: 20px;
-  box-shadow: var(--trial-glass-shadow);
-  pointer-events: auto;
+  gap: var(--trial-dock-gap, 8px);
+  padding: 0 !important;
+  background: transparent !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  pointer-events: none;
   /* top / left → FieldTrialShell.js */
 }
 
-/* Canlı konum — cam panel içinde yeşil nişangâh */
+body.field-trial-ui.field-mode #map-float-controls > * {
+  pointer-events: auto;
+}
+
+/* Canlı konum — ayrı yüzen kart (ortak panel yok) */
 body.field-trial-ui.field-mode #btn-map-locate.trial-locate-btn {
   width: 44px !important;
   height: 44px !important;
@@ -396,8 +621,10 @@ body.field-trial-ui.field-mode #btn-map-locate.trial-locate-btn {
   max-width: 44px !important;
   max-height: 44px !important;
   border-radius: 12px !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  background: rgba(255, 255, 255, 0.04) !important;
+  border: 2px solid rgba(34, 197, 94, 0.50) !important;
+  background: rgba(12, 18, 26, 0.92) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
   color: #22c55e !important;
   box-shadow:
     0 2px 5px rgba(0, 0, 0, 0.30),
@@ -536,16 +763,18 @@ html.lang-en #trial-finish-wrap .trial-finish-cap {
   letter-spacing: 0.01em;
 }
 
-/* Zoom +/- — sol/üst cam panel ile aynı şeffaf stil */
+/* Zoom +/- — ayrı yüzen kart */
 body.field-trial-ui.field-mode #map-float-controls .map-zoom-stack {
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  background: rgba(255, 255, 255, 0.04) !important;
+  border: 2px solid rgba(34, 197, 94, 0.50) !important;
+  background: rgba(12, 18, 26, 0.92) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
   border-radius: 14px !important;
   overflow: hidden;
   box-shadow:
-    0 2px 5px rgba(0, 0, 0, 0.30),
+    0 6px 16px rgba(0, 0, 0, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
 }
 
@@ -747,7 +976,7 @@ body.field-trial-ui.field-mode #btn-dock-projects .field-dock-label {
   color: #fca5a5;
 }
 
-/* ── Sol araç çubuğu — üst hizada başlar, Geziler butonu hizasına kadar uzanır ── */
+/* ── Sol araç çubuğu — alt dock gibi yüzen butonlar, ortak cam şerit yok ── */
 body.field-trial-ui.field-mode #app {
   position: relative;
 }
@@ -756,62 +985,88 @@ body.field-trial-ui.field-mode #left-bar {
   position: absolute;
   left: var(--trial-edge);
   top: var(--trial-edge);
-  bottom: var(--trial-edge-b);
+  bottom: auto;
   width: var(--trial-left-w);
   min-width: var(--trial-left-w);
   max-width: var(--trial-left-w);
-  height: auto;
-  max-height: none;
+  height: auto !important;
+  max-height: calc(100dvh - var(--trial-edge) - var(--trial-edge-b));
   flex: none;
   align-self: auto;
-  padding: 0;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  overflow: hidden;
-  z-index: 125;
-  pointer-events: none;
-}
-
-body.field-trial-ui.field-mode .left-bar-inner {
-  pointer-events: auto;
-  height: 100%;
-  max-height: 100%;
-  padding: 8px 5px 8px;
-  gap: 3px;
-  overflow-y: auto;
+  padding: 0 !important;
+  background: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   overflow-x: hidden;
+  overflow-y: auto;
+  z-index: 125;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--trial-dock-gap, 8px);
   scrollbar-width: none;
   -ms-overflow-style: none;
-  justify-content: flex-start;
-  background: var(--trial-glass-bg);
-  -webkit-backdrop-filter: var(--trial-glass-blur);
-  backdrop-filter: var(--trial-glass-blur);
-  border: 1px solid var(--trial-glass-border);
-  border-right: none;
-  border-radius: 18px;
-  box-shadow: var(--trial-glass-shadow);
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
-body.field-trial-ui.field-mode .left-bar-inner::-webkit-scrollbar {
+
+body.field-trial-ui.field-mode #left-bar::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
 }
 
+/* Eski kapsayıcı (app.css cam paneli) — trial'da tamamen devre dışı */
+body.field-trial-ui.field-mode #left-bar .left-bar-inner,
+body.field-trial-ui.field-mode #left-bar.field-trial-left-dock .left-bar-inner {
+  display: contents !important;
+  background: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  flex: none !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+body.field-trial-ui.field-mode .field-left-tail {
+  display: none !important;
+}
+
 body.field-trial-ui.field-mode .field-brand-block {
-  padding: 4px 2px 6px;
+  width: 100%;
+  max-width: var(--trial-left-btn-w);
+  box-sizing: border-box;
+  padding: 6px 3px 7px;
+  border-radius: 14px;
+  background: var(--trial-card-bg);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  backdrop-filter: blur(28px) saturate(150%);
+  border: 2px solid var(--trial-green-border);
+  box-shadow: var(--trial-card-shadow);
+}
+
+body.field-trial-ui.field-mode .tool-group-label,
+body.field-trial-ui.field-mode .tool-sep {
+  display: none !important;
 }
 
 body.field-trial-ui.field-mode .logo {
-  width: 62px !important;
-  height: 62px !important;
-  padding: 5px !important;
+  width: 47px !important;
+  height: 47px !important;
+  padding: 4px !important;
   background: rgba(34, 197, 94, 0.20) !important;
   border: 2px solid rgba(34, 197, 94, 0.38) !important;
-  border-radius: 14px !important;
+  border-radius: 11px !important;
   box-shadow:
-    0 3px 10px rgba(0, 0, 0, 0.34),
+    0 2px 8px rgba(0, 0, 0, 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
 }
 
@@ -822,156 +1077,150 @@ body.field-trial-ui.field-mode .logo-img {
 
 body.field-trial-ui.field-mode .field-brand-title {
   color: #5fe39a;
-  font-size: 9px;
-  margin: 4px 0 2px;
-}
-
-body.field-trial-ui.field-mode .tool-group-label {
-  color: #6b7686;
   font-size: 8px;
+  margin: 3px 0 1px;
+}
+
+body.field-trial-ui.field-mode #left-bar .tool-btn,
+body.field-trial-ui.field-mode #left-bar .field-toolbar-action {
+  flex: 0 0 auto;
+  width: var(--trial-left-btn-w);
+  min-width: var(--trial-left-btn-w);
+  max-width: var(--trial-left-btn-w);
+  min-height: var(--trial-left-btn-h);
+  padding: 8px 4px 7px;
+  gap: 5px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--trial-card-bg) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  backdrop-filter: blur(28px) saturate(150%);
+  border: 2px solid var(--trial-green-border) !important;
+  color: #f8fafc;
+  border-radius: 14px;
+  box-shadow: var(--trial-card-shadow) !important;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.5px;
 }
 
-body.field-trial-ui.field-mode .tool-btn,
-body.field-trial-ui.field-mode .field-toolbar-action {
-  width: 54px;
-  min-width: 54px;
-  min-height: 52px;
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 2px solid rgba(255, 255, 255, 0.14) !important;
-  color: #c8d4e0;
-  border-radius: 12px;
-  box-shadow:
-    0 2px 5px rgba(0, 0, 0, 0.30),
-    inset 0 1px 0 rgba(255, 255, 255, 0.10);
-}
-
-body.field-trial-ui.field-mode .tool-btn svg,
-body.field-trial-ui.field-mode .tool-btn .slope-analysis-icon svg {
+body.field-trial-ui.field-mode #left-bar .tool-btn svg,
+body.field-trial-ui.field-mode #left-bar .tool-btn .slope-toolbar-icon svg,
+body.field-trial-ui.field-mode #left-bar .field-toolbar-action svg {
+  width: 19px !important;
+  height: 19px !important;
   stroke: currentColor;
   color: currentColor;
 }
 
-body.field-trial-ui.field-mode .tool-btn .tool-label {
+body.field-trial-ui.field-mode #left-bar .tool-btn > span:not(.tool-label):not(.tooltip) {
+  font-size: 18px !important;
+  line-height: 1 !important;
+}
+
+body.field-trial-ui.field-mode #left-bar .tool-btn .tool-label,
+body.field-trial-ui.field-mode #left-bar .field-toolbar-action .tool-label {
   color: currentColor;
-  opacity: 0.92;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  opacity: 1;
 }
 
-body.field-trial-ui.field-mode .tool-btn:hover,
-body.field-trial-ui.field-mode .field-toolbar-action:not(:disabled):hover {
-  filter: brightness(1.12);
-  border-color: rgba(255, 255, 255, 0.26) !important;
-  background: rgba(255, 255, 255, 0.07) !important;
+body.field-trial-ui.field-mode #left-bar .tool-btn:hover,
+body.field-trial-ui.field-mode #left-bar .field-toolbar-action:not(:disabled):hover {
+  filter: none;
+  background: rgba(12, 20, 28, 0.94) !important;
+  border-color: var(--trial-green-border-hover) !important;
 }
 
-/* app.css field-mode aktif dolgusunu ez — şeffaf renkli cam */
-body.field-trial-ui.field-mode .tool-btn.active,
-body.field-trial-ui.field-mode .tool-btn[aria-pressed="true"] {
+body.field-trial-ui.field-mode #left-bar .tool-btn.active,
+body.field-trial-ui.field-mode #left-bar .tool-btn[aria-pressed="true"],
+body.field-trial-ui.field-mode #left-bar .field-toolbar-action.active {
+  background: rgba(14, 24, 18, 0.94) !important;
+  border-color: var(--trial-green-border-active) !important;
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.32),
-    inset 0 0 0 1px color-mix(in srgb, currentColor 38%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
-  filter: brightness(1.14);
+    0 8px 22px rgba(0, 0, 0, 0.40),
+    inset 0 0 0 1px rgba(34, 197, 94, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  filter: none;
 }
-body.field-trial-ui.field-mode .tool-btn.active .tool-label,
-body.field-trial-ui.field-mode .tool-btn[aria-pressed="true"] .tool-label {
+body.field-trial-ui.field-mode #left-bar .tool-btn.active .tool-label,
+body.field-trial-ui.field-mode #left-bar .tool-btn[aria-pressed="true"] .tool-label {
   color: currentColor !important;
 }
 
-/* Sol bar — araç renkleri (Seç yeşil, Bilgi mavi, Ölçüm turkuaz, Alan turuncu, Eğim mor, Katman indigo, Geri gri, Sil kırmızı) */
-body.field-trial-ui.field-mode .tool-btn[data-tool="select"] {
+/* Sol bar — ikon/etiket rengi (yeşil kontur = alt dock) */
+body.field-trial-ui.field-mode #left-bar .tool-btn[data-tool="select"] {
   color: #5fe39a;
-  background: rgba(34, 197, 94, 0.12) !important;
-  border-color: rgba(34, 197, 94, 0.36) !important;
 }
-body.field-trial-ui.field-mode .tool-btn[data-tool="select"].active {
-  background: rgba(34, 197, 94, 0.22) !important;
-  border-color: rgba(34, 197, 94, 0.58) !important;
+body.field-trial-ui.field-mode #left-bar .tool-btn[data-tool="select"].active {
   color: #5fe39a !important;
 }
 
-body.field-trial-ui.field-mode .tool-btn[data-tool="info"] {
+body.field-trial-ui.field-mode #left-bar .tool-btn[data-tool="info"] {
   color: #60a5fa;
-  background: rgba(59, 130, 246, 0.12) !important;
-  border-color: rgba(59, 130, 246, 0.36) !important;
 }
-body.field-trial-ui.field-mode .tool-btn[data-tool="info"].active {
-  background: rgba(59, 130, 246, 0.22) !important;
-  border-color: rgba(59, 130, 246, 0.58) !important;
+body.field-trial-ui.field-mode #left-bar .tool-btn[data-tool="info"].active {
   color: #60a5fa !important;
 }
 
-body.field-trial-ui.field-mode .tool-btn[data-tool="polyline"] {
+body.field-trial-ui.field-mode #left-bar .tool-btn[data-tool="polyline"] {
   color: #2dd4bf;
-  background: rgba(45, 212, 191, 0.11) !important;
-  border-color: rgba(45, 212, 191, 0.34) !important;
 }
-body.field-trial-ui.field-mode .tool-btn[data-tool="polyline"].active {
-  background: rgba(45, 212, 191, 0.22) !important;
-  border-color: rgba(45, 212, 191, 0.55) !important;
+body.field-trial-ui.field-mode #left-bar .tool-btn[data-tool="polyline"].active {
   color: #2dd4bf !important;
 }
 
-body.field-trial-ui.field-mode .tool-btn[data-tool="polygon"] {
+body.field-trial-ui.field-mode #left-bar .tool-btn[data-tool="polygon"] {
   color: #fbbf24;
-  background: rgba(245, 158, 11, 0.12) !important;
-  border-color: rgba(245, 158, 11, 0.36) !important;
 }
-body.field-trial-ui.field-mode .tool-btn[data-tool="polygon"].active {
-  background: rgba(245, 158, 11, 0.22) !important;
-  border-color: rgba(245, 158, 11, 0.58) !important;
+body.field-trial-ui.field-mode #left-bar .tool-btn[data-tool="polygon"].active {
   color: #fbbf24 !important;
 }
 
-body.field-trial-ui.field-mode .tool-btn[data-tool="circle"] {
+body.field-trial-ui.field-mode #left-bar .tool-btn[data-tool="circle"] {
   color: #c084fc;
-  background: rgba(168, 85, 247, 0.12) !important;
-  border-color: rgba(168, 85, 247, 0.36) !important;
 }
-body.field-trial-ui.field-mode .tool-btn[data-tool="circle"].active {
-  background: rgba(168, 85, 247, 0.22) !important;
-  border-color: rgba(168, 85, 247, 0.58) !important;
+body.field-trial-ui.field-mode #left-bar .tool-btn[data-tool="circle"].active {
   color: #c084fc !important;
 }
 
-body.field-trial-ui.field-mode #btn-field-layers.tool-btn {
+body.field-trial-ui.field-mode #left-bar #btn-field-layers.tool-btn {
   color: #a5b4fc;
-  background: rgba(129, 140, 248, 0.12) !important;
-  border-color: rgba(129, 140, 248, 0.36) !important;
 }
-body.field-trial-ui.field-mode #btn-field-layers.tool-btn.active {
-  background: rgba(129, 140, 248, 0.22) !important;
-  border-color: rgba(129, 140, 248, 0.58) !important;
+body.field-trial-ui.field-mode #left-bar #btn-field-layers.tool-btn.active {
   color: #a5b4fc !important;
 }
 
-body.field-trial-ui.field-mode .field-toolbar-action {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 2px solid rgba(255, 255, 255, 0.14) !important;
-  color: #c8d4e0;
-}
-
-body.field-trial-ui.field-mode #btn-delete.field-toolbar-action {
+body.field-trial-ui.field-mode #left-bar #btn-delete.field-toolbar-action {
   color: #fca5a5 !important;
-  background: rgba(239, 68, 68, 0.16) !important;
-  border-color: rgba(248, 113, 113, 0.48) !important;
+  background: var(--trial-card-bg) !important;
+  border-color: var(--trial-green-border) !important;
   opacity: 1 !important;
   cursor: pointer;
   pointer-events: auto;
 }
-body.field-trial-ui.field-mode #btn-delete.field-toolbar-action.delete-armed {
+body.field-trial-ui.field-mode #left-bar #btn-delete.field-toolbar-action.delete-armed {
   color: #fecaca !important;
-  background: rgba(239, 68, 68, 0.26) !important;
-  border-color: rgba(252, 165, 165, 0.72) !important;
+  background: rgba(14, 24, 18, 0.94) !important;
+  border-color: var(--trial-green-border-active) !important;
   box-shadow:
-    0 0 0 2px rgba(248, 113, 113, 0.28),
-    0 4px 14px rgba(239, 68, 68, 0.22) !important;
+    0 8px 22px rgba(0, 0, 0, 0.40),
+    inset 0 0 0 1px rgba(34, 197, 94, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
 }
-body.field-trial-ui.field-mode #btn-delete.field-toolbar-action:not(:disabled):hover,
-body.field-trial-ui.field-mode #btn-delete.field-toolbar-action:hover {
-  filter: brightness(1.14);
-  border-color: rgba(252, 165, 165, 0.78) !important;
+body.field-trial-ui.field-mode #left-bar #btn-delete.field-toolbar-action:not(:disabled):hover,
+body.field-trial-ui.field-mode #left-bar #btn-delete.field-toolbar-action:hover {
+  filter: none;
+  background: rgba(12, 20, 28, 0.94) !important;
+  border-color: var(--trial-green-border-hover) !important;
 }
 body.field-trial-ui.field-mode #btn-delete.field-toolbar-action .tool-label {
   color: #fca5a5 !important;
@@ -1033,6 +1282,8 @@ body.field-trial-ui.field-journey-hub-active .planai-brand-footer {
     --trial-edge-b: max(6px, var(--safe-bottom));
     --trial-gap: 6px;
     --trial-left-w: 64px;
+    --trial-left-btn-w: 58px;
+    --trial-left-btn-h: 62px;
     --trial-map-col-inset: 48px;
   }
   body.field-trial-ui.field-mode #field-dock {
@@ -1874,4 +2125,24 @@ body.field-trial-ui.field-mode .panel-toggle {
 body.field-trial-ui.field-mode .panel-toggle:hover {
   border-color: rgba(34, 197, 94, 0.45) !important;
   color: #5fe39a !important;
+}
+
+/* Son katman — app.css cam şeritlerini kesin kapat */
+body.field-trial-ui.field-mode #left-bar,
+body.field-trial-ui.field-mode #left-bar.field-trial-left-dock,
+body.field-trial-ui.field-mode #map-float-controls {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body.field-trial-ui.field-mode #left-bar > .tool-btn,
+body.field-trial-ui.field-mode #left-bar > .field-toolbar-action,
+body.field-trial-ui.field-mode #left-bar > .field-brand-block,
+body.field-trial-ui.field-mode #map-float-controls > .trial-locate-btn,
+body.field-trial-ui.field-mode #map-float-controls > .map-zoom-stack {
+  isolation: isolate;
 }
