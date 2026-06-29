@@ -23,7 +23,7 @@
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="stylesheet" href="css/app.css?v=1.0.5">
-<link rel="stylesheet" href="css/field-trial-shell.css?v=1.5.9">
+<link rel="stylesheet" href="css/field-trial-shell.css?v=1.6.1">
 <script src="libs/jszip.min.js"></script>
 <script src="libs/exif.min.js"></script>
 <script src="libs/proj4.js"></script>
@@ -50,11 +50,6 @@
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2l9 5.5-4.5 1.5L6.5 14z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
       <span class="tool-label" data-i18n="tlbl.select">Seç</span>
       <span class="tooltip">Seç / Taşı / Döndür <kbd>V</kbd></span>
-    </div>
-    <div class="tool-btn field-main-tool" data-tool="info" id="btn-field-info-tool" onclick="setTool('info')" title="Bilgi">
-      <span style="font-size:20px;line-height:1">☝️</span>
-      <span class="tool-label" data-i18n="tlbl.info">Bilgi</span>
-      <span class="tooltip">Bilgi — Öznitelik incele</span>
     </div>
     <div class="tool-group-label planning-only">Çizim</div>
     <div class="tool-btn planning-only" data-tool="freedraw" onclick="setTool('freedraw')">
@@ -524,6 +519,7 @@
     <div id="field-notes-panel">
       <div class="fn-head">
         <span class="fn-title" data-i18n="note.book">Saha Defteri</span>
+        <span class="fn-live-time" id="fn-live-time" aria-live="polite"></span>
         <button type="button" class="fn-close" onclick="closeFieldNotes()" data-i18n-aria="note.close" aria-label="Kapat">✕</button>
       </div>
       <div id="field-note-pin-banner" class="fn-pin-banner" style="display:none;" data-i18n="note.pinMap">Haritada konuma dokunun.</div>
@@ -1336,6 +1332,7 @@
   <div class="fpvs-backdrop-label" data-i18n="photo.voiceSheetLabel">Sesli saha notu</div>
   <img id="fpvs-thumb" class="fpvs-thumb" alt="" />
   <div class="fpvs-title" id="fpvs-title" data-i18n="ctx.photo">Fotoğraf</div>
+  <div class="fpvs-capture-time" id="fpvs-capture-time" aria-live="polite"></div>
   <div class="fpvs-hint" data-i18n="photo.voiceSheetHint">İsteğe bağlı ses kaydı. Saha paneli üzerinde açılır.</div>
   <div class="field-dictate-bar" style="padding:0 0 6px;">
     <button type="button" class="field-dictate-btn" onclick="toggleFieldDictation('field-fpvs-desc','dict-status-fpvs')">🎤</button>
@@ -1463,7 +1460,7 @@
 <script src="js/replay/FieldReplayAssets.js?v=1.1.75"></script>
 <script src="js/replay/FieldSafeReplay.js?v=1.0.3"></script>
 <script src="js/replay/FieldReplaySafariRoute.js?v=1.3.5"></script>
-<script src="js/replay/FieldReplayPreviewDiagnostics.js?v=1.0.1"></script>
+<script src="js/replay/FieldReplayPreviewDiagnostics.js?v=1.0.2"></script>
 <script src="js/replay/FieldCinematicReport.js?v=1.3.17"></script>
 <script>
 (function () {
@@ -1498,7 +1495,7 @@ window.pdfjsLib = pdfjs;
 <script src="js/security/FieldDbCrypto.js?v=1.2.2"></script>
 <script src="js/ui/LegacyClickBridge.js?v=1.2.0"></script>
 <script src="js/ui/FieldDockIcons.js?v=1.0.0"></script>
-<script src="js/app.js?v=1.1.85"></script>
+<script src="js/app.js?v=1.1.87"></script>
 <script src="js/ui/FieldTrialShell.js?v=1.0.14"></script>
 </body>
 </html>

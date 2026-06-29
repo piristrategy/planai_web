@@ -462,6 +462,10 @@ const PA_I18N = {
     'export.cancel': 'İptal',
     'export.downloaded': 'İndirme başlatıldı',
     'export.shareFail': 'Paylaşım açılamadı — cihaza indiriliyor',
+    'export.openingMail': 'E-posta uygulaması açılıyor…',
+    'export.openingWhatsapp': 'WhatsApp açılıyor…',
+    'export.openingCloud': 'Dosya indirildi — buluta yükleyin',
+    'export.shareNote': 'PlanAI Field — {title}\n{fname}',
     'export.ready': 'Dosya hazır — gönderin veya indirin',
     'export.openingShare': 'Gönder menüsü açılıyor…',
     'feat.landUse': 'Alan türü', 'feat.plan': 'Plan kararı', 'feat.far': 'Emsal', 'feat.height': 'Yükseklik', 'feat.type': 'Tür',
@@ -1075,6 +1079,10 @@ const PA_I18N = {
     'export.cancel': 'Cancel',
     'export.downloaded': 'Download started',
     'export.shareFail': 'Could not share — saving to device',
+    'export.openingMail': 'Opening email…',
+    'export.openingWhatsapp': 'Opening WhatsApp…',
+    'export.openingCloud': 'File downloaded — upload to cloud',
+    'export.shareNote': 'PlanAI Field — {title}\n{fname}',
     'export.ready': 'File ready — send or download',
     'export.openingShare': 'Opening share menu…',
     'feat.landUse': 'Land use', 'feat.plan': 'Plan decision', 'feat.far': 'FAR', 'feat.height': 'Height', 'feat.type': 'Type',
@@ -10877,6 +10885,87 @@ window.shareReportPreviewHtml = shareReportPreviewHtml;
 window.downloadReportPreviewHtml = downloadReportPreviewHtml;
 window.triggerReportHtmlShareOrDownload = triggerReportHtmlShareOrDownload;
 
+function triggerFieldExportBlobDownload(blob, filename) {
+  if (!blob) return;
+  const a = document.createElement('a');
+  const href = URL.createObjectURL(blob);
+  a.href = href;
+  a.download = filename || 'export';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => {
+    try { URL.revokeObjectURL(href); } catch (_) {}
+  }, 8000);
+}
+
+async function openFieldExportShareFallback(target, p, blob) {
+  if (!p || !blob) return false;
+  const fname = p.filename || 'export';
+  const title = FIELD_PROJECT.name || 'PlanAI Field';
+  const shareTarget = target || 'any';
+  const note = t('export.shareNote', { title, fname });
+
+  if (shareTarget === 'mail') {
+    const subj = encodeURIComponent(`${title} — ${fname}`);
+    const body = encodeURIComponent(note);
+    showHint(t('export.openingMail'));
+    window.location.href = 'mailto:?subject=' + subj + '&body=' + body;
+    return true;
+  }
+
+  if (shareTarget === 'whatsapp') {
+    const waText = encodeURIComponent(note);
+    const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+    const url = mobile ? 'whatsapp://send?text=' + waText : 'https://web.whatsapp.com/send?text=' + waText;
+    triggerFieldExportBlobDownload(blob, fname);
+    showHint(t('export.openingWhatsapp'));
+    setTimeout(() => {
+      try {
+        if (mobile) window.location.href = url;
+        else window.open(url, '_blank', 'noopener');
+      } catch (_) {
+        window.open(url, '_blank', 'noopener');
+      }
+    }, 350);
+    return true;
+  }
+
+  const cloudUrls = {
+    drive: 'https://drive.google.com/drive/my-drive',
+    onedrive: 'https://onedrive.live.com/',
+    dropbox: 'https://www.dropbox.com/home',
+  };
+  if (cloudUrls[shareTarget]) {
+    triggerFieldExportBlobDownload(blob, fname);
+    showHint(t('export.openingCloud'));
+    window.open(cloudUrls[shareTarget], '_blank', 'noopener');
+    return true;
+  }
+
+  if (shareTarget === 'any') {
+    try {
+      const file = new File([blob], fname, { type: p.mimeType || 'application/octet-stream' });
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+        await navigator.share({ files: [file], title });
+        return true;
+      }
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ title, text: note }))) {
+        await navigator.share({ title, text: note });
+        triggerFieldExportBlobDownload(blob, fname);
+        return true;
+      }
+    } catch (e) {
+      if (/abort|cancel|dismiss/i.test(String(e?.message || e))) return true;
+    }
+    triggerFieldExportBlobDownload(blob, fname);
+    showHint(t('export.downloaded'));
+    return true;
+  }
+
+  return false;
+}
+
 async function shareFieldExportFile(dialogTitle, target) {
   const p = _fieldExportPending;
   if (!p?.blob) return false;
@@ -10950,6 +11039,17 @@ async function shareFieldExportFile(dialogTitle, target) {
     if (/abort/i.test(String(e?.message || e))) {
       closeFieldExportSheet();
       return true;
+    }
+  }
+  if (!isCapacitorNative()) {
+    try {
+      const fb = await openFieldExportShareFallback(shareTarget, p, shareBlob);
+      if (fb) {
+        closeFieldExportSheet();
+        return true;
+      }
+    } catch (e) {
+      console.warn('[Share fallback]', e);
     }
   }
   return false;
@@ -11168,6 +11268,42 @@ function formatReportDateTime(iso, lang) {
     const loc = (lang || PA_LANG) === 'tr' ? 'tr-TR' : 'en-GB';
     return d.toLocaleDateString(loc) + ' ' + d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
   } catch (_) { return String(iso); }
+}
+
+function formatFieldLocalDateTime(iso) {
+  return formatReportDateTime(iso, PA_LANG);
+}
+
+function formatFieldLiveClock() {
+  const loc = PA_LANG === 'en' ? 'en-GB' : 'tr-TR';
+  return new Date().toLocaleString(loc, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+let _fieldSheetClockTimer = null;
+
+function stopFieldSheetClock() {
+  if (_fieldSheetClockTimer) {
+    clearInterval(_fieldSheetClockTimer);
+    _fieldSheetClockTimer = null;
+  }
+}
+
+function startFieldSheetClock(el, mode) {
+  stopFieldSheetClock();
+  if (!el) return;
+  const tick = () => {
+    if (mode === 'live') el.textContent = formatFieldLiveClock();
+    else if (mode && mode.iso) el.textContent = formatFieldLocalDateTime(mode.iso);
+  };
+  tick();
+  if (mode === 'live') _fieldSheetClockTimer = setInterval(tick, 1000);
 }
 
 function formatCoord(lat, lon) {
@@ -13883,7 +14019,7 @@ async function showFieldObservationPopup(primary) {
         block += '<audio class="fnp-photo-audio" controls preload="metadata" playsinline data-photo-id="' + photo.id + '"></audio>';
         block += '</div>';
       }
-      block += '<div class="fnp-meta">' + (photo.timestamp || '').slice(0, 16).replace('T', ' ') + '</div>';
+      block += '<div class="fnp-meta">' + formatFieldLocalDateTime(photo.timestamp) + '</div>';
       block += '</div>';
     });
     return block;
@@ -13909,7 +14045,7 @@ async function showFieldObservationPopup(primary) {
         block += '<div style="color:var(--muted);margin-top:4px;">✏️ ' +
           (PA_LANG === 'tr' ? 'El yazısı eki' : 'Handwriting') + '</div>';
       }
-      block += '<div class="fnp-meta">' + (n.timestamp || n.createdAt || '').slice(0, 16).replace('T', ' ') + '</div>';
+      block += '<div class="fnp-meta">' + formatFieldLocalDateTime(n.timestamp || n.createdAt) + '</div>';
       block += '</div>';
     });
     block += '</div>';
@@ -13986,7 +14122,7 @@ function buildFieldNotesList() {
     const handTag = noteHasHandwriting(n) ? '<span class="note-hand-tag"> ✏️</span>' : '';
     const preview = getNoteText(n) || (noteHasHandwriting(n) ? 'El yazısı notu' : 'Not');
     row.innerHTML = '<strong>#' + (n.noteNum || '?') + '</strong> ' + escapeHtml(preview.slice(0, 50)) + handTag +
-      '<small>' + (n.timestamp || n.createdAt || '').slice(0, 16).replace('T', ' ') + '</small>';
+      '<small>' + formatFieldLocalDateTime(n.timestamp || n.createdAt) + '</small>';
     row.onclick = () => selectNoteFromLayer(n.id);
     el.appendChild(row);
   });
@@ -14041,6 +14177,7 @@ function openFieldNoteEditorPanel() {
   raiseFieldNotesPanel();
   setNotePanelMode(_notePanelMode || 'text');
   updateFieldNoteDeleteButton();
+  startFieldSheetClock(document.getElementById('fn-live-time'), 'live');
   requestAnimationFrame(() => initNoteHandCanvas());
 }
 
@@ -14081,10 +14218,12 @@ function deleteFieldNoteFromPanel() {
 }
 
 function closeFieldNotes() {
+  stopFieldSheetClock();
   cancelFieldNoteEditor(true);
 }
 
 function cancelFieldNoteEditor(clearPin) {
+  stopFieldSheetClock();
   closeFieldNotesSheet();
   _editingNoteId = null;
   _pendingNoteGeo = null;
@@ -15088,6 +15227,7 @@ async function openFieldPhotoVoiceSheet(objId) {
   const descText = obj.description || '';
   if (fpvsDesc) fpvsDesc.value = descText;
   if (panelDesc) panelDesc.value = descText;
+  startFieldSheetClock(document.getElementById('fpvs-capture-time'), 'live');
   sheet?.classList.add('open');
   fieldUiRaise('field-photo-voice-sheet');
   closeFieldPhotoSheet();
@@ -15122,6 +15262,7 @@ function toggleFieldVoiceRecordFromSheet() {
 
 function closeFieldPhotoVoiceSheet(skipOnly) {
   const sheet = document.getElementById('field-photo-voice-sheet');
+  stopFieldSheetClock();
   saveFieldPhotoDetail();
   if (sheet?._thumbUrl) { URL.revokeObjectURL(sheet._thumbUrl); sheet._thumbUrl = null; }
   sheet?.classList.remove('open');
@@ -16039,11 +16180,19 @@ function syncFieldTopbarHeight() {
 function fitFieldTopBar() {
   const topBar = document.getElementById('top-bar');
   if (!topBar || !FIELD_MODE) return;
-  document.body.classList.remove('field-top-overflow-1', 'field-top-overflow-2', 'field-top-overflow-3');
+  document.body.classList.remove(
+    'field-top-overflow-1', 'field-top-overflow-2', 'field-top-overflow-3',
+    'trial-top-compact-1', 'trial-top-compact-2', 'trial-top-compact-3', 'trial-top-compact-4'
+  );
   let guard = 0;
-  while (topBar.scrollWidth > topBar.clientWidth + 2 && guard < 3) {
+  const maxGuard = document.body.classList.contains('field-trial-ui') ? 4 : 3;
+  while (topBar.scrollWidth > topBar.clientWidth + 2 && guard < maxGuard) {
     guard++;
-    document.body.classList.add('field-top-overflow-' + guard);
+    if (document.body.classList.contains('field-trial-ui')) {
+      document.body.classList.add('trial-top-compact-' + guard);
+    } else {
+      document.body.classList.add('field-top-overflow-' + guard);
+    }
   }
 }
 
@@ -22227,7 +22376,10 @@ function dismissLayerListDeleteConfirm() {
   wrap?.classList.remove('ln-del-confirming');
   item?.classList.remove('ln-del-pending');
   wrap?.querySelector('.ln-del-confirm')?.remove();
-  if (trash) trash.hidden = false;
+  if (trash) {
+    trash.hidden = false;
+    trash.style.display = '';
+  }
   _activeLayerDelConfirm = null;
 }
 
@@ -22236,6 +22388,7 @@ function showLayerListDeleteConfirm(item, wrap, trashBtn, onDelete) {
   wrap.classList.add('ln-del-confirming');
   item.classList.add('ln-del-pending');
   trashBtn.hidden = true;
+  trashBtn.style.display = 'none';
   const bar = document.createElement('div');
   bar.className = 'ln-del-confirm';
   bar.setAttribute('role', 'group');

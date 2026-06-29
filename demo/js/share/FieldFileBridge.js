@@ -137,6 +137,18 @@
       global.location.href = 'mailto:?subject=' + subj + '&body=' + body;
       return true;
     }
+    if (target === 'whatsapp') {
+      const text = encodeURIComponent(title || filename || 'PlanAI Field');
+      const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+      const url = mobile ? 'whatsapp://send?text=' + text : 'https://web.whatsapp.com/send?text=' + text;
+      try {
+        if (mobile) global.location.href = url;
+        else global.open(url, '_blank', 'noopener');
+      } catch (_) {
+        global.open(url, '_blank', 'noopener');
+      }
+      return true;
+    }
     return false;
   }
 

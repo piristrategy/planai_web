@@ -1,5 +1,5 @@
 /**
- * FIELD-102 — Preview-only replay diagnostics (no route fixes).
+ * FIELD-102 — Preview-only replay diagnostics (opt-in; no route fixes).
  * Injected only via prepareInteractiveHtmlForPreview() in app.js.
  */
 (function (global) {
@@ -209,10 +209,7 @@
       if (/[?&]previewDiag=1(?:&|$)/.test(global.location?.search || '')) return true;
       if (global.localStorage?.getItem('PLANAI_PREVIEW_DIAG') === '1') return true;
     } catch (_) { /* ignore */ }
-    const ua = global.navigator?.userAgent || '';
-    const iOS = /iPad|iPhone|iPod/.test(ua);
-    const iPadOS = global.navigator?.platform === 'MacIntel' && (global.navigator?.maxTouchPoints || 0) > 1;
-    return iOS || iPadOS;
+    return false;
   }
 
   function injectPreviewDiagnostics(html) {
