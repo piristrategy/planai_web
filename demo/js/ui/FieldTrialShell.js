@@ -698,6 +698,10 @@
 
   function init() {
     if (!document.body.classList.contains('field-trial-ui')) return;
+    try {
+      const build = document.querySelector('meta[name="planai-field-build"]')?.content;
+      if (build) console.info('[PlanAI Field] build', build);
+    } catch (_) {}
     wrapHubAction('fieldHubActionNew');
     wrapHubAction('fieldHubActionContinue');
     wrapHubAction('fieldHubOpenJourney');
