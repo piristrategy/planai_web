@@ -522,6 +522,8 @@
       tools.style.setProperty('transform', 'translateX(-50%)', 'important');
     }
 
+    document.body.classList.add('field-trial-ready');
+
     const coach = $('trial-locate-coach');
     if (coach && coach.classList.contains('show')) {
       requestAnimationFrame(positionLocateCoach);
@@ -742,6 +744,7 @@
     setTimeout(() => {
       if (isInspectionMapActive()) startRecSession();
     }, 800);
+    setTimeout(() => document.body.classList.add('field-trial-ready'), 1500);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

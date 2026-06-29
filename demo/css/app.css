@@ -1957,19 +1957,113 @@ body.field-mode #btn-field-photo-tool.active{border-color:var(--green);color:var
 }
 #field-camera-overlay.open{display:flex;}
 body.field-camera-open{overflow:hidden;}
-#field-camera-overlay video{flex:1;width:100%;min-height:0;object-fit:cover;background:#111;}
+#field-camera-overlay video{flex:1;width:100%;min-height:0;object-fit:cover;background:#111;position:relative;z-index:0;}
 #field-camera-bar{
-  display:flex;gap:14px;padding:14px 18px calc(14px + var(--safe-bottom));
+  display:flex;gap:10px;padding:14px 12px calc(14px + var(--safe-bottom));
   background:rgba(0,0,0,.88);align-items:center;justify-content:center;flex-shrink:0;
 }
 #field-camera-bar .fcb-cancel,#field-camera-bar .fcb-flip{
-  min-width:52px;min-height:52px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
+  min-width:48px;min-height:48px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
   background:transparent;color:#fff;font-size:15px;font-weight:700;cursor:pointer;
 }
 #field-camera-bar .fcb-shutter{
   width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:var(--green);
   box-shadow:0 0 0 3px rgba(255,255,255,.25);cursor:pointer;flex-shrink:0;
 }
+.field-camera-pano-hint{
+  position:relative;margin:0;padding:8px 14px;border-radius:12px;background:rgba(0,0,0,.72);color:#fff;
+  font-size:13px;font-weight:700;text-align:center;pointer-events:none;max-width:min(92vw,360px);
+}
+.field-camera-pano-guide{
+  position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;padding:0 16px;pointer-events:none;
+}
+.field-camera-pano-guide[hidden]{display:none!important;}
+.field-pano-line{
+  position:relative;width:min(88vw,420px);height:48px;display:flex;align-items:center;justify-content:center;
+}
+.field-pano-line-track{
+  display:block;width:100%;height:2px;background:linear-gradient(90deg,transparent,#fff 12%,#fff 88%,transparent);
+  box-shadow:0 0 8px rgba(255,255,255,.55);
+}
+.field-pano-line-arrow{
+  position:absolute;top:50%;transform:translateY(-50%);font-size:28px;font-weight:900;color:#fff;
+  text-shadow:0 0 10px rgba(0,0,0,.8);opacity:.35;transition:opacity .2s,transform .2s;
+}
+.field-pano-line.dir-left .field-pano-line-arrow-l{opacity:1;animation:field-pano-nudge-l 1.4s ease-in-out infinite;}
+.field-pano-line.dir-right .field-pano-line-arrow-r{opacity:1;animation:field-pano-nudge-r 1.4s ease-in-out infinite;}
+.field-pano-line-arrow-l{left:4px;}
+.field-pano-line-arrow-r{right:4px;}
+@keyframes field-pano-nudge-l{
+  0%,100%{transform:translateY(-50%) translateX(0);}
+  50%{transform:translateY(-50%) translateX(-8px);}
+}
+@keyframes field-pano-nudge-r{
+  0%,100%{transform:translateY(-50%) translateX(0);}
+  50%{transform:translateY(-50%) translateX(8px);}
+}
+.field-pano-dir-row{display:flex;gap:10px;pointer-events:auto;}
+.field-pano-dir-btn{
+  min-height:36px;padding:6px 14px;border-radius:999px;border:2px solid rgba(255,255,255,.35);
+  background:rgba(0,0,0,.55);color:#fff;font-size:12px;font-weight:800;cursor:pointer;
+}
+.field-pano-dir-btn.active{border-color:#7ef0ae;color:#7ef0ae;background:rgba(34,197,94,.18);}
+.field-pano-progress{display:flex;gap:8px;pointer-events:none;}
+.field-pano-dot{
+  width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.65);background:transparent;
+}
+.field-pano-dot.filled{background:#7ef0ae;border-color:#7ef0ae;box-shadow:0 0 8px rgba(126,240,174,.6);}
+#field-camera-bar .fcb-pano{
+  width:52px;height:52px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
+  background:rgba(0,0,0,.45);color:#fff;font-size:20px;cursor:pointer;flex-shrink:0;
+}
+#field-camera-bar .fcb-pano.active{border-color:#818cf8;background:rgba(99,102,241,.35);box-shadow:0 0 0 3px rgba(129,140,248,.25);}
+#field-video-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  width:100vw;height:100dvh;max-width:100vw;max-height:100dvh;
+  z-index:2147483100;background:#000;display:none;flex-direction:column;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  box-sizing:border-box;
+}
+#field-video-overlay.open{display:flex;}
+body.field-video-open{overflow:hidden;}
+#field-video-overlay video{flex:1;width:100%;min-height:0;object-fit:cover;background:#111;}
+#field-video-hud{
+  position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);left:0;right:0;
+  display:flex;justify-content:center;gap:12px;pointer-events:none;z-index:2;
+}
+#field-video-timer{
+  padding:6px 12px;border-radius:999px;background:rgba(0,0,0,.65);color:#fff;
+  font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;
+}
+#field-video-hint{
+  padding:6px 12px;border-radius:999px;background:rgba(0,0,0,.45);color:#ddd;
+  font-size:12px;font-weight:700;
+}
+#field-video-bar{
+  display:flex;gap:14px;padding:14px 18px calc(14px + var(--safe-bottom));
+  background:rgba(0,0,0,.88);align-items:center;justify-content:center;flex-shrink:0;
+}
+#field-video-bar .fcb-cancel{
+  min-width:52px;min-height:52px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
+  background:transparent;color:#fff;font-size:15px;font-weight:700;cursor:pointer;
+}
+#field-video-bar .fcb-spacer{min-width:52px;min-height:52px;flex-shrink:0;}
+#field-video-record-btn{
+  width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:#e74c3c;
+  box-shadow:0 0 0 3px rgba(255,255,255,.25);cursor:pointer;flex-shrink:0;
+}
+#field-video-record-btn.recording{
+  background:#c0392b;box-shadow:0 0 0 6px rgba(231,76,60,.45);
+  animation:field-video-pulse 1s ease-in-out infinite;
+}
+@keyframes field-video-pulse{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.06);}
+}
+.trial-capture-extra{display:none!important;}
+body.field-trial-ui .trial-capture-extra{display:block!important;}
+body.field-trial-ui .field-dock-btn.trial-capture-extra{display:flex!important;}
 .field-photo-file-input{position:fixed;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;}
 body.field-mode #btn-field-info-tool.active{border-color:#1565c0;color:#1565c0;background:#e8f0fe;}
 #field-lang-switch{

@@ -282,10 +282,10 @@ body.field-trial-ui.field-mode #top-bar #field-lang-switch.trial-lang-switch {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   pointer-events: auto;
   width: max-content;
-  max-width: min(72px, calc(100vw - 16px));
+  max-width: min(80px, calc(100vw - 16px));
 }
 
 body.field-trial-ui.field-journey-hub-active #trial-top-tools.trial-right-tools {
@@ -293,28 +293,31 @@ body.field-trial-ui.field-journey-hub-active #trial-top-tools.trial-right-tools 
 }
 
 #trial-top-tools.trial-right-tools .trial-tool-toggle {
-  width: 44px;
-  min-width: 44px;
-  max-width: 44px;
-  min-height: 48px;
-  padding: 5px 3px 4px;
-  gap: 2px;
-  border-radius: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.12);
-  background: rgba(12, 18, 26, 0.92);
-  box-shadow: var(--trial-card-shadow);
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+  min-height: 54px;
+  padding: 6px 4px 5px;
+  gap: 3px;
+  border-radius: 14px;
+  border: 2px solid var(--trial-green-border) !important;
+  background: rgba(12, 18, 26, 0.92) !important;
+  color: #9aa6b4;
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
 #trial-top-tools.trial-right-tools .trial-tool-toggle svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 
 #trial-top-tools.trial-right-tools .trial-tool-toggle span {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   line-height: 1.05;
-  max-width: 40px;
+  max-width: 44px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -322,24 +325,28 @@ body.field-trial-ui.field-journey-hub-active #trial-top-tools.trial-right-tools 
 }
 
 #trial-top-tools.trial-right-tools .trial-tool-toggle:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.20);
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--trial-green-border-hover) !important;
+  color: #e8edf3;
 }
 
 #trial-top-tools.trial-right-tools .trial-tool-toggle.active {
-  background: rgba(255, 255, 255, 0.10);
-  border-color: rgba(255, 255, 255, 0.32);
-  color: #f4f7fb;
+  background: rgba(34, 197, 94, 0.14) !important;
+  border-color: var(--trial-green-border-active) !important;
+  color: #5fe39a !important;
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.10),
-    var(--trial-card-shadow);
+    0 0 0 2px rgba(34, 197, 94, 0.18),
+    0 2px 5px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
 #trial-top-tools.trial-right-tools #btn-trial-sun.active {
-  border-color: rgba(255, 255, 255, 0.55);
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  color: #fff !important;
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.18),
-    var(--trial-card-shadow);
+    0 0 0 2px rgba(34, 197, 94, 0.18),
+    0 2px 5px rgba(0, 0, 0, 0.30);
 }
 
 #trial-top-tools.trial-top-tools {
@@ -979,6 +986,9 @@ body.field-trial-ui.field-mode #btn-field-gps .field-dock-icon {
 body.field-trial-ui.field-mode #btn-dock-photo .field-dock-icon {
   color: #3fa7ff;
 }
+body.field-trial-ui.field-mode #btn-dock-video .field-dock-icon {
+  color: #f87171;
+}
 body.field-trial-ui.field-mode #btn-dock-notes .field-dock-icon {
   color: #ffb020;
 }
@@ -1044,6 +1054,10 @@ body.field-trial-ui.field-mode #btn-osm.active .field-osm-icon {
 
 body.field-trial-ui.field-mode #btn-dock-photo .field-dock-label {
   color: #93c5fd;
+}
+
+body.field-trial-ui.field-mode #btn-dock-video .field-dock-label {
+  color: #fca5a5;
 }
 
 body.field-trial-ui.field-mode #btn-dock-notes .field-dock-label {
@@ -1435,6 +1449,63 @@ body.field-trial-ui.trial-top-compact-3 #top-bar .trial-stat-clock {
 }
 body.field-trial-ui.trial-top-compact-4 #top-bar .trial-badge .l2 {
   display: none !important;
+}
+
+/* iPhone / dar ekran — üst bar yatay kaydırma (arama için sola çek) */
+@media (max-width: 480px) {
+  body.field-trial-ui.field-mode #top-bar {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    touch-action: pan-x;
+  }
+  body.field-trial-ui.field-mode #top-bar::-webkit-scrollbar {
+    display: none;
+  }
+  body.field-trial-ui.field-mode #top-bar #trial-inspection-chrome {
+    flex: 0 0 auto;
+    min-width: max-content;
+    overflow: visible;
+  }
+  body.field-trial-ui.field-mode #top-bar #field-lang-switch.trial-lang-switch {
+    margin-left: 0;
+    flex: 0 0 auto;
+  }
+  body.field-trial-ui.field-mode #top-bar #loc-search {
+    flex: 0 0 auto;
+    min-width: min(168px, 42vw);
+    max-width: none;
+    margin-left: 6px;
+  }
+  body.field-trial-ui.field-mode #top-bar .trial-stat .t2,
+  body.field-trial-ui.field-mode #top-bar #trial-loc-line2,
+  body.field-trial-ui.field-mode #top-bar .trial-badge .l2 {
+    display: block !important;
+  }
+  body.field-trial-ui.field-mode #top-bar .trial-stat-wx,
+  body.field-trial-ui.field-mode #top-bar .trial-stat-alt,
+  body.field-trial-ui.field-mode #top-bar .trial-stat-clock {
+    display: flex !important;
+  }
+  body.field-trial-ui.field-mode #top-bar #trial-loc-line1 {
+    max-width: none;
+  }
+  body.field-trial-ui.trial-top-compact-1 #top-bar .trial-stat .t2,
+  body.field-trial-ui.trial-top-compact-1 #top-bar #trial-loc-line2,
+  body.field-trial-ui.trial-top-compact-2 #top-bar .trial-stat-wx,
+  body.field-trial-ui.trial-top-compact-3 #top-bar .trial-stat-alt,
+  body.field-trial-ui.trial-top-compact-3 #top-bar .trial-stat-clock,
+  body.field-trial-ui.trial-top-compact-4 #top-bar .trial-badge .l2 {
+    display: revert !important;
+  }
+  body.field-trial-ui.trial-top-compact-2 #top-bar .trial-stat-wx,
+  body.field-trial-ui.trial-top-compact-3 #top-bar .trial-stat-alt,
+  body.field-trial-ui.trial-top-compact-3 #top-bar .trial-stat-clock {
+    display: flex !important;
+  }
 }
 
 @media (min-width: 768px) and (max-width: 1180px) {
@@ -2437,4 +2508,33 @@ body.field-trial-ui.field-mode #map-float-controls > .trial-locate-btn,
 body.field-trial-ui.field-mode #map-float-controls > .map-zoom-stack,
 body.field-trial-ui.field-mode #trial-top-tools.trial-right-tools > .trial-tool-toggle {
   isolation: isolate;
+}
+
+/* ── Trial: video not + panoramik foto ── */
+body.field-trial-ui #field-video-overlay #field-video-hint {
+  color: #c8d4e0 !important;
+}
+
+body.field-trial-ui #field-video-bar {
+  background: rgba(8, 12, 18, 0.94) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+body.field-trial-ui #field-video-record-btn {
+  border-color: rgba(248, 113, 113, 0.65) !important;
+}
+
+body.field-trial-ui #field-photo-sheet .trial-capture-extra {
+  border-color: rgba(129, 140, 248, 0.35) !important;
+  color: #c7d2fe !important;
+}
+
+body.field-trial-ui #field-camera-pano-hint {
+  background: rgba(12, 16, 22, 0.88) !important;
+  border: 1px solid rgba(129, 140, 248, 0.35) !important;
+  color: #e0e7ff !important;
+}
+
+body.field-trial-ui #field-right-photo .field-video-panel-player {
+  border: 2px solid rgba(255, 255, 255, 0.12) !important;
 }

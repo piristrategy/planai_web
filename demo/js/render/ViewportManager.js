@@ -66,7 +66,7 @@ const ViewportManager = (function () {
     }
 
     if (obj.type === 'import_point' || obj.type === 'import_text'
-        || obj.type === 'field_note' || obj.type === 'field_photo') {
+        || obj.type === 'field_note' || obj.type === 'field_photo' || obj.type === 'field_video') {
       if (obj.lat == null || obj.lon == null) return null;
       const w = latLonToWorld(obj.lat, obj.lon);
       const pad = 24;

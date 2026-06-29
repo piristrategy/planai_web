@@ -33,6 +33,9 @@
       '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"' + CAP + '/>'
       + '<circle cx="12" cy="13" r="3"' + CAP + '/>',
     ),
+    video: svgInner(
+      '<path d="m16 13 5.223 3.482A.5.5 0 0 0 22 16.118V7.882a.5.5 0 0 0-.777-.416L16 11V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4z"' + CAP + '/>',
+    ),
     notebookPen: svgInner(
       '<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"' + CAP + '/>'
       + '<path d="M2 6h4"' + CAP + '/>'
@@ -73,6 +76,7 @@
       ['btn-dock-import', icons.folderInput],
       ['btn-field-gps', icons.crosshair],
       ['btn-dock-photo', icons.camera],
+      ['btn-dock-video', icons.video],
       ['btn-dock-notes', icons.notebookPen],
     ];
     set.forEach(([id, html]) => {

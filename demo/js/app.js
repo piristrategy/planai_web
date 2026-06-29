@@ -355,7 +355,7 @@ const PA_I18N = {
     'guide.hint': 'Düz rota hazır — HUD yönüne göre yürüyün', 'guide.needGps': 'Önce GPS\'i açın',
     'guide.replayPoint': 'Rota noktasına git', 'guide.route': 'Düz rota',
     'guide.showRoute': 'Rotayı göster', 'guide.walk': 'Bu yönde yürü',
-    'dock.projects': 'Geziler', 'dock.import': 'İçe Aktar', 'dock.gps': 'GPS', 'dock.photo': 'Foto',
+    'dock.projects': 'Geziler', 'dock.import': 'İçe Aktar', 'dock.gps': 'GPS', 'dock.photo': 'Foto', 'dock.video': 'Video',
     'tlbl.select': 'Seç', 'tlbl.info': 'Bilgi', 'tlbl.point': 'Nokta', 'tlbl.line': 'Ölçüm', 'tlbl.polyline': 'Kırık', 'tlbl.area': 'Alan', 'tlbl.slope': 'Eğim', 'tlbl.layers': 'Katman', 'tlbl.undo': 'Geri', 'tlbl.delete': 'Sil',
     'dock.notes': 'Notlar', 'basemap.none': 'Kapalı', 'basemap.osm': 'OSM', 'basemap.satellite': 'Uydu', 'basemap.topo': 'Topo',
     'basemap.hint.none': 'Altlık kapalı', 'basemap.hint.osm': 'OSM harita', 'basemap.hint.satellite': 'Uydu görüntüsü', 'basemap.hint.topo': 'Topoğrafya',
@@ -367,7 +367,7 @@ const PA_I18N = {
     'layer.expandList': 'Nesne listesini aç', 'layer.collapseList': 'Nesne listesini kapat',
     'layer.delete': 'Katmanı sil', 'layer.cannotDelete': 'Bu katman silinemez',
     'layer.deleteConfirm': '"{name}" ve {n} geometri silinsin mi?', 'layer.deleted': 'Katman silindi', 'layer.opacity': 'Şeffaflık',
-    'type.point': 'Nokta', 'type.field_note': 'Saha notu', 'type.field_photo': 'Fotoğraf',
+    'type.point': 'Nokta', 'type.field_note': 'Saha notu', 'type.field_photo': 'Fotoğraf', 'type.field_video': 'Video not',
     'track.start': 'Rota kaydı başladı', 'track.pause': 'Duraklatıldı', 'track.stop': 'Rota kaydedildi',
     'track.stopHud': 'ROTA DUR', 'track.stopHudHint': 'Rota durdu — GPS ve takip devam ediyor',
     'track.idle': 'Rota kaydı kapalı', 'track.recording': 'Kayıt', 'track.paused': 'Duraklatıldı',
@@ -512,6 +512,24 @@ const PA_I18N = {
     'trial.finishCap': 'İncelemeyi<br>Tamamla',
     'trial.sun': 'Güneş',
     'trial.sunTitle': 'Güneş modu — araç çubuklarında yüksek kontrast',
+    'trial.videoNote': 'Video Not (15 sn)',
+    'trial.panorama': 'Panoramik Foto',
+    'trial.videoTitle': 'Video not',
+    'trial.videoHint': 'Maks 15 sn · yalnızca konum notu',
+    'trial.videoSaved': 'Video not kaydedildi',
+    'trial.videoUnsupported': 'Video kaydı desteklenmiyor',
+    'trial.videoEmpty': 'Kayıt boş — tekrar deneyin',
+    'trial.videoProcessing': 'Video kaydediliyor…',
+    'trial.panoSaved': 'Panoramik foto kaydedildi',
+    'trial.panoStep': 'Panorama karesi',
+    'trial.panoStart': 'Çizgiye hizalayın, deklanşöre basın',
+    'trial.panoPanLeft': 'Çizgi boyunca yavaşça sola çevirin, tekrar çekin',
+    'trial.panoPanRight': 'Çizgi boyunca yavaşça sağa çevirin, tekrar çekin',
+    'trial.panoStitch': 'Birleştiriliyor…',
+    'trial.panoModeOn': 'Panorama modu — çizgi boyunca hareket edin',
+    'trial.gpsForVideo': 'Video not için GPS açıldı',
+    'trial.videoDur': 'Süre',
+    'type.field_video': 'Video not',
     'trial.locateCoach': 'Canlı konumunuzu görmek için <strong>sağdaki bu butona</strong> dokunun.',
     'trial.locateBtn': 'Canlı konum',
     'hub.openFailed': 'İnceleme açılamadı. PIN varsa kilidi açın veya yeni inceleme başlatın.',
@@ -851,7 +869,7 @@ const PA_I18N = {
     'guide.hint': 'Direct route ready — walk per HUD bearing', 'guide.needGps': 'Turn on GPS first',
     'guide.replayPoint': 'Go to track point', 'guide.route': 'Direct route',
     'guide.showRoute': 'Show route', 'guide.walk': 'Walk this way',
-    'dock.projects': 'Journeys', 'dock.import': 'Import', 'dock.gps': 'GPS', 'dock.photo': 'Photo',
+    'dock.projects': 'Journeys', 'dock.import': 'Import', 'dock.gps': 'GPS', 'dock.photo': 'Photo', 'dock.video': 'Video',
     'tlbl.select': 'Select', 'tlbl.info': 'Info', 'tlbl.point': 'Point', 'tlbl.line': 'Measure', 'tlbl.polyline': 'Polyline', 'tlbl.area': 'Area', 'tlbl.slope': 'Slope', 'tlbl.layers': 'Layers', 'tlbl.undo': 'Undo', 'tlbl.delete': 'Delete',
     'dock.notes': 'Notes', 'basemap.none': 'Off', 'basemap.osm': 'OSM', 'basemap.satellite': 'Satellite', 'basemap.topo': 'Topo',
     'basemap.hint.none': 'Basemap off', 'basemap.hint.osm': 'OSM map', 'basemap.hint.satellite': 'Satellite imagery', 'basemap.hint.topo': 'Topography',
@@ -898,6 +916,24 @@ const PA_I18N = {
     'trial.finishCap': 'Complete<br>Inspection',
     'trial.sun': 'Sun',
     'trial.sunTitle': 'Sun mode — high contrast toolbars',
+    'trial.videoNote': 'Video Note (15s)',
+    'trial.panorama': 'Panorama Photo',
+    'trial.videoTitle': 'Video note',
+    'trial.videoHint': 'Max 15s · location note only',
+    'trial.videoSaved': 'Video note saved',
+    'trial.videoUnsupported': 'Video recording not supported',
+    'trial.videoEmpty': 'Empty recording — try again',
+    'trial.videoProcessing': 'Saving video…',
+    'trial.panoSaved': 'Panorama saved',
+    'trial.panoStep': 'Panorama frame',
+    'trial.panoStart': 'Align with the line, tap shutter',
+    'trial.panoPanLeft': 'Slowly pan left along the line, capture again',
+    'trial.panoPanRight': 'Slowly pan right along the line, capture again',
+    'trial.panoStitch': 'Stitching…',
+    'trial.panoModeOn': 'Panorama mode — pan along the line',
+    'trial.gpsForVideo': 'GPS enabled for video note',
+    'trial.videoDur': 'Duration',
+    'type.field_video': 'Video note',
     'trial.locateCoach': 'Click <strong>this button on the right</strong> for live location',
     'trial.locateBtn': 'Live location',
     'hub.openFailed': 'Could not open inspection. Unlock PIN if required, or start a new inspection.',
@@ -984,7 +1020,7 @@ const PA_I18N = {
     'layer.expandList': 'Expand feature list', 'layer.collapseList': 'Collapse feature list',
     'layer.delete': 'Delete layer', 'layer.cannotDelete': 'Cannot delete this layer',
     'layer.deleteConfirm': 'Delete "{name}" and {n} features?', 'layer.deleted': 'Layer deleted', 'layer.opacity': 'Opacity',
-    'type.point': 'Point', 'type.field_note': 'Field note', 'type.field_photo': 'Photo',
+    'type.point': 'Point', 'type.field_note': 'Field note', 'type.field_photo': 'Photo', 'type.field_video': 'Video note',
     'track.start': 'Track recording started', 'track.pause': 'Paused', 'track.stop': 'Track saved',
     'track.stopHud': 'STOP ROUTE', 'track.stopHudHint': 'Route stopped — GPS and follow still on',
     'track.idle': 'Track recording off', 'track.recording': 'Recording', 'track.paused': 'Paused',
@@ -1129,6 +1165,24 @@ const PA_I18N = {
     'trial.finishCap': 'Complete<br>Inspection',
     'trial.sun': 'Sun',
     'trial.sunTitle': 'Sun mode — high contrast toolbars',
+    'trial.videoNote': 'Video Note (15s)',
+    'trial.panorama': 'Panorama Photo',
+    'trial.videoTitle': 'Video note',
+    'trial.videoHint': 'Max 15s · location note only',
+    'trial.videoSaved': 'Video note saved',
+    'trial.videoUnsupported': 'Video recording not supported',
+    'trial.videoEmpty': 'Empty recording — try again',
+    'trial.videoProcessing': 'Saving video…',
+    'trial.panoSaved': 'Panorama saved',
+    'trial.panoStep': 'Panorama frame',
+    'trial.panoStart': 'Align with the line, tap shutter',
+    'trial.panoPanLeft': 'Slowly pan left along the line, capture again',
+    'trial.panoPanRight': 'Slowly pan right along the line, capture again',
+    'trial.panoStitch': 'Stitching…',
+    'trial.panoModeOn': 'Panorama mode — pan along the line',
+    'trial.gpsForVideo': 'GPS enabled for video note',
+    'trial.videoDur': 'Duration',
+    'type.field_video': 'Video note',
     'trial.locateCoach': 'Click <strong>this button on the right</strong> for live location',
     'trial.locateBtn': 'Live location',
     'hub.openFailed': 'Could not open inspection. Unlock PIN if required, or start a new inspection.',
@@ -8934,6 +8988,7 @@ function applyProjectSnapshot(snap) {
       o._imgEl = img;
     }
     if (o.type === 'field_photo') normalizeFieldPhotoObject(o);
+    if (o.type === 'field_video') normalizeFieldVideoObject(o);
     if (o.type === 'field_note') normalizeFieldNoteObject(o);
     if (o.type === 'field_gps_track') normalizeFieldGpsTrackObject(o);
     return o;
@@ -10380,6 +10435,10 @@ window.fieldHubActionNew = fieldHubActionNew;
 window.fieldHubActionContinue = fieldHubActionContinue;
 window.fieldHubOpenJourney = fieldHubOpenJourney;
 window.scheduleProjectSave = scheduleProjectSave;
+window.ingestFieldVideo = ingestFieldVideo;
+window.markLastPhotoPanorama = markLastPhotoPanorama;
+window.isFieldGpsOn = () => _fieldGpsOn;
+window.openFieldPhotoDetail = openFieldPhotoDetail;
 window.flushProjectSave = flushProjectSave;
 window.showFieldJourneyHub = showFieldJourneyHub;
 window.reloadFieldHubProjects = reloadFieldHubProjects;
@@ -14085,7 +14144,7 @@ function editFromObservationPopup() {
   if (!obj) return;
   closeNotePopup();
   if (obj.type === 'field_note') openFieldNoteEditor(obj.id);
-  else if (obj.type === 'field_photo') openFieldPhotoDetail(obj.id);
+  else if (obj.type === 'field_photo' || obj.type === 'field_video') openFieldPhotoDetail(obj.id);
 }
 
 function editNoteFromPopup() {
@@ -14552,7 +14611,11 @@ async function fieldPhotoCaptureViaCapacitor() {
   }
 }
 
-function closeFieldCameraCaptureUi() {
+function closeFieldCameraCaptureUi(opts) {
+  const keepPano = !!(opts && opts.keepPano);
+  if (!keepPano && window._fieldCameraPanoMode && typeof FieldTrialCapture !== 'undefined') {
+    FieldTrialCapture.clearPanoMode();
+  }
   const ov = document.getElementById('field-camera-overlay');
   const video = document.getElementById('field-camera-video');
   ov?.classList.remove('open');
@@ -14575,7 +14638,8 @@ async function openFieldCameraCaptureUi() {
     const ok = await FieldPermissions.request('camera', { hintDenied: t('photo.camDenied') });
     if (!ok) return false;
   }
-  closeFieldCameraCaptureUi();
+  const keepPano = !!window._fieldCameraPanoMode;
+  closeFieldCameraCaptureUi({ keepPano });
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: _fieldCameraFacing }, width: { ideal: 1920 }, height: { ideal: 1080 } },
@@ -14587,6 +14651,9 @@ async function openFieldCameraCaptureUi() {
     ov.classList.add('open');
     ov.setAttribute('aria-hidden', 'false');
     document.body.classList.add('field-camera-open');
+    if (keepPano && typeof FieldTrialCapture !== 'undefined' && FieldTrialCapture.refreshPanoGuide) {
+      FieldTrialCapture.refreshPanoGuide();
+    }
     return true;
   } catch (_) {
     return false;
@@ -14596,13 +14663,18 @@ async function openFieldCameraCaptureUi() {
 async function fieldCameraFlip() {
   _fieldCameraFacing = _fieldCameraFacing === 'environment' ? 'user' : 'environment';
   if (!_fieldCameraStream) return;
-  closeFieldCameraCaptureUi();
+  const keepPano = !!window._fieldCameraPanoMode;
+  closeFieldCameraCaptureUi({ keepPano });
   await openFieldCameraCaptureUi();
 }
 
 async function fieldCameraShutter() {
   const video = document.getElementById('field-camera-video');
   if (!video?.videoWidth) return;
+  if (window._fieldCameraPanoMode && typeof FieldTrialCapture !== 'undefined') {
+    await FieldTrialCapture.onPanoShutter(video);
+    return;
+  }
   const c = document.createElement('canvas');
   c.width = video.videoWidth;
   c.height = video.videoHeight;
@@ -14624,11 +14696,14 @@ function fieldPhotoCaptureCameraFileInput() {
 }
 
 function ensurePhotosLayer() {
-  if (!S.layers.find(l => l.id === FIELD_PHOTOS_LAYER)) {
+  let layer = S.layers.find(l => l.id === FIELD_PHOTOS_LAYER);
+  if (!layer) {
     S.layers.push({
       id: FIELD_PHOTOS_LAYER, name: '📷 Fotoğraflar', color: '#8e44ad',
       order: 6, visible: true, locked: false,
     });
+  } else {
+    layer.visible = true;
   }
 }
 
@@ -14833,9 +14908,25 @@ function getFieldPhotosSorted() {
     .sort((a, b) => (a.photoNum || 0) - (b.photoNum || 0));
 }
 
+function getFieldPhotosLayerItems() {
+  return S.objects
+    .filter(o => o.type === 'field_photo' || o.type === 'field_video')
+    .map(o => {
+      if (o.type === 'field_photo') normalizeFieldPhotoObject(o);
+      else if (o.type === 'field_video') normalizeFieldVideoObject(o);
+      return o;
+    })
+    .sort((a, b) => (a.photoNum || a.videoNum || 0) - (b.photoNum || b.videoNum || 0));
+}
+
 function selectPhotoFromLayer(id) {
   const p = S.objects.find(o => o.id === id);
-  if (!p || p.type !== 'field_photo') return;
+  if (!p || (p.type !== 'field_photo' && p.type !== 'field_video')) return;
+  if (p.type === 'field_video') {
+    setActiveLayer(FIELD_PHOTOS_LAYER);
+    openFieldPhotoDetail(p.id);
+    return;
+  }
   normalizeFieldPhotoObject(p);
   setActiveLayer(FIELD_PHOTOS_LAYER);
   const b = { minLat: p.lat, maxLat: p.lat, minLon: p.lon, maxLon: p.lon, ok: true };
@@ -14855,6 +14946,27 @@ function normalizeFieldPhotoObject(o) {
   if (!o.title) o.title = 'Foto ' + o.photoNum;
   o.timestamp = o.timestamp || o.createdAt || new Date().toISOString();
   o.description = o.description ?? (o.caption && o.caption !== o.title ? o.caption : '') ?? '';
+}
+
+function normalizeFieldVideoObject(o) {
+  if (o.type !== 'field_video') return;
+  o.layerId = FIELD_PHOTOS_LAYER;
+  o.projectId = o.projectId || FIELD_PROJECT.id;
+  if (!o.videoNum) {
+    const m = (o.title || '').match(/Video\s*(\d+)/i);
+    o.videoNum = m ? parseInt(m[1], 10) : getNextVideoNum();
+  }
+  if (!o.title) o.title = 'Video ' + o.videoNum;
+  o.timestamp = o.timestamp || o.createdAt || new Date().toISOString();
+  o.visible = o.visible !== false;
+}
+
+function getNextVideoNum() {
+  let n = 0;
+  S.objects.forEach((o) => {
+    if (o.type === 'field_video' && (o.videoNum || 0) > n) n = o.videoNum;
+  });
+  return n + 1;
 }
 
 function makeFieldPhoto(lat, lon, photoId, photoNum, title) {
@@ -15065,6 +15177,19 @@ function activateFieldPhotoTool() {
   });
 }
 
+function activateFieldVideoTool() {
+  requireProject(() => {
+    document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-field-photo-tool')?.classList.remove('active');
+    closeFieldPhotoSheet();
+    if (typeof FieldTrialCapture !== 'undefined') {
+      FieldTrialCapture.startVideoNote();
+      return;
+    }
+    showHint(t('trial.videoUnsupported'));
+  });
+}
+
 function attachFieldPhoto() { activateFieldPhotoTool(); }
 
 function openFieldPermissionsPanel() {
@@ -15172,6 +15297,7 @@ async function ingestFieldPhoto(file) {
   const obj = makeFieldPhoto(lat, lon, photoId, photoNum, title);
   obj.gpsSource = gpsSource;
   S.objects.push(obj);
+  _lastIngestedPhotoId = obj.id;
   ensurePhotosLayer();
   await prefetchPhotoThumb(obj);
   S.selectedIds = [obj.id];
@@ -15182,12 +15308,119 @@ async function ingestFieldPhoto(file) {
   openFieldPhotoVoiceSheet(obj.id);
   if (_fieldGpsOn) resumeGpsAfterInterruption();
   showHint(title + ' kaydedildi · ' + (gpsSource === 'exif' ? 'EXIF GPS' : gpsSource === 'gps' ? 'Canlı GPS' : 'Harita merkezi'));
+  return obj.id;
+}
+
+let _lastIngestedPhotoId = null;
+
+function markLastPhotoPanorama() {
+  const o = S.objects.find(x => x.id === _lastIngestedPhotoId)
+    || [...S.objects].reverse().find(x => x.type === 'field_photo');
+  if (!o) return;
+  o.isPanorama = true;
+  if (!/\(Pano\)/i.test(o.title || '')) o.title = (o.title || 'Foto') + ' (Pano)';
+  scheduleProjectSave();
+  scheduleRender();
 }
 
 function notePlacementLatLon() {
   if (_fieldGpsFix) return { lat: _fieldGpsFix.lat, lon: _fieldGpsFix.lon };
   const c = worldToLatLon((CW / 2 - S.tx) / S.scale, (CH / 2 - getTopBarH() - S.ty) / S.scale);
   return { lat: c.lat, lon: c.lon };
+}
+
+function videoNotePlacement() {
+  if (_fieldGpsFix) {
+    return { lat: _fieldGpsFix.lat, lon: _fieldGpsFix.lon, gpsSource: 'gps' };
+  }
+  const p = notePlacementLatLon();
+  return { lat: p.lat, lon: p.lon, gpsSource: _fieldGpsOn ? 'gps' : 'map' };
+}
+
+async function thumbFromVideoBlob(blob) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(blob);
+    const v = document.createElement('video');
+    v.muted = true;
+    v.playsInline = true;
+    v.preload = 'metadata';
+    v.onloadeddata = () => {
+      try { v.currentTime = Math.min(0.4, (v.duration || 1) * 0.15); } catch (_) { capture(); }
+    };
+    v.onseeked = capture;
+    v.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    function capture() {
+      try {
+        const c = document.createElement('canvas');
+        const w = Math.min(320, v.videoWidth || 320);
+        const h = Math.round((v.videoHeight || 180) * (w / (v.videoWidth || w)));
+        c.width = w;
+        c.height = h || 180;
+        c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+        c.toBlob((b) => { URL.revokeObjectURL(url); resolve(b); }, 'image/jpeg', 0.82);
+      } catch (_) {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      }
+    }
+    v.src = url;
+  });
+}
+
+async function ingestFieldVideo(blob, mime, durationSec) {
+  if (!blob?.size || !FIELD_PROJECT.id) return;
+  const { lat, lon, gpsSource } = videoNotePlacement();
+  const videoId = 'vid_' + Date.now();
+  const videoNum = getNextVideoNum();
+  const title = (t('trial.videoTitle') || 'Video') + ' ' + videoNum;
+  const ts = new Date().toISOString();
+
+  let thumbBlob = null;
+  try { thumbBlob = await thumbFromVideoBlob(blob); } catch (_) {}
+
+  const db = await openProjectDb();
+  await idbPut(db, 'blobs', { key: projectBlobKey(videoId, 'video'), data: blob, mime: mime || 'video/webm' });
+  if (thumbBlob) {
+    await idbPut(db, 'blobs', { key: projectBlobKey(videoId, 'thumb'), data: thumbBlob, mime: 'image/jpeg' });
+  }
+
+  const obj = {
+    id: uid(),
+    type: 'field_video',
+    videoId,
+    videoNum,
+    projectId: FIELD_PROJECT.id,
+    title,
+    lat,
+    lon,
+    gpsSource,
+    duration: durationSec,
+    timestamp: ts,
+    createdAt: ts,
+    description: '',
+    layerId: FIELD_PHOTOS_LAYER,
+    visible: true,
+    locked: false,
+  };
+  normalizeFieldVideoObject(obj);
+  S.objects.push(obj);
+  ensurePhotosLayer();
+  const photosLayer = S.layers.find(l => l.id === FIELD_PHOTOS_LAYER);
+  if (photosLayer) photosLayer.visible = true;
+  setActiveLayer(FIELD_PHOTOS_LAYER);
+  await prefetchVideoThumb(obj);
+  S.selectedIds = [obj.id];
+  pushHistory();
+  buildLayerPanel();
+  scheduleProjectSave();
+  scheduleRender();
+  fitMapToLatLonBounds({ minLat: lat, maxLat: lat, minLon: lon, maxLon: lon, ok: true });
+  requestAnimationFrame(() => {
+    scheduleRender();
+    openFieldPhotoDetail(obj.id);
+  });
+  showHint(t('trial.videoSaved') + ' (' + durationSec + ' sn) · ' +
+    (gpsSource === 'gps' ? 'GPS' : 'Harita'));
 }
 
 function ensureRightPanelVisible() {
@@ -15307,6 +15540,28 @@ async function openFieldPhotoEarthViewer(id) {
   scheduleRender();
 }
 
+async function prefetchVideoThumb(obj) {
+  if (!obj || obj.type !== 'field_video' || obj._thumbReady) return;
+  const row = await getPhotoBlobRecord(obj.videoId, 'thumb');
+  if (!row?.data) return;
+  const cacheKey = obj.videoId;
+  if (_photoThumbCache.has(cacheKey)) {
+    obj._thumbImg = _photoThumbCache.get(cacheKey);
+    obj._thumbReady = true;
+    return;
+  }
+  const url = URL.createObjectURL(row.data);
+  const img = new Image();
+  img.onload = () => {
+    obj._thumbImg = img;
+    obj._thumbUrl = url;
+    obj._thumbReady = true;
+    _photoThumbCache.set(cacheKey, img);
+    scheduleRender();
+  };
+  img.src = url;
+}
+
 async function prefetchPhotoThumb(obj) {
   if (!obj || obj.type !== 'field_photo' || obj._thumbReady) return;
   const row = await getPhotoBlobRecord(obj.photoId, 'thumb');
@@ -15329,14 +15584,32 @@ async function prefetchPhotoThumb(obj) {
 }
 
 function preloadPhotoThumbs() {
-  S.objects.filter(o => o.type === 'field_photo' && o.visible !== false).forEach(o => {
-    prefetchPhotoThumb(o);
+  preloadFieldVideoPinIcon();
+  preloadFieldPhotoPinIcon();
+  S.objects.filter(o => (o.type === 'field_photo' || o.type === 'field_video') && o.visible !== false).forEach(o => {
+    if (o.type === 'field_video') prefetchVideoThumb(o);
+    else prefetchPhotoThumb(o);
   });
 }
 
 function openFieldPhotoDetail(id) {
   const obj = S.objects.find(o => o.id === id);
-  if (!obj || obj.type !== 'field_photo') return;
+  if (!obj) return;
+  if (obj.type === 'field_video') {
+    _fieldCtxPhotoId = id;
+    S.selectedIds = [id];
+    const panel = document.getElementById('right-panel');
+    if (panel?.style.display === 'none') {
+      panel.style.display = 'block';
+      document.body.classList.add('field-panel-right');
+    }
+    if (typeof FieldTrialCapture !== 'undefined') FieldTrialCapture.showVideoPanel(obj);
+    const b = { minLat: obj.lat, maxLat: obj.lat, minLon: obj.lon, maxLon: obj.lon, ok: true };
+    fitMapToLatLonBounds(b);
+    scheduleRender();
+    return;
+  }
+  if (obj.type !== 'field_photo') return;
   normalizeFieldPhotoObject(obj);
   _fieldCtxPhotoId = id;
   S.selectedIds = [id];
@@ -15403,7 +15676,32 @@ function saveFieldPhotoDetail() {
 
 async function deleteFieldPhotoById(objId) {
   const obj = S.objects.find(o => o.id === objId);
-  if (!obj || obj.type !== 'field_photo') return;
+  if (!obj) return;
+  if (obj.type === 'field_video') {
+    const db = await openProjectDb();
+    await idbDelete(db, 'blobs', projectBlobKey(obj.videoId, 'video'));
+    await idbDelete(db, 'blobs', projectBlobKey(obj.videoId, 'thumb'));
+    if (obj._thumbUrl) URL.revokeObjectURL(obj._thumbUrl);
+    _photoThumbCache.delete(obj.videoId);
+    const vidEl = document.getElementById('field-video-panel-player');
+    if (vidEl) {
+      vidEl.pause();
+      vidEl.removeAttribute('src');
+      if (vidEl._blobUrl) URL.revokeObjectURL(vidEl._blobUrl);
+      vidEl._blobUrl = null;
+    }
+    S.objects = S.objects.filter(o => o.id !== objId);
+    if (_fieldCtxPhotoId === objId) _fieldCtxPhotoId = null;
+    S.selectedIds = [];
+    pushHistory();
+    buildLayerPanel();
+    updateFieldRightPanel(null);
+    scheduleProjectSave();
+    scheduleRender();
+    showHint(t('photo.deleted'));
+    return;
+  }
+  if (obj.type !== 'field_photo') return;
   const db = await openProjectDb();
   await idbDelete(db, 'blobs', projectBlobKey(obj.photoId, 'full'));
   await idbDelete(db, 'blobs', projectBlobKey(obj.photoId, 'thumb'));
@@ -15574,9 +15872,10 @@ function fieldOpenObservationFromTap(obj) {
   setDeleteButtonVisible(true);
   updateSelPanel(obj);
   updateFieldAnalysisActions(obj);
-  if (obj.type === 'field_note' || obj.type === 'field_photo') {
+  if (obj.type === 'field_note' || obj.type === 'field_photo' || obj.type === 'field_video') {
     if (fieldCoarseTouchUi()) ensureRightPanelVisible();
-    showFieldObservationPopup(obj);
+    if (obj.type === 'field_video') openFieldPhotoDetail(obj.id);
+    else showFieldObservationPopup(obj);
   } else {
     closeNotePopup();
   }
@@ -16184,6 +16483,9 @@ function fitFieldTopBar() {
     'field-top-overflow-1', 'field-top-overflow-2', 'field-top-overflow-3',
     'trial-top-compact-1', 'trial-top-compact-2', 'trial-top-compact-3', 'trial-top-compact-4'
   );
+  if (document.body.classList.contains('field-trial-ui') && window.matchMedia('(max-width: 480px)').matches) {
+    return;
+  }
   let guard = 0;
   const maxGuard = document.body.classList.contains('field-trial-ui') ? 4 : 3;
   while (topBar.scrollWidth > topBar.clientWidth + 2 && guard < maxGuard) {
@@ -16929,7 +17231,14 @@ function updateFieldRightPanel(obj) {
       ts + '\n' + (obj.lat?.toFixed(5) || '—') + '°, ' + (obj.lon?.toFixed(5) || '—') + '°';
     return;
   }
+  if (obj.type === 'field_video') {
+    if (typeof FieldTrialCapture !== 'undefined') {
+      FieldTrialCapture.showVideoPanel(obj);
+      return;
+    }
+  }
   if (obj.type === 'field_photo') {
+    if (typeof FieldTrialCapture !== 'undefined') FieldTrialCapture.resetPhotoPanelChrome();
     normalizeFieldPhotoObject(obj);
     if (objP) objP.style.display = 'none';
     if (noteP) noteP.style.display = 'none';
@@ -17777,7 +18086,7 @@ function translateObject(obj, snap, dx, dy) {
     const dLa = g1.lat - g0.lat, dLo = g1.lon - g0.lon;
     obj.rings = snap.rings.map(ring => ring.map(c => ({ lat: c.lat + dLa, lon: c.lon + dLo })));
     obj.holes = (snap.holes || []).map(ring => ring.map(c => ({ lat: c.lat + dLa, lon: c.lon + dLo })));
-  } else if (obj.type === 'field_note' || obj.type === 'field_photo') {
+  } else if (obj.type === 'field_note' || obj.type === 'field_photo' || obj.type === 'field_video') {
     const g0 = worldToLatLon(snap._w0x ?? 0, snap._w0y ?? 0);
     const g1 = worldToLatLon((snap._w0x ?? 0) + dx, (snap._w0y ?? 0) + dy);
     obj.lat = snap.lat + (g1.lat - g0.lat);
@@ -17823,7 +18132,7 @@ function nearVertex(obj, wx, wy) {
 
 function getBoundingCenter(obj) {
   if (obj.type === 'circle' || obj.type === 'analysis_zone') return { x: obj.cx, y: obj.cy };
-  if (obj.type === 'field_note' || obj.type === 'field_photo') {
+  if (obj.type === 'field_note' || obj.type === 'field_photo' || obj.type === 'field_video') {
     const w = latLonToWorld(obj.lat, obj.lon);
     return { x: w.x, y: w.y };
   }
@@ -18691,6 +19000,118 @@ function renderImportObj(obj, sel) {
   ctx.restore();
 }
 
+const FIELD_VIDEO_PIN_SVG = 'assets/field-video-pin.svg?v=1';
+const FIELD_VIDEO_PIN_PNG = 'assets/field-video-pin.png?v=1';
+let _fieldVideoPinSvg = null;
+let _fieldVideoPinPng = null;
+
+function preloadFieldVideoPinIcon() {
+  const onReady = () => { if (typeof scheduleRender === 'function') scheduleRender(); };
+  if (!_fieldVideoPinSvg) {
+    _fieldVideoPinSvg = new Image();
+    _fieldVideoPinSvg.decoding = 'async';
+    _fieldVideoPinSvg.onload = onReady;
+    _fieldVideoPinSvg.src = FIELD_VIDEO_PIN_SVG;
+  }
+  if (!_fieldVideoPinPng) {
+    _fieldVideoPinPng = new Image();
+    _fieldVideoPinPng.decoding = 'async';
+    _fieldVideoPinPng.onload = onReady;
+    _fieldVideoPinPng.src = FIELD_VIDEO_PIN_PNG;
+  }
+}
+preloadFieldVideoPinIcon();
+
+function fieldDockIconDataUrl(svg, color) {
+  const html = String(svg || '').replace(/currentColor/g, color || '#5f6368');
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(html);
+}
+
+function getFieldPhotoPinIconColor() {
+  try {
+    if (document.body.classList.contains('field-trial-ui')) return '#3fa7ff';
+  } catch (_) {}
+  return '#1a73e8';
+}
+
+function getFieldPanoPinIconColor() {
+  try {
+    if (document.body.classList.contains('field-trial-ui')) return '#3fa7ff';
+  } catch (_) {}
+  return '#1a73e8';
+}
+
+let _fieldPhotoPinIcon = null;
+let _fieldPanoPinIcon = null;
+let _fieldPhotoPinIconColor = '';
+let _fieldPanoPinIconColor = '';
+
+function preloadFieldPhotoPinIcon() {
+  if (typeof FieldDockIcons === 'undefined') return;
+  const onReady = () => { if (typeof scheduleRender === 'function') scheduleRender(); };
+  const photoColor = getFieldPhotoPinIconColor();
+  const panoColor = getFieldPanoPinIconColor();
+  if (!_fieldPhotoPinIcon || _fieldPhotoPinIconColor !== photoColor) {
+    _fieldPhotoPinIconColor = photoColor;
+    _fieldPhotoPinIcon = new Image();
+    _fieldPhotoPinIcon.decoding = 'async';
+    _fieldPhotoPinIcon.onload = onReady;
+    _fieldPhotoPinIcon.src = fieldDockIconDataUrl(FieldDockIcons.icons.camera, photoColor);
+  }
+  if (!_fieldPanoPinIcon || _fieldPanoPinIconColor !== panoColor) {
+    _fieldPanoPinIconColor = panoColor;
+    _fieldPanoPinIcon = new Image();
+    _fieldPanoPinIcon.decoding = 'async';
+    _fieldPanoPinIcon.onload = onReady;
+    _fieldPanoPinIcon.src = fieldDockIconDataUrl(FieldDockIcons.icons.globe, panoColor);
+  }
+}
+preloadFieldPhotoPinIcon();
+
+function drawFieldPhotoPinIcon(ctx, cx, cy, size, isPanorama) {
+  preloadFieldPhotoPinIcon();
+  const img = isPanorama
+    ? (_fieldPanoPinIcon?.complete && _fieldPanoPinIcon.naturalWidth ? _fieldPanoPinIcon : null)
+    : (_fieldPhotoPinIcon?.complete && _fieldPhotoPinIcon.naturalWidth ? _fieldPhotoPinIcon : null);
+  const w = size;
+  const h = size;
+  const x = cx - w / 2;
+  const y = cy - h / 2;
+  if (img?.complete && img.naturalWidth) {
+    ctx.drawImage(img, x, y, w, h);
+    return;
+  }
+  ctx.save();
+  ctx.fillStyle = '#5f6368';
+  ctx.font = `bold ${Math.max(14, size * 0.55)}px Inter,sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(isPanorama ? '🌐' : '📷', cx, cy);
+  ctx.restore();
+}
+
+function drawFieldVideoPinIcon(ctx, cx, cy, size) {
+  preloadFieldVideoPinIcon();
+  const img = (_fieldVideoPinSvg?.complete && _fieldVideoPinSvg.naturalWidth)
+    ? _fieldVideoPinSvg
+    : (_fieldVideoPinPng?.complete && _fieldVideoPinPng.naturalWidth ? _fieldVideoPinPng : null);
+  const w = size;
+  const h = size;
+  const x = cx - w / 2;
+  const y = cy - h / 2;
+  if (img?.complete && img.naturalWidth) {
+    ctx.drawImage(img, x, y, w, h);
+    return;
+  }
+  ctx.save();
+  ctx.fillStyle = '#5f6368';
+  ctx.font = `bold ${Math.max(12, size * 0.55)}px Inter,sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('▶', cx, cy);
+  ctx.restore();
+}
+
 function drawEarthPhotoMarker(ctx, x, y, scale, selected, obj) {
   const s = 1 / scale;
   const tw = 40 * s;
@@ -18722,7 +19143,10 @@ function drawEarthPhotoMarker(ctx, x, y, scale, selected, obj) {
   const pad = 3 * s;
   const iw = tw - pad * 2;
   const ih = th - pad * 2 - (obj.title && scale > 0.2 ? 8 * s : 0);
-  if (obj._thumbImg && obj._thumbImg.complete && obj._thumbImg.naturalWidth) {
+  const isVideoPin = obj.type === 'field_video';
+  const isPhotoPin = obj.type === 'field_photo';
+  const useMapPinIcon = isVideoPin || isPhotoPin;
+  if (!useMapPinIcon && obj._thumbImg && obj._thumbImg.complete && obj._thumbImg.naturalWidth) {
     ctx.save();
     ctx.beginPath();
     ctx.rect(tx + pad, ty + pad, iw, ih);
@@ -18732,13 +19156,13 @@ function drawEarthPhotoMarker(ctx, x, y, scale, selected, obj) {
   } else {
     ctx.fillStyle = '#e8eaed';
     ctx.fillRect(tx + pad, ty + pad, iw, ih);
-    ctx.fillStyle = '#5f6368';
-    ctx.font = `bold ${Math.max(14, 18 * s)}px Inter,sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('📷', x, ty + pad + ih / 2);
+    if (isVideoPin) {
+      drawFieldVideoPinIcon(ctx, x, ty + pad + ih / 2, Math.min(iw, ih) * 1.64);
+    } else if (isPhotoPin) {
+      drawFieldPhotoPinIcon(ctx, x, ty + pad + ih / 2, Math.min(iw, ih) * 1.64, !!obj.isPanorama);
+    }
   }
-  if (obj.photoNum != null && scale > 0.15) {
+  if ((obj.photoNum != null || obj.videoNum != null) && scale > 0.15) {
     ctx.fillStyle = selected ? '#E53935' : '#1a73e8';
     ctx.beginPath();
     ctx.arc(tx + tw - 6 * s, ty + 6 * s, 7 * s, 0, Math.PI * 2);
@@ -18747,9 +19171,9 @@ function drawEarthPhotoMarker(ctx, x, y, scale, selected, obj) {
     ctx.font = `bold ${Math.max(8, 9 * s)}px Inter,sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(String(obj.photoNum), tx + tw - 6 * s, ty + 6 * s);
+    ctx.fillText(String(obj.photoNum != null ? obj.photoNum : obj.videoNum), tx + tw - 6 * s, ty + 6 * s);
   }
-  if (obj.hasVoice) {
+  if (obj.hasVoice && !isVideoPin) {
     ctx.fillStyle = '#e74c3c';
     ctx.beginPath();
     ctx.arc(tx + 8 * s, ty + 8 * s, 5 * s, 0, Math.PI * 2);
@@ -18785,11 +19209,15 @@ function renderFieldSpatialObj(obj, sel) {
     if (!obj._thumbReady) prefetchPhotoThumb(obj);
     const isSel = sel || S.selectedIds.includes(obj.id);
     drawEarthPhotoMarker(ctx, w.x, w.y, S.scale, isSel, obj);
+  } else if (obj.type === 'field_video') {
+    if (!obj._thumbReady) prefetchVideoThumb(obj);
+    const isSel = sel || S.selectedIds.includes(obj.id);
+    drawEarthPhotoMarker(ctx, w.x, w.y, S.scale, isSel, obj);
   }
 }
 
 function renderObjFull(obj, sel) {
-  if (obj.type === 'field_note' || obj.type === 'field_photo') {
+  if (obj.type === 'field_note' || obj.type === 'field_photo' || obj.type === 'field_video') {
     renderFieldSpatialObj(obj, sel);
     return;
   }
@@ -18883,7 +19311,7 @@ function renderVertexHandles(pts, isEndpointsOnly) {
 
 function renderObj(obj, sel) {
   if (!obj.visible) return;
-  if (obj.type === 'field_note' || obj.type === 'field_photo') {
+  if (obj.type === 'field_note' || obj.type === 'field_photo' || obj.type === 'field_video') {
     renderFieldSpatialObj(obj, sel);
     return;
   }
@@ -20480,6 +20908,16 @@ function hitTest(obj, wx, wy) {
     const ty = w.y - th - 6 * s;
     return wx >= tx - 4 * s && wx <= tx + tw + 4 * s && wy >= ty - 4 * s && wy <= w.y + 4 * s;
   }
+  if (obj.type === 'field_video') {
+    const w = latLonToWorld(obj.lat, obj.lon);
+    const pad = fieldTouchHitSlop();
+    const s = (1 / S.scale) * pad;
+    const tw = 36 * s;
+    const th = 28 * s;
+    const tx = w.x - tw / 2;
+    const ty = w.y - th - 6 * s;
+    return wx >= tx - 4 * s && wx <= tx + tw + 4 * s && wy >= ty - 4 * s && wy <= w.y + 4 * s;
+  }
   if (obj.type === 'field_gps_track') {
     const verts = obj.vertices || [];
     for (let i = 0; i < verts.length - 1; i++) {
@@ -21050,7 +21488,7 @@ function onMouseDown(e) {
         return hitTest(o, p.x, p.y);
       });
       if (selObj) {
-        if (FIELD_MODE && (selObj.type === 'field_note' || selObj.type === 'field_photo')) {
+        if (FIELD_MODE && (selObj.type === 'field_note' || selObj.type === 'field_photo' || selObj.type === 'field_video')) {
           showFieldObservationPopup(selObj);
           scheduleRender();
           return;
@@ -21084,7 +21522,7 @@ function onMouseDown(e) {
     const selObj = found ? S.objects.find(o => o.id === found) : null;
     updateSelPanel(selObj);
     updateFieldAnalysisActions(selObj);
-    if (selObj?.type === 'field_note' || selObj?.type === 'field_photo') {
+    if (selObj?.type === 'field_note' || selObj?.type === 'field_photo' || selObj?.type === 'field_video') {
       showFieldObservationPopup(selObj);
     } else {
       closeNotePopup();
@@ -22172,7 +22610,7 @@ function buildCircleStyles() {
 const TYPE_LABELS = {
   import_polygon:'İçe Aktarılan Alan', import_polyline:'İçe Aktarılan Ölçüm', import_point:'İçe Aktarılan Nokta',
   import_text:'İçe Aktarılan Etiket',
-  field_note:'Saha Notu', field_photo:'Fotoğraf', field_gps_track:'GPS Rotası',
+  field_note:'Saha Notu', field_photo:'Fotoğraf', field_video:'Video Not', field_gps_track:'GPS Rotası',
   point:'Nokta', polyline:'Polyline', freedraw:'Serbest Çizim', line:'Çizgi', arrow:'Ok', bezier:'Bezier Eğrisi',
   polygon:'Poligon', zone:'Dikdörtgen', circle:'Daire',
   analysis_zone:'Analiz Zonu', text:'Metin',
@@ -22485,7 +22923,7 @@ function fieldSketchPanelLabel(obj) {
 function getFieldSketchObjectsForPanel() {
   return S.objects.filter(o => {
     if (!o || o._import || o._planOverlay) return false;
-    if (['field_photo', 'field_note', 'field_gps_track', 'georef_image'].includes(o.type)) return false;
+    if (['field_photo', 'field_video', 'field_note', 'field_gps_track', 'georef_image'].includes(o.type)) return false;
     return (o.layerId || 'sketch') === 'sketch';
   });
 }
@@ -22523,7 +22961,7 @@ function fieldLayerSublistCount(layerId) {
   if (!FIELD_MODE) return 0;
   if (layerId === 'sketch') return getFieldSketchObjectsForPanel().length;
   if (layerId === 'notes') return getFieldNotesSorted().length;
-  if (layerId === FIELD_PHOTOS_LAYER) return getFieldPhotosSorted().length;
+  if (layerId === FIELD_PHOTOS_LAYER) return getFieldPhotosLayerItems().length;
   if (layerId === FIELD_GPS_LAYER) return getFieldGpsTracksSorted().length;
   if (layerId === 'imported') return getFieldImportPanelEntries().length;
   return 0;
@@ -22549,7 +22987,7 @@ function ensureLayerPanelExpandedForSelection() {
   if (!obj) return;
   if (obj.type === 'point') _layerPanelExpanded.add('sketch');
   else if (obj.type === 'field_note') _layerPanelExpanded.add('notes');
-  else if (obj.type === 'field_photo') _layerPanelExpanded.add(FIELD_PHOTOS_LAYER);
+  else if (obj.type === 'field_photo' || obj.type === 'field_video') _layerPanelExpanded.add(FIELD_PHOTOS_LAYER);
   else if (obj.type === 'field_gps_track') _layerPanelExpanded.add(FIELD_GPS_LAYER);
   else if (obj._import) {
     _layerPanelExpanded.add('imported');
@@ -22614,7 +23052,7 @@ function buildLayerPanel() {
     if (FIELD_MODE && layer.id === 'notes') {
       cnt = S.objects.filter(o => o.type === 'field_note').length;
     } else if (FIELD_MODE && layer.id === FIELD_PHOTOS_LAYER) {
-      cnt = S.objects.filter(o => o.type === 'field_photo').length;
+      cnt = getFieldPhotosLayerItems().length;
     } else if (FIELD_MODE && layer.id === FIELD_GPS_LAYER) {
       cnt = getFieldGpsTracksSorted().length;
     } else if (FIELD_MODE && layer.id === 'imported') {
@@ -22703,16 +23141,21 @@ function buildLayerPanel() {
     }
 
     if (FIELD_MODE && layer.id === FIELD_PHOTOS_LAYER && subExpanded) {
-      const photos = getFieldPhotosSorted();
+      const photos = getFieldPhotosLayerItems();
       if (photos.length) {
         const list = document.createElement('div');
         list.className = 'layer-photos-list';
         photos.forEach(p => {
           const item = document.createElement('div');
           item.className = 'layer-photo-item layer-note-item' + (S.selectedIds.includes(p.id) ? ' active' : '');
-          const preview = (p.description || p.title || p.caption || '').trim() || t('type.field_photo');
-          item.innerHTML = '<span class="ln-num">#' + (p.photoNum || '?') + '</span><span class="ln-text">' +
-            escapeHtml(preview.slice(0, 80)) + (p.hasVoice ? ' 🎤' : '') + '</span>';
+          const isVideo = p.type === 'field_video';
+          const preview = isVideo
+            ? (p.title || t('type.field_video'))
+            : ((p.description || p.title || p.caption || '').trim() || t('type.field_photo'));
+          const num = p.photoNum || p.videoNum || '?';
+          const badge = isVideo ? '' : (p.isPanorama ? ' 🌐' : '') + (p.hasVoice ? ' 🎤' : '');
+          item.innerHTML = '<span class="ln-num">#' + num + '</span><span class="ln-text">' +
+            escapeHtml(preview.slice(0, 80)) + badge + '</span>';
           item.onclick = ev => { if (ev.target.closest('.ln-del-wrap')) return; selectPhotoFromLayer(p.id); };
           appendLayerListDeleteButton(item, ev => deleteFieldPhotoFromLayer(p.id, ev));
           list.appendChild(item);
