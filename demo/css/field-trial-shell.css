@@ -19,7 +19,7 @@ body.field-trial-ui.field-mode {
   --trial-tb-muted: #b8c8d8;
   --trial-tb-label-shadow: 0 1px 2px rgba(0, 0, 0, 0.62);
   --trial-finish-locate-gap: 12px;
-  --trial-tools-pen-anchor-gap: 96px;
+  --trial-right-toggle-gap: 10px;
   --trial-map-col-inset: 0px;
   --trial-green-border: rgba(34, 197, 94, 0.50);
   --trial-green-border-hover: rgba(34, 197, 94, 0.62);
@@ -45,8 +45,13 @@ body.field-trial-ui.field-mode #top-bar {
   gap: 6px;
   box-shadow: var(--trial-glass-shadow);
   color: #f4f7fb;
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  touch-action: pan-x;
   flex-wrap: nowrap;
   align-items: center;
 }
@@ -124,9 +129,9 @@ body.field-trial-ui.field-mode #top-bar #btn-trial-sun.active {
 
 /* Üst bar içi — öğeler yeşil çerçeve içinde kalsın */
 body.field-trial-ui.field-mode #top-bar #trial-inspection-chrome {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 body.field-trial-ui.field-mode #top-bar .trial-badge {
   padding: 4px 8px;
@@ -166,8 +171,8 @@ body.field-trial-ui.field-mode #top-bar #field-lang-switch.trial-lang-switch but
   padding: 4px 8px;
 }
 body.field-trial-ui.field-mode #top-bar #loc-search {
-  flex: 1 1 72px;
-  min-width: 0;
+  flex: 0 0 auto;
+  min-width: min(148px, 36vw);
   max-width: 200px;
   padding: 2px 4px 2px 8px;
   max-height: 38px;
@@ -1407,6 +1412,10 @@ body.field-trial-ui.trial-top-compact-3 #top-bar .trial-stat-clock {
 body.field-trial-ui.trial-top-compact-4 #top-bar .trial-badge .l2 {
   display: none !important;
 }
+body.field-trial-ui.trial-top-compact-5 #top-bar .trial-tb-sep,
+body.field-trial-ui.trial-top-compact-5 #top-bar .trial-stat-wx {
+  display: none !important;
+}
 
 /* iPhone / dar ekran — üst bar yatay kaydırma (arama için sola çek) */
 @media (max-width: 480px) {
@@ -1457,6 +1466,13 @@ body.field-trial-ui.trial-top-compact-4 #top-bar .trial-badge .l2 {
   body.field-trial-ui.trial-top-compact-3 #top-bar .trial-stat-clock,
   body.field-trial-ui.trial-top-compact-4 #top-bar .trial-badge .l2 {
     display: revert !important;
+  }
+  body.field-trial-ui.trial-top-compact-5 #top-bar .trial-tb-sep,
+  body.field-trial-ui.trial-top-compact-5 #top-bar .trial-stat-wx {
+    display: revert !important;
+  }
+  body.field-trial-ui.trial-top-compact-5 #top-bar .trial-stat-wx {
+    display: flex !important;
   }
   body.field-trial-ui.trial-top-compact-2 #top-bar .trial-stat-wx,
   body.field-trial-ui.trial-top-compact-3 #top-bar .trial-stat-alt,

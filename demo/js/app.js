@@ -16575,21 +16575,24 @@ function fitFieldTopBar() {
   if (!topBar || !FIELD_MODE) return;
   document.body.classList.remove(
     'field-top-overflow-1', 'field-top-overflow-2', 'field-top-overflow-3',
-    'trial-top-compact-1', 'trial-top-compact-2', 'trial-top-compact-3', 'trial-top-compact-4'
+    'trial-top-compact-1', 'trial-top-compact-2', 'trial-top-compact-3', 'trial-top-compact-4',
+    'trial-top-compact-5'
   );
-  if (document.body.classList.contains('field-trial-ui') && window.matchMedia('(max-width: 480px)').matches) {
-    return;
-  }
-  let guard = 0;
-  const maxGuard = document.body.classList.contains('field-trial-ui') ? 4 : 3;
-  while (topBar.scrollWidth > topBar.clientWidth + 2 && guard < maxGuard) {
-    guard++;
-    if (document.body.classList.contains('field-trial-ui')) {
-      document.body.classList.add('trial-top-compact-' + guard);
-    } else {
-      document.body.classList.add('field-top-overflow-' + guard);
+  const trialUi = document.body.classList.contains('field-trial-ui');
+  const phoneScroll = trialUi && window.matchMedia('(max-width: 480px)').matches;
+  if (!phoneScroll) {
+    let guard = 0;
+    const maxGuard = trialUi ? 5 : 3;
+    while (topBar.scrollWidth > topBar.clientWidth + 2 && guard < maxGuard) {
+      guard++;
+      if (trialUi) {
+        document.body.classList.add('trial-top-compact-' + guard);
+      } else {
+        document.body.classList.add('field-top-overflow-' + guard);
+      }
     }
   }
+  topBar.style.overflowX = topBar.scrollWidth > topBar.clientWidth + 2 ? 'auto' : '';
 }
 
 function setFieldInteractionMode(mode, fromStylus) {

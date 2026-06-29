@@ -460,80 +460,100 @@
     const canvas = $('canvas-wrap');
     const rightPanel = $('right-panel');
     const dock = $('field-dock');
-    const topBar = $('top-bar');
-    const selectBtn = document.querySelector('#left-bar .tool-btn[data-tool="select"]');
+    const rightToggle = $('right-toggle');
     if (!canvas) return;
 
     const cr = canvas.getBoundingClientRect();
     const cs = getComputedStyle(document.body);
     const edge = parseFloat(cs.getPropertyValue('--trial-edge')) || 10;
-    const rightEdge = parseFloat(cs.getPropertyValue('--trial-edge-r')) || edge;
     const bEdge = parseFloat(cs.getPropertyValue('--trial-edge-b')) || edge;
     const gap = parseFloat(cs.getPropertyValue('--trial-gap')) || 8;
     const colGap = parseFloat(cs.getPropertyValue('--trial-finish-locate-gap')) || 12;
-    const penAnchorGap = parseFloat(cs.getPropertyValue('--trial-tools-pen-anchor-gap')) || 96;
-    const topBase = parseFloat(cs.getPropertyValue('--field-topbar-h')) || 58;
+    const toggleGap = parseFloat(cs.getPropertyValue('--trial-right-toggle-gap')) || colGap;
 
     const floatW = mapFloat ? mapFloat.offsetWidth : 44;
     const toolsW = tools ? tools.offsetWidth : 44;
     const colW = Math.max(floatW, toolsW, 44);
 
-    let rightBound = cr.width - rightEdge;
+    let toggleTop = Math.round(cr.height * 0.5 - 22);
+    let toggleBottom = toggleTop + 44;
+    let centerX = Math.round(cr.width - edge - colW / 2);
+
+    if (rightToggle) {
+      const tr = rightToggle.getBoundingClientRect();
+      toggleTop = Math.round(tr.top - cr.top);
+      toggleBottom = Math.round(tr.bottom - cr.top);
+      centerX = Math.round(tr.left + tr.width / 2 - cr.left);
+    }
+
     if (rightPanel && rightPanel.style.display !== 'none') {
       const pr = rightPanel.getBoundingClientRect();
-      rightBound = Math.min(rightBound, pr.left - cr.left - gap);
+      const panelLeft = Math.round(pr.left - cr.left - gap);
+      centerX = Math.min(centerX, Math.round(panelLeft - colW / 2));
     }
 
-    let centerX = Math.round(rightBound - colW / 2);
     const minCx = colW / 2 + edge;
-    const maxCx = rightBound - colW / 2;
+    const maxCx = cr.width - edge - colW / 2;
     centerX = Math.round(Math.min(maxCx, Math.max(minCx, centerX)));
 
-    let topFloat;
-    if (selectBtn) {
-      topFloat = Math.round(selectBtn.getBoundingClientRect().top - cr.top);
-    } else if (topBar) {
-      const tbr = topBar.getBoundingClientRect();
-      topFloat = Math.round(tbr.bottom - cr.top + gap);
-    } else {
-      topFloat = Math.round(topBase + edge + gap);
-    }
-
     const dockH = dock ? dock.offsetHeight : 96;
+    const mapAreaTop = edge;
     const mapAreaBottom = cr.height - dockH - bEdge - gap;
 
-    function placeColumn(top) {
+    let topFloat = mapAreaTop;
+    if (mapFloat) {
+      const floatH = mapFloat.offsetHeight || 132;
+      topFloat = Math.round(toggleTop - toggleGap - floatH);
+      topFloat = Math.max(mapAreaTop, topFloat);
+    }
+
+    let topTools = Math.round(toggleBottom + toggleGap);
+
+    function placeSplit(floatTop, toolsTop) {
       if (mapFloat) {
         mapFloat.style.setProperty('position', 'absolute', 'important');
         mapFloat.style.setProperty('left', centerX + 'px', 'important');
         mapFloat.style.setProperty('right', 'auto', 'important');
-        mapFloat.style.setProperty('top', top + 'px', 'important');
+        mapFloat.style.setProperty('top', floatTop + 'px', 'important');
         mapFloat.style.setProperty('transform', 'translateX(-50%)', 'important');
       }
 
-      let anchorBottom = top;
-      if (mapFloat) {
-        anchorBottom = Math.round(mapFloat.getBoundingClientRect().bottom - cr.top);
-      }
-
       if (tools) {
-        const topTools = Math.round(anchorBottom + colGap + penAnchorGap);
         tools.style.setProperty('position', 'absolute', 'important');
         tools.style.setProperty('left', centerX + 'px', 'important');
-        tools.style.setProperty('top', topTools + 'px', 'important');
+        tools.style.setProperty('top', toolsTop + 'px', 'important');
         tools.style.setProperty('right', 'auto', 'important');
         tools.style.setProperty('bottom', 'auto', 'important');
         tools.style.setProperty('transform', 'translateX(-50%)', 'important');
-        anchorBottom = Math.round(tools.getBoundingClientRect().bottom - cr.top);
       }
 
-      return anchorBottom;
+      let stackBottom = toolsTop;
+      if (tools) {
+        stackBottom = Math.round(tools.getBoundingClientRect().bottom - cr.top);
+      } else if (mapFloat) {
+        stackBottom = Math.round(mapFloat.getBoundingClientRect().bottom - cr.top);
+      }
+      return stackBottom;
     }
 
-    let stackBottom = placeColumn(topFloat);
-    if (stackBottom > mapAreaBottom) {
-      topFloat = Math.max(edge, topFloat - (stackBottom - mapAreaBottom));
-      placeColumn(topFloat);
+    let stackBottom = placeSplit(topFloat, topTools);
+
+    if (mapFloat) {
+      const floatBottom = Math.round(mapFloat.getBoundingClientRect().bottom - cr.top);
+      if (floatBottom > toggleTop - toggleGap) {
+        topFloat = Math.max(mapAreaTop, Math.round(toggleTop - toggleGap - (mapFloat.offsetHeight || 132)));
+        stackBottom = placeSplit(topFloat, topTools);
+      }
+    }
+
+    if (tools && stackBottom > mapAreaBottom) {
+      topTools = Math.max(toggleBottom + toggleGap, mapAreaBottom - tools.offsetHeight);
+      stackBottom = placeSplit(topFloat, topTools);
+    }
+
+    if (mapFloat && topFloat < mapAreaTop) {
+      topFloat = mapAreaTop;
+      placeSplit(topFloat, topTools);
     }
 
     document.body.classList.add('field-trial-ready');
@@ -549,8 +569,8 @@
     const tools = $('trial-top-tools');
     const canvas = $('canvas-wrap');
     const rightPanel = $('right-panel');
-    const topBar = $('top-bar');
-    const leftBar = $('left-bar');
+    const rightToggle = $('right-toggle');
+    const dock = $('field-dock');
     if (!mapFloat && !tools) return;
 
     const reposition = () => requestAnimationFrame(positionTrialRightColumn);
@@ -560,8 +580,8 @@
       if (mapFloat) new ResizeObserver(reposition).observe(mapFloat);
       if (tools) new ResizeObserver(reposition).observe(tools);
       if (canvas) new ResizeObserver(reposition).observe(canvas);
-      if (topBar) new ResizeObserver(reposition).observe(topBar);
-      if (leftBar) new ResizeObserver(reposition).observe(leftBar);
+      if (rightToggle) new ResizeObserver(reposition).observe(rightToggle);
+      if (dock) new ResizeObserver(reposition).observe(dock);
       if (rightPanel) {
         new ResizeObserver(reposition).observe(rightPanel);
         const panelObs = new MutationObserver(reposition);
