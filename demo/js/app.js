@@ -10436,6 +10436,7 @@ window.fieldHubActionContinue = fieldHubActionContinue;
 window.fieldHubOpenJourney = fieldHubOpenJourney;
 window.scheduleProjectSave = scheduleProjectSave;
 window.ingestFieldVideo = ingestFieldVideo;
+window.getPhotoBlobRecord = getPhotoBlobRecord;
 window.markLastPhotoPanorama = markLastPhotoPanorama;
 window.isFieldGpsOn = () => _fieldGpsOn;
 window.openFieldPhotoDetail = openFieldPhotoDetail;
@@ -15398,21 +15399,41 @@ async function thumbFromVideoBlob(blob, mime) {
   ]);
 }
 
+function kickFieldMapRender() {
+  scheduleRender();
+  requestAnimationFrame(() => scheduleRender());
+  const ua = navigator.userAgent || '';
+  const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1);
+  if (ios) {
+    setTimeout(() => scheduleRender(), 80);
+    setTimeout(() => scheduleRender(), 280);
+  }
+}
+
 async function ingestFieldVideo(blob, mime, durationSec) {
   if (!blob?.size) {
     showHint(t('trial.videoEmpty') || 'Kayıt boş');
     return;
   }
+  if (!FIELD_PROJECT.id) bootstrapFieldProjectSync();
   if (!FIELD_PROJECT.id) await ensureFieldProjectId();
   if (!FIELD_PROJECT.id) {
     showHint('Önce gezi oluşturun veya açın');
     return;
   }
-  const { lat, lon, gpsSource } = videoNotePlacement();
+  let { lat, lon, gpsSource } = videoNotePlacement();
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    const p = notePlacementLatLon();
+    lat = p.lat;
+    lon = p.lon;
+    gpsSource = 'map';
+  }
   const videoId = 'vid_' + Date.now();
   const videoNum = getNextVideoNum();
   const title = (t('trial.videoTitle') || 'Video') + ' ' + videoNum;
   const ts = new Date().toISOString();
+  const blobMime = mime || blob.type || 'video/webm';
+  const isPosterOnly = blobMime.startsWith('image/');
 
   const obj = {
     id: uid(),
@@ -15431,6 +15452,7 @@ async function ingestFieldVideo(blob, mime, durationSec) {
     layerId: FIELD_PHOTOS_LAYER,
     visible: true,
     locked: false,
+    videoPosterOnly: isPosterOnly,
   };
   normalizeFieldVideoObject(obj);
   S.objects.push(obj);
@@ -15441,13 +15463,14 @@ async function ingestFieldVideo(blob, mime, durationSec) {
   S.selectedIds = [obj.id];
   pushHistory();
   buildLayerPanel();
-  scheduleRender();
+  _projectDirty = true;
+  kickFieldMapRender();
   fitMapToLatLonBounds({ minLat: lat, maxLat: lat, minLon: lon, maxLon: lon, ok: true });
   showHint(t('trial.videoSaved') + ' (' + durationSec + ' sn) · ' +
     (gpsSource === 'gps' ? 'GPS' : 'Harita'));
   requestAnimationFrame(() => {
-    scheduleRender();
-    openFieldPhotoDetail(obj.id);
+    kickFieldMapRender();
+    try { openFieldPhotoDetail(obj.id); } catch (e) { console.error('[openFieldPhotoDetail]', e); }
   });
 
   (async () => {
@@ -15456,20 +15479,29 @@ async function ingestFieldVideo(blob, mime, durationSec) {
       await idbPut(db, 'blobs', {
         key: projectBlobKey(videoId, 'video'),
         data: blob,
-        mime: mime || blob.type || 'video/webm',
+        mime: blobMime,
       });
-      let thumbBlob = null;
-      try { thumbBlob = await thumbFromVideoBlob(blob, mime || blob.type); } catch (_) {}
-      if (thumbBlob) {
+      if (isPosterOnly) {
         await idbPut(db, 'blobs', {
           key: projectBlobKey(videoId, 'thumb'),
-          data: thumbBlob,
+          data: blob,
           mime: 'image/jpeg',
         });
         await prefetchVideoThumb(obj);
+      } else {
+        let thumbBlob = null;
+        try { thumbBlob = await thumbFromVideoBlob(blob, blobMime); } catch (_) {}
+        if (thumbBlob) {
+          await idbPut(db, 'blobs', {
+            key: projectBlobKey(videoId, 'thumb'),
+            data: thumbBlob,
+            mime: 'image/jpeg',
+          });
+          await prefetchVideoThumb(obj);
+        }
       }
       scheduleProjectSave();
-      scheduleRender();
+      kickFieldMapRender();
     } catch (e) {
       console.error('[ingestFieldVideo]', e);
       showHint('Video haritaya eklendi; dosya kaydı tamamlanamadı');
@@ -19147,9 +19179,9 @@ function drawFieldPhotoPinIcon(ctx, cx, cy, size, isPanorama) {
 
 function drawFieldVideoPinIcon(ctx, cx, cy, size) {
   preloadFieldVideoPinIcon();
-  const img = (_fieldVideoPinSvg?.complete && _fieldVideoPinSvg.naturalWidth)
-    ? _fieldVideoPinSvg
-    : (_fieldVideoPinPng?.complete && _fieldVideoPinPng.naturalWidth ? _fieldVideoPinPng : null);
+  const img = (_fieldVideoPinPng?.complete && _fieldVideoPinPng.naturalWidth)
+    ? _fieldVideoPinPng
+    : (_fieldVideoPinSvg?.complete && _fieldVideoPinSvg.naturalWidth ? _fieldVideoPinSvg : null);
   const w = size;
   const h = size;
   const x = cx - w / 2;

@@ -38,7 +38,7 @@
 
   function videoMime() {
     const types = isIosWebKit()
-      ? ['video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm']
+      ? ['video/mp4', 'video/mp4;codecs=avc1', 'video/webm']
       : [
         'video/webm;codecs=vp8,opus',
         'video/webm;codecs=vp9,opus',
@@ -48,7 +48,33 @@
     for (let i = 0; i < types.length; i++) {
       if (global.MediaRecorder?.isTypeSupported?.(types[i])) return types[i];
     }
+    if (isIosWebKit() && typeof global.MediaRecorder !== 'undefined') return 'video/mp4';
     return '';
+  }
+
+  function recorderInputStream() {
+    const preview = $('field-video-preview');
+    if (isIosWebKit() && preview?.captureStream) {
+      try {
+        const cap = preview.captureStream(15);
+        if (cap?.getVideoTracks?.().length) return cap;
+      } catch (_) {}
+    }
+    if (!_videoStream) return null;
+    if (isIosWebKit()) {
+      const vt = _videoStream.getVideoTracks();
+      if (vt.length) return new MediaStream(vt);
+    }
+    return _videoStream;
+  }
+
+  async function capturePreviewFrame(preview) {
+    if (!preview?.videoWidth) return null;
+    const c = document.createElement('canvas');
+    c.width = preview.videoWidth;
+    c.height = preview.videoHeight;
+    c.getContext('2d').drawImage(preview, 0, 0);
+    return new Promise((res) => c.toBlob(res, 'image/jpeg', 0.88));
   }
 
   async function saveFieldVideo(blob, mime, durationSec) {
@@ -114,14 +140,21 @@
     }
     if (typeof global.FieldPermissions !== 'undefined') {
       const cam = await global.FieldPermissions.request('camera', { hintDenied: trialT('photo.camDenied', 'Camera denied', 'Kamera izni gerekli') });
-      const mic = await global.FieldPermissions.request('microphone', { hintDenied: trialT('photo.micDenied', 'Microphone denied', 'Mikrofon izni gerekli') });
-      if (!cam || !mic) return false;
+      if (!cam) return false;
+      if (!isIosWebKit()) {
+        const mic = await global.FieldPermissions.request('microphone', { hintDenied: trialT('photo.micDenied', 'Microphone denied', 'Mikrofon izni gerekli') });
+        if (!mic) return false;
+      } else {
+        await global.FieldPermissions.request('microphone', { hintDenied: trialT('photo.micDenied', 'Microphone denied', 'Mikrofon izni gerekli') });
+      }
     }
     closeVideoUi();
     try {
-      const mime = videoMime();
+      const useAudio = !isIosWebKit() || (typeof global.FieldPermissions !== 'undefined'
+        ? (await global.FieldPermissions.check?.('microphone')) === 'granted'
+        : false);
       _videoStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+        audio: useAudio,
         video: {
           facingMode: { ideal: 'environment' },
           width: { ideal: 1280, max: 1280 },
@@ -175,13 +208,21 @@
       return;
     }
 
+    const recordStream = recorderInputStream();
+    if (!recordStream) {
+      global.showHint?.(trialT('trial.videoUnsupported', 'Camera not ready', 'Kamera hazır değil'));
+      await openVideoUi();
+      return;
+    }
+
     _videoChunks = [];
-    const opts = { mimeType: mime, videoBitsPerSecond: VIDEO_BITRATE };
-    if (!isIosWebKit()) opts.audioBitsPerSecond = 96000;
+    const opts = isIosWebKit()
+      ? { mimeType: mime }
+      : { mimeType: mime, videoBitsPerSecond: VIDEO_BITRATE, audioBitsPerSecond: 96000 };
     try {
-      _videoRec = new MediaRecorder(_videoStream, opts);
+      _videoRec = new MediaRecorder(recordStream, opts);
     } catch (_) {
-      try { _videoRec = new MediaRecorder(_videoStream, { mimeType: mime }); } catch (e2) {
+      try { _videoRec = new MediaRecorder(recordStream, { mimeType: mime }); } catch (e2) {
         global.showHint?.(trialT('trial.videoUnsupported', 'Video recording not supported', 'Video kaydı desteklenmiyor'));
         return;
       }
@@ -195,12 +236,21 @@
       }
       const btn = $('field-video-record-btn');
       if (btn) btn.classList.remove('recording');
-      await new Promise((r) => setTimeout(r, isIosWebKit() ? 250 : 80));
+      const preview = $('field-video-preview');
+      await new Promise((r) => setTimeout(r, isIosWebKit() ? 400 : 80));
       const dur = Math.max(1, Math.min(VIDEO_MAX_SEC, Math.round((Date.now() - _videoStart) / 1000)));
       const outMime = _videoRec?.mimeType || mime;
-      const blob = new Blob(_videoChunks, { type: outMime });
+      let blob = new Blob(_videoChunks, { type: outMime });
       _videoRec = null;
       _videoChunks = [];
+      let saveMime = outMime;
+      if (!blob.size && preview) {
+        const frame = await capturePreviewFrame(preview);
+        if (frame?.size) {
+          blob = frame;
+          saveMime = 'image/jpeg';
+        }
+      }
       if (!blob.size) {
         closeVideoUi();
         global.showHint?.(trialT('trial.videoEmpty', 'Empty recording', 'Kayıt boş'));
@@ -208,7 +258,7 @@
       }
       global.showHint?.(trialT('trial.videoProcessing', 'Saving video…', 'Video kaydediliyor…'));
       try {
-        await saveFieldVideo(blob, outMime, dur);
+        await saveFieldVideo(blob, saveMime, dur);
       } finally {
         closeVideoUi();
       }
@@ -219,7 +269,7 @@
     };
 
     _videoStart = Date.now();
-    if (isIosWebKit()) _videoRec.start();
+    if (isIosWebKit()) _videoRec.start(1000);
     else _videoRec.start(500);
     if (btn) btn.classList.add('recording');
     _videoTimer = setInterval(updateVideoTimer, 250);
@@ -404,10 +454,23 @@
     if (vidEl) {
       vidEl.style.display = 'block';
       if (vidEl._blobUrl) URL.revokeObjectURL(vidEl._blobUrl);
-      const row = await global.getPhotoBlobRecord(obj.videoId, 'video');
+      const row = typeof global.getPhotoBlobRecord === 'function'
+        ? await global.getPhotoBlobRecord(obj.videoId, 'video')
+        : null;
       if (row?.data) {
-        vidEl._blobUrl = URL.createObjectURL(row.data);
-        vidEl.src = vidEl._blobUrl;
+        const mime = row.mime || row.data.type || '';
+        if (mime.startsWith('image/')) {
+          vidEl.style.display = 'none';
+          if (imgEl) {
+            imgEl.style.display = 'block';
+            if (imgEl._blobUrl) URL.revokeObjectURL(imgEl._blobUrl);
+            imgEl._blobUrl = URL.createObjectURL(row.data);
+            imgEl.src = imgEl._blobUrl;
+          }
+        } else {
+          vidEl._blobUrl = URL.createObjectURL(row.data);
+          vidEl.src = vidEl._blobUrl;
+        }
       }
     }
     const meta = $('field-photo-meta');
