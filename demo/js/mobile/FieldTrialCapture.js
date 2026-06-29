@@ -6,8 +6,13 @@
 
   const VIDEO_MAX_SEC = 15;
   const VIDEO_BITRATE = 750000;
-  const PANO_FRAMES = 3;
-  const PANO_GAP_MS = 900;
+  const PANO_SCAN_MS = 5200;
+  const PANO_CAPTURE_MS = 300;
+  const PANO_MIN_FRAMES = 5;
+  const PANO_MAX_FRAMES = 14;
+  const PANO_FILM_SLOTS = 14;
+  const PANO_CAPTURE_MAX_W = 960;
+  const PANO_MATCH_MAX_W = 240;
 
   let _videoStream = null;
   let _videoRec = null;
@@ -15,8 +20,11 @@
   let _videoStart = 0;
   let _videoTimer = null;
   let _panoFrames = [];
-  let _panoStep = 0;
-  let _panoDir = 'left';
+  let _panoDir = 'right';
+  let _panoScanning = false;
+  let _panoCaptureTimer = null;
+  let _panoScanAnim = 0;
+  let _panoScanDone = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -292,6 +300,133 @@
     });
   }
 
+  function stopPanoScanTimers() {
+    if (_panoCaptureTimer) {
+      clearInterval(_panoCaptureTimer);
+      _panoCaptureTimer = null;
+    }
+    if (_panoScanAnim) {
+      cancelAnimationFrame(_panoScanAnim);
+      _panoScanAnim = 0;
+    }
+    _panoScanning = false;
+    document.body.classList.remove('field-pano-scanning');
+    $('field-pano-film')?.classList.remove('scanning');
+  }
+
+  function ensurePanoFilmSlots() {
+    const strip = $('field-pano-film-strip');
+    if (!strip || strip.childElementCount === PANO_FILM_SLOTS) return;
+    strip.innerHTML = '';
+    for (let i = 0; i < PANO_FILM_SLOTS; i++) {
+      const slot = document.createElement('span');
+      slot.className = 'field-pano-film-slot';
+      strip.appendChild(slot);
+    }
+  }
+
+  function updatePanoFilmUi(progress) {
+    ensurePanoFilmSlots();
+    const slots = $('field-pano-film-strip')?.querySelectorAll('.field-pano-film-slot');
+    if (!slots?.length) return;
+    let prog = progress;
+    if (!Number.isFinite(prog)) {
+      prog = Math.min(1, _panoFrames.length / Math.max(PANO_MIN_FRAMES, PANO_MAX_FRAMES - 1));
+    }
+    const filledCount = Math.max(0, Math.min(PANO_FILM_SLOTS, Math.round(prog * PANO_FILM_SLOTS)));
+    slots.forEach((slot, i) => {
+      slot.classList.toggle('filled', i < filledCount);
+      slot.style.backgroundImage = '';
+    });
+  }
+
+  function setScanHeadProgress(t) {
+    const head = $('field-pano-scan-head');
+    const film = $('field-pano-film');
+    if (!head || !film) return;
+    const windowEl = film.querySelector('.field-pano-film-window');
+    const w = windowEl?.clientWidth || film.clientWidth;
+    const p = Math.max(0, Math.min(1, t));
+    head.style.left = Math.round(p * w) + 'px';
+  }
+
+  function capturePanoFrame(videoEl) {
+    if (!videoEl?.videoWidth) return null;
+    const srcW = videoEl.videoWidth;
+    const srcH = videoEl.videoHeight;
+    const scale = Math.min(1, PANO_CAPTURE_MAX_W / srcW);
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(srcW * scale));
+    c.height = Math.max(1, Math.round(srcH * scale));
+    c.getContext('2d').drawImage(videoEl, 0, 0, c.width, c.height);
+    return c;
+  }
+
+  function downscaleCanvas(src, maxW) {
+    if (src.width <= maxW) return src;
+    const sc = maxW / src.width;
+    const c = document.createElement('canvas');
+    c.width = maxW;
+    c.height = Math.max(1, Math.round(src.height * sc));
+    c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+    return c;
+  }
+
+  function grayPlane(ctx, w, h) {
+    const sampleW = Math.min(w, 160);
+    const sampleH = Math.max(1, Math.round(h * (sampleW / w)));
+    const tmp = document.createElement('canvas');
+    tmp.width = sampleW;
+    tmp.height = sampleH;
+    const tctx = tmp.getContext('2d');
+    tctx.drawImage(ctx.canvas, 0, 0, w, h, 0, 0, sampleW, sampleH);
+    const img = tctx.getImageData(0, 0, sampleW, sampleH).data;
+    const out = new Float32Array(sampleW * sampleH);
+    for (let i = 0, p = 0; i < img.length; i += 4, p++) {
+      out[p] = img[i] * 0.299 + img[i + 1] * 0.587 + img[i + 2] * 0.114;
+    }
+    return { gray: out, w: sampleW, h: sampleH };
+  }
+
+  function overlapScore(planeA, planeB, overlapW) {
+    const { gray: grayA, w: wA, h } = planeA;
+    const { gray: grayB, w: wB } = planeB;
+    const ow = Math.min(overlapW, wA, wB);
+    let sum = 0;
+    let n = 0;
+    const yStep = 4;
+    const xStep = 4;
+    for (let y = 0; y < h; y += yStep) {
+      for (let ox = 0; ox < ow; ox += xStep) {
+        const ax = wA - ow + ox;
+        const bx = ox;
+        const d = grayA[y * wA + ax] - grayB[y * wB + bx];
+        sum += d * d;
+        n++;
+      }
+    }
+    return n ? sum / n : Infinity;
+  }
+
+  function findBestOverlap(smallA, smallB) {
+    const h = Math.min(smallA.height, smallB.height);
+    const ga = grayPlane(smallA.getContext('2d'), smallA.width, h);
+    const gb = grayPlane(smallB.getContext('2d'), smallB.width, h);
+    const minOw = Math.max(6, Math.round(smallA.width * 0.16));
+    const maxOw = Math.max(minOw + 4, Math.round(smallA.width * 0.38));
+    let bestOw = Math.round(smallA.width * 0.26);
+    let best = Infinity;
+    const step = Math.max(3, Math.round(smallA.width * 0.04));
+    for (let ow = minOw; ow <= maxOw; ow += step) {
+      const s = overlapScore(ga, gb, ow);
+      if (s < best) {
+        best = s;
+        bestOw = ow;
+      }
+    }
+    return bestOw;
+  }
+
   function stitchPanorama(canvases) {
     if (!canvases.length) return null;
     const h = Math.min.apply(null, canvases.map((c) => c.height));
@@ -304,18 +439,34 @@
       oc.getContext('2d').drawImage(c, 0, 0, w, h);
       return oc;
     });
-    const overlap = 0.18;
-    const step = Math.max(1, Math.round(scaled[0].width * (1 - overlap)));
+
+    const placements = [{ x: 0, w: scaled[0].width, canvas: scaled[0], overlap: 0 }];
+    for (let i = 1; i < scaled.length; i++) {
+      const prevSmall = downscaleCanvas(scaled[i - 1], PANO_MATCH_MAX_W);
+      const curSmall = downscaleCanvas(scaled[i], PANO_MATCH_MAX_W);
+      const owSmall = findBestOverlap(prevSmall, curSmall);
+      const scale = scaled[i - 1].width / prevSmall.width;
+      const overlap = Math.max(8, Math.round(owSmall * scale));
+      const x = placements[i - 1].x + scaled[i - 1].width - overlap;
+      placements.push({ x, w: scaled[i].width, canvas: scaled[i], overlap });
+    }
+
+    const totalW = placements[placements.length - 1].x + placements[placements.length - 1].w;
     const out = document.createElement('canvas');
-    out.width = scaled[0].width + step * (scaled.length - 1);
+    out.width = Math.max(1, totalW);
     out.height = h;
     const ctx = out.getContext('2d');
-    let x = 0;
-    scaled.forEach((c, i) => {
-      ctx.drawImage(c, x, 0);
-      x += step;
+
+    placements.forEach((p) => {
+      ctx.drawImage(p.canvas, p.x, 0);
     });
     return out;
+  }
+
+  function stitchPanoramaAsync(canvases) {
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(stitchPanorama(canvases)), 20);
+    });
   }
 
   function updatePanoGuideUi() {
@@ -324,35 +475,36 @@
     const btnL = $('field-pano-dir-left');
     const btnR = $('field-pano-dir-right');
     const panoBtn = $('field-camera-pano-btn');
-    const dots = $('field-pano-progress')?.querySelectorAll('.field-pano-dot');
     const active = !!global._fieldCameraPanoMode;
     if (guide) guide.hidden = !active;
     if (panoBtn) panoBtn.classList.toggle('active', active);
-    if (btnL) btnL.classList.toggle('active', _panoDir === 'left');
-    if (btnR) btnR.classList.toggle('active', _panoDir === 'right');
-    const line = guide?.querySelector('.field-pano-line');
-    if (line) {
-      line.classList.toggle('dir-left', _panoDir === 'left');
-      line.classList.toggle('dir-right', _panoDir === 'right');
+    if (btnL) {
+      btnL.classList.toggle('active', _panoDir === 'left');
+      btnL.disabled = _panoScanning;
+    }
+    if (btnR) {
+      btnR.classList.toggle('active', _panoDir === 'right');
+      btnR.disabled = _panoScanning;
     }
     if (hint) {
-      const step = _panoFrames.length;
-      if (step === 0) {
-        hint.textContent = trialT('trial.panoStart', 'Align with the line, tap shutter', 'Çizgiye hizalayın, deklanşöre basın');
-      } else if (step < PANO_FRAMES) {
-        hint.textContent = _panoDir === 'left'
-          ? trialT('trial.panoPanLeft', 'Slowly pan left along the line, capture again', 'Çizgi boyunca yavaşça sola çevirin, tekrar çekin')
-          : trialT('trial.panoPanRight', 'Slowly pan right along the line, capture again', 'Çizgi boyunca yavaşça sağa çevirin, tekrar çekin');
-      } else {
+      if (_panoScanning) {
+        hint.textContent = _panoDir === 'right'
+          ? trialT('trial.panoScanRight', 'Pan slowly to the right…', 'Yavaşça sağa çevirin…')
+          : trialT('trial.panoScanLeft', 'Pan slowly to the left…', 'Yavaşça sola çevirin…');
+      } else if (_panoFrames.length) {
         hint.textContent = trialT('trial.panoStitch', 'Stitching…', 'Birleştiriliyor…');
+      } else {
+        hint.textContent = trialT('trial.panoStartScan', 'Choose direction, tap shutter to scan', 'Yön seçin, taramak için deklanşöre basın');
       }
     }
-    if (dots) dots.forEach((d, i) => d.classList.toggle('filled', i < _panoFrames.length));
+    if (!active) setScanHeadProgress(0);
+    else updatePanoFilmUi();
   }
 
   function setPanoDirection(dir) {
-    if (!global._fieldCameraPanoMode) return;
-    _panoDir = dir === 'right' ? 'right' : 'left';
+    if (!global._fieldCameraPanoMode || _panoScanning) return;
+    _panoDir = dir === 'left' ? 'left' : 'right';
+    setScanHeadProgress(_panoDir === 'right' ? 0 : 1);
     updatePanoGuideUi();
   }
 
@@ -360,8 +512,10 @@
     if (!isTrial()) return false;
     global._fieldCameraPanoMode = true;
     _panoFrames = [];
-    _panoStep = 0;
-    _panoDir = 'left';
+    _panoDir = 'right';
+    stopPanoScanTimers();
+    ensurePanoFilmSlots();
+    setScanHeadProgress(0);
     updatePanoGuideUi();
     return true;
   }
@@ -373,44 +527,95 @@
       return;
     }
     enterPanoramaMode();
-    global.showHint?.(trialT('trial.panoModeOn', 'Panorama mode — pan along the line', 'Panorama modu — çizgi boyunca hareket edin'));
+    global.showHint?.(trialT('trial.panoModeOn', 'Panorama mode — scan along the film strip', 'Panorama modu — film şeridi boyunca tarayın'));
   }
 
   function clearPanoMode() {
+    stopPanoScanTimers();
     global._fieldCameraPanoMode = false;
     _panoFrames = [];
-    _panoStep = 0;
     updatePanoGuideUi();
   }
 
-  async function onPanoShutter(videoEl) {
-    if (!videoEl?.videoWidth) return;
-    const c = document.createElement('canvas');
-    c.width = videoEl.videoWidth;
-    c.height = videoEl.videoHeight;
-    c.getContext('2d').drawImage(videoEl, 0, 0);
-    _panoFrames.push(c);
-    _panoStep = _panoFrames.length;
-
-    if (_panoFrames.length < PANO_FRAMES) {
+  async function finishPanoScan(videoEl) {
+    if (_panoScanDone) return _panoScanDone;
+    _panoScanDone = (async () => {
+      stopPanoScanTimers();
       updatePanoGuideUi();
-      global.showHint?.(trialT('trial.panoStep', 'Frame ' + _panoFrames.length + '/' + PANO_FRAMES, 'Kare ' + _panoFrames.length + '/' + PANO_FRAMES));
-      return;
-    }
+      if (_panoFrames.length < PANO_MIN_FRAMES) {
+        _panoFrames = [];
+        updatePanoFilmUi();
+        setScanHeadProgress(_panoDir === 'right' ? 0 : 1);
+        global.showHint?.(trialT('trial.panoTooFew', 'Scan again — pan more slowly', 'Tekrar tarayın — daha yavaş çevirin'));
+        _panoScanDone = null;
+        return;
+      }
+      global.showHint?.(trialT('trial.panoStitch', 'Stitching…', 'Birleştiriliyor…'));
+      const frames = _panoFrames.slice();
+      _panoFrames = [];
+      const stitched = await stitchPanoramaAsync(frames);
+      clearPanoMode();
+      if (typeof global.closeFieldCameraCaptureUi === 'function') global.closeFieldCameraCaptureUi();
+      if (!stitched) {
+        _panoScanDone = null;
+        return;
+      }
+      const blob = await new Promise((res) => stitched.toBlob(res, 'image/jpeg', 0.9));
+      if (!blob) {
+        _panoScanDone = null;
+        return;
+      }
+      const file = new File([blob], 'field-pano-' + Date.now() + '.jpg', { type: 'image/jpeg' });
+      if (typeof global.ingestFieldPhoto === 'function') {
+        await global.ingestFieldPhoto(file);
+        if (typeof global.markLastPhotoPanorama === 'function') global.markLastPhotoPanorama();
+      }
+      global.showHint?.(trialT('trial.panoSaved', 'Panorama saved', 'Panoramik foto kaydedildi') +
+        ' (' + frames.length + ' ' + trialT('trial.panoFrames', 'frames', 'kare') + ')');
+      _panoScanDone = null;
+    })();
+    return _panoScanDone;
+  }
 
+  async function onPanoShutter(videoEl) {
+    if (!videoEl?.videoWidth || !global._fieldCameraPanoMode) return;
+    if (_panoScanning) return;
+    _panoFrames = [];
+    _panoScanning = true;
+    _panoScanDone = null;
+    document.body.classList.add('field-pano-scanning');
+    const film = $('field-pano-film');
+    film?.classList.add('scanning');
     updatePanoGuideUi();
-    const stitched = stitchPanorama(_panoFrames);
-    clearPanoMode();
-    if (typeof global.closeFieldCameraCaptureUi === 'function') global.closeFieldCameraCaptureUi();
-    if (!stitched) return;
-    const blob = await new Promise((res) => stitched.toBlob(res, 'image/jpeg', 0.86));
-    if (!blob) return;
-    const file = new File([blob], 'field-pano-' + Date.now() + '.jpg', { type: 'image/jpeg' });
-    if (typeof global.ingestFieldPhoto === 'function') {
-      await global.ingestFieldPhoto(file);
-      if (typeof global.markLastPhotoPanorama === 'function') global.markLastPhotoPanorama();
-    }
-    global.showHint?.(trialT('trial.panoSaved', 'Panorama saved', 'Panoramik foto kaydedildi'));
+
+    const first = capturePanoFrame(videoEl);
+    if (first) _panoFrames.push(first);
+    updatePanoFilmUi(0);
+
+    const start = performance.now();
+    const from = _panoDir === 'right' ? 0 : 1;
+    const to = _panoDir === 'right' ? 1 : 0;
+    setScanHeadProgress(from);
+
+    _panoCaptureTimer = setInterval(() => {
+      if (!_panoScanning) return;
+      const frame = capturePanoFrame(videoEl);
+      if (frame) _panoFrames.push(frame);
+      if (_panoFrames.length >= PANO_MAX_FRAMES) finishPanoScan(videoEl);
+    }, PANO_CAPTURE_MS);
+
+    const tick = (now) => {
+      if (!_panoScanning) return;
+      const t = Math.min(1, (now - start) / PANO_SCAN_MS);
+      setScanHeadProgress(from + (to - from) * t);
+      updatePanoFilmUi(t);
+      if (t < 1) {
+        _panoScanAnim = requestAnimationFrame(tick);
+      } else {
+        finishPanoScan(videoEl);
+      }
+    };
+    _panoScanAnim = requestAnimationFrame(tick);
   }
 
   function startPanorama() {

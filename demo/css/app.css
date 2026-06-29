@@ -1975,32 +1975,43 @@ body.field-camera-open{overflow:hidden;}
   font-size:13px;font-weight:700;text-align:center;pointer-events:none;max-width:min(92vw,360px);
 }
 .field-camera-pano-guide{
-  position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:14px;padding:0 16px;pointer-events:none;
+  position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  gap:12px;padding:max(12px,env(safe-area-inset-top)) 16px 0;pointer-events:none;
 }
 .field-camera-pano-guide[hidden]{display:none!important;}
-.field-pano-line{
-  position:relative;width:min(88vw,420px);height:48px;display:flex;align-items:center;justify-content:center;
+.field-pano-scanner-wrap{
+  display:flex;flex-direction:column;align-items:center;gap:12px;width:min(92vw,440px);pointer-events:none;
 }
-.field-pano-line-track{
-  display:block;width:100%;height:2px;background:linear-gradient(90deg,transparent,#fff 12%,#fff 88%,transparent);
-  box-shadow:0 0 8px rgba(255,255,255,.55);
+.field-pano-film{
+  width:100%;border-radius:8px;background:#0a0a0a;border:2px solid rgba(255,255,255,.22);
+  box-shadow:0 8px 28px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.06);overflow:hidden;
 }
-.field-pano-line-arrow{
-  position:absolute;top:50%;transform:translateY(-50%);font-size:28px;font-weight:900;color:#fff;
-  text-shadow:0 0 10px rgba(0,0,0,.8);opacity:.35;transition:opacity .2s,transform .2s;
+.field-pano-film-perf{
+  height:14px;background:
+    repeating-linear-gradient(90deg,#0a0a0a 0 6px,rgba(255,255,255,.92) 6px 12px);
 }
-.field-pano-line.dir-left .field-pano-line-arrow-l{opacity:1;animation:field-pano-nudge-l 1.4s ease-in-out infinite;}
-.field-pano-line.dir-right .field-pano-line-arrow-r{opacity:1;animation:field-pano-nudge-r 1.4s ease-in-out infinite;}
-.field-pano-line-arrow-l{left:4px;}
-.field-pano-line-arrow-r{right:4px;}
-@keyframes field-pano-nudge-l{
-  0%,100%{transform:translateY(-50%) translateX(0);}
-  50%{transform:translateY(-50%) translateX(-8px);}
+.field-pano-film-window{
+  position:relative;height:72px;background:#111;border-block:1px solid rgba(255,255,255,.08);overflow:hidden;
 }
-@keyframes field-pano-nudge-r{
-  0%,100%{transform:translateY(-50%) translateX(0);}
-  50%{transform:translateY(-50%) translateX(8px);}
+.field-pano-film-strip{
+  position:absolute;inset:0;display:flex;align-items:stretch;gap:2px;padding:4px 6px;
+}
+.field-pano-film-slot{
+  flex:1 1 0;min-width:0;border-radius:3px;border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.04);opacity:.35;transition:opacity .15s,background .15s,border-color .15s;
+}
+.field-pano-film-slot.filled{
+  opacity:1;border-color:rgba(126,240,174,.55);background:rgba(34,197,94,.22);
+  background-size:cover;background-position:center;
+}
+.field-pano-scan-head{
+  position:absolute;top:0;bottom:0;width:3px;margin-left:-1px;
+  background:linear-gradient(180deg,rgba(126,240,174,.15),#7ef0ae 20%,#7ef0ae 80%,rgba(126,240,174,.15));
+  box-shadow:0 0 14px rgba(126,240,174,.85),0 0 4px rgba(255,255,255,.65);
+  left:0;transform:translateX(0);transition:none;pointer-events:none;z-index:2;
+}
+.field-pano-film.scanning .field-pano-scan-head{
+  animation:none;
 }
 .field-pano-dir-row{display:flex;gap:10px;pointer-events:auto;}
 .field-pano-dir-btn{
@@ -2008,11 +2019,13 @@ body.field-camera-open{overflow:hidden;}
   background:rgba(0,0,0,.55);color:#fff;font-size:12px;font-weight:800;cursor:pointer;
 }
 .field-pano-dir-btn.active{border-color:#7ef0ae;color:#7ef0ae;background:rgba(34,197,94,.18);}
-.field-pano-progress{display:flex;gap:8px;pointer-events:none;}
-.field-pano-dot{
-  width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.65);background:transparent;
+body.field-camera-open.field-pano-scanning #field-camera-bar .fcb-shutter{
+  box-shadow:0 0 0 4px rgba(126,240,174,.45),0 0 0 3px rgba(255,255,255,.25);
+  animation:field-pano-shutter-pulse 1s ease-in-out infinite;
 }
-.field-pano-dot.filled{background:#7ef0ae;border-color:#7ef0ae;box-shadow:0 0 8px rgba(126,240,174,.6);}
+@keyframes field-pano-shutter-pulse{
+  50%{transform:scale(0.94);opacity:.88;}
+}
 #field-camera-bar .fcb-pano{
   width:52px;height:52px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
   background:rgba(0,0,0,.45);color:#fff;font-size:20px;cursor:pointer;flex-shrink:0;

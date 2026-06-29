@@ -1362,18 +1362,20 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
 <div id="field-camera-overlay" aria-hidden="true">
   <video id="field-camera-video" playsinline autoplay muted></video>
   <div id="field-camera-pano-guide" class="field-camera-pano-guide" hidden>
-    <div class="field-pano-line" aria-hidden="true">
-      <span class="field-pano-line-track"></span>
-      <span class="field-pano-line-arrow field-pano-line-arrow-l">‹</span>
-      <span class="field-pano-line-arrow field-pano-line-arrow-r">›</span>
-    </div>
-    <p id="field-camera-pano-hint" class="field-camera-pano-hint"></p>
-    <div class="field-pano-dir-row">
-      <button type="button" class="field-pano-dir-btn" id="field-pano-dir-left" onclick="FieldTrialCapture.setPanoDirection('left')">← Sol</button>
-      <button type="button" class="field-pano-dir-btn" id="field-pano-dir-right" onclick="FieldTrialCapture.setPanoDirection('right')">Sağ →</button>
-    </div>
-    <div class="field-pano-progress" id="field-pano-progress" aria-hidden="true">
-      <span class="field-pano-dot"></span><span class="field-pano-dot"></span><span class="field-pano-dot"></span>
+    <div class="field-pano-scanner-wrap">
+      <div class="field-pano-film" id="field-pano-film" aria-hidden="true">
+        <div class="field-pano-film-perf field-pano-film-perf-top"></div>
+        <div class="field-pano-film-window">
+          <div class="field-pano-film-strip" id="field-pano-film-strip"></div>
+          <div class="field-pano-scan-head" id="field-pano-scan-head"></div>
+        </div>
+        <div class="field-pano-film-perf field-pano-film-perf-bottom"></div>
+      </div>
+      <p id="field-camera-pano-hint" class="field-camera-pano-hint"></p>
+      <div class="field-pano-dir-row">
+        <button type="button" class="field-pano-dir-btn" id="field-pano-dir-left" onclick="FieldTrialCapture.setPanoDirection('left')">← Sol</button>
+        <button type="button" class="field-pano-dir-btn" id="field-pano-dir-right" onclick="FieldTrialCapture.setPanoDirection('right')">Sağ →</button>
+      </div>
     </div>
   </div>
   <div id="field-camera-bar">
@@ -1536,8 +1538,8 @@ window.pdfjsLib = pdfjs;
 <script src="js/security/FieldDbCrypto.js?v=1.2.2"></script>
 <script src="js/ui/LegacyClickBridge.js?v=1.2.0"></script>
 <script src="js/ui/FieldDockIcons.js?v=1.0.1"></script>
-<script src="js/app.js?v=1.2.4"></script>
-<script src="js/mobile/FieldTrialCapture.js?v=1.0.7"></script>
+<script src="js/app.js?v=1.2.5"></script>
+<script src="js/mobile/FieldTrialCapture.js?v=1.1.1"></script>
 <script src="js/ui/FieldTrialShell.js?v=1.0.23"></script>
 </body>
 </html>
