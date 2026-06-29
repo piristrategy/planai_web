@@ -15337,52 +15337,82 @@ function videoNotePlacement() {
   return { lat: p.lat, lon: p.lon, gpsSource: _fieldGpsOn ? 'gps' : 'map' };
 }
 
-async function thumbFromVideoBlob(blob) {
-  return new Promise((resolve) => {
+async function thumbFromVideoBlob(blob, mime) {
+  const timeoutMs = 4000;
+  const work = new Promise((resolve) => {
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
     const url = URL.createObjectURL(blob);
     const v = document.createElement('video');
     v.muted = true;
     v.playsInline = true;
-    v.preload = 'metadata';
-    v.onloadeddata = () => {
-      try { v.currentTime = Math.min(0.4, (v.duration || 1) * 0.15); } catch (_) { capture(); }
-    };
-    v.onseeked = capture;
-    v.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-    function capture() {
+    v.setAttribute('playsinline', '');
+    v.setAttribute('webkit-playsinline', 'true');
+    v.preload = 'auto';
+    const cleanup = () => { try { URL.revokeObjectURL(url); } catch (_) {} };
+    const capture = () => {
       try {
+        if (!v.videoWidth) { cleanup(); finish(null); return; }
         const c = document.createElement('canvas');
         const w = Math.min(320, v.videoWidth || 320);
-        const h = Math.round((v.videoHeight || 180) * (w / (v.videoWidth || w)));
+        const h = Math.max(1, Math.round((v.videoHeight || 180) * (w / (v.videoWidth || w))));
         c.width = w;
-        c.height = h || 180;
+        c.height = h;
         c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
-        c.toBlob((b) => { URL.revokeObjectURL(url); resolve(b); }, 'image/jpeg', 0.82);
+        c.toBlob((b) => { cleanup(); finish(b); }, 'image/jpeg', 0.82);
       } catch (_) {
-        URL.revokeObjectURL(url);
-        resolve(null);
+        cleanup();
+        finish(null);
       }
-    }
+    };
+    const seekThumb = () => {
+      const t = Math.min(0.35, Math.max(0.05, (v.duration || 1) * 0.12));
+      try {
+        v.currentTime = t;
+      } catch (_) {
+        capture();
+      }
+    };
+    v.onerror = () => { cleanup(); finish(null); };
+    v.onseeked = capture;
+    v.onloadedmetadata = () => {
+      v.play().then(() => {
+        v.pause();
+        seekThumb();
+      }).catch(() => seekThumb());
+    };
+    v.onloadeddata = () => {
+      if (!settled && v.readyState >= 2 && v.currentTime === 0) seekThumb();
+    };
     v.src = url;
+    if (mime) v.type = mime;
+    v.load();
   });
+  return Promise.race([
+    work,
+    new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+  ]);
 }
 
 async function ingestFieldVideo(blob, mime, durationSec) {
-  if (!blob?.size || !FIELD_PROJECT.id) return;
+  if (!blob?.size) {
+    showHint(t('trial.videoEmpty') || 'Kayıt boş');
+    return;
+  }
+  if (!FIELD_PROJECT.id) await ensureFieldProjectId();
+  if (!FIELD_PROJECT.id) {
+    showHint('Önce gezi oluşturun veya açın');
+    return;
+  }
   const { lat, lon, gpsSource } = videoNotePlacement();
   const videoId = 'vid_' + Date.now();
   const videoNum = getNextVideoNum();
   const title = (t('trial.videoTitle') || 'Video') + ' ' + videoNum;
   const ts = new Date().toISOString();
-
-  let thumbBlob = null;
-  try { thumbBlob = await thumbFromVideoBlob(blob); } catch (_) {}
-
-  const db = await openProjectDb();
-  await idbPut(db, 'blobs', { key: projectBlobKey(videoId, 'video'), data: blob, mime: mime || 'video/webm' });
-  if (thumbBlob) {
-    await idbPut(db, 'blobs', { key: projectBlobKey(videoId, 'thumb'), data: thumbBlob, mime: 'image/jpeg' });
-  }
 
   const obj = {
     id: uid(),
@@ -15408,19 +15438,44 @@ async function ingestFieldVideo(blob, mime, durationSec) {
   const photosLayer = S.layers.find(l => l.id === FIELD_PHOTOS_LAYER);
   if (photosLayer) photosLayer.visible = true;
   setActiveLayer(FIELD_PHOTOS_LAYER);
-  await prefetchVideoThumb(obj);
   S.selectedIds = [obj.id];
   pushHistory();
   buildLayerPanel();
-  scheduleProjectSave();
   scheduleRender();
   fitMapToLatLonBounds({ minLat: lat, maxLat: lat, minLon: lon, maxLon: lon, ok: true });
+  showHint(t('trial.videoSaved') + ' (' + durationSec + ' sn) · ' +
+    (gpsSource === 'gps' ? 'GPS' : 'Harita'));
   requestAnimationFrame(() => {
     scheduleRender();
     openFieldPhotoDetail(obj.id);
   });
-  showHint(t('trial.videoSaved') + ' (' + durationSec + ' sn) · ' +
-    (gpsSource === 'gps' ? 'GPS' : 'Harita'));
+
+  (async () => {
+    try {
+      const db = await openProjectDb();
+      await idbPut(db, 'blobs', {
+        key: projectBlobKey(videoId, 'video'),
+        data: blob,
+        mime: mime || blob.type || 'video/webm',
+      });
+      let thumbBlob = null;
+      try { thumbBlob = await thumbFromVideoBlob(blob, mime || blob.type); } catch (_) {}
+      if (thumbBlob) {
+        await idbPut(db, 'blobs', {
+          key: projectBlobKey(videoId, 'thumb'),
+          data: thumbBlob,
+          mime: 'image/jpeg',
+        });
+        await prefetchVideoThumb(obj);
+      }
+      scheduleProjectSave();
+      scheduleRender();
+    } catch (e) {
+      console.error('[ingestFieldVideo]', e);
+      showHint('Video haritaya eklendi; dosya kaydı tamamlanamadı');
+      scheduleProjectSave();
+    }
+  })();
 }
 
 function ensureRightPanelVisible() {

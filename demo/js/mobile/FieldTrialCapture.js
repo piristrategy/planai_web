@@ -30,13 +30,21 @@
     return L === 'en' ? en : tr;
   }
 
+  function isIosWebKit() {
+    const ua = navigator.userAgent || '';
+    const iPadOs = navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1;
+    return /iPad|iPhone|iPod/.test(ua) || iPadOs;
+  }
+
   function videoMime() {
-    const types = [
-      'video/webm;codecs=vp8,opus',
-      'video/webm;codecs=vp9,opus',
-      'video/webm',
-      'video/mp4',
-    ];
+    const types = isIosWebKit()
+      ? ['video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm']
+      : [
+        'video/webm;codecs=vp8,opus',
+        'video/webm;codecs=vp9,opus',
+        'video/webm',
+        'video/mp4',
+      ];
     for (let i = 0; i < types.length; i++) {
       if (global.MediaRecorder?.isTypeSupported?.(types[i])) return types[i];
     }
@@ -155,6 +163,12 @@
       return;
     }
 
+    if (!_videoStream || _videoStream.getTracks().every((t) => t.readyState === 'ended')) {
+      global.showHint?.(trialT('trial.videoUnsupported', 'Camera not ready', 'Kamera hazır değil'));
+      await openVideoUi();
+      return;
+    }
+
     const mime = videoMime();
     if (!mime || typeof MediaRecorder === 'undefined') {
       global.showHint?.(trialT('trial.videoUnsupported', 'Video recording not supported', 'Video kaydı desteklenmiyor'));
@@ -162,7 +176,8 @@
     }
 
     _videoChunks = [];
-    const opts = { mimeType: mime, videoBitsPerSecond: VIDEO_BITRATE, audioBitsPerSecond: 96000 };
+    const opts = { mimeType: mime, videoBitsPerSecond: VIDEO_BITRATE };
+    if (!isIosWebKit()) opts.audioBitsPerSecond = 96000;
     try {
       _videoRec = new MediaRecorder(_videoStream, opts);
     } catch (_) {
@@ -178,17 +193,25 @@
         clearInterval(_videoTimer);
         _videoTimer = null;
       }
+      const btn = $('field-video-record-btn');
+      if (btn) btn.classList.remove('recording');
+      await new Promise((r) => setTimeout(r, isIosWebKit() ? 250 : 80));
       const dur = Math.max(1, Math.min(VIDEO_MAX_SEC, Math.round((Date.now() - _videoStart) / 1000)));
       const outMime = _videoRec?.mimeType || mime;
       const blob = new Blob(_videoChunks, { type: outMime });
       _videoRec = null;
-      closeVideoUi();
+      _videoChunks = [];
       if (!blob.size) {
+        closeVideoUi();
         global.showHint?.(trialT('trial.videoEmpty', 'Empty recording', 'Kayıt boş'));
         return;
       }
       global.showHint?.(trialT('trial.videoProcessing', 'Saving video…', 'Video kaydediliyor…'));
-      await saveFieldVideo(blob, outMime, dur);
+      try {
+        await saveFieldVideo(blob, outMime, dur);
+      } finally {
+        closeVideoUi();
+      }
     };
     _videoRec.onerror = () => {
       _videoRec = null;
@@ -196,7 +219,8 @@
     };
 
     _videoStart = Date.now();
-    _videoRec.start(400);
+    if (isIosWebKit()) _videoRec.start();
+    else _videoRec.start(500);
     if (btn) btn.classList.add('recording');
     _videoTimer = setInterval(updateVideoTimer, 250);
     updateVideoTimer();
