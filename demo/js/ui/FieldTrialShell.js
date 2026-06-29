@@ -457,6 +457,7 @@
     if (!document.body.classList.contains('field-trial-ui') || isHubOpen()) return;
     const mapFloat = $('map-float-controls');
     const wrap = $('trial-finish-wrap');
+    const tools = $('trial-top-tools');
     const canvas = $('canvas-wrap');
     const rightPanel = $('right-panel');
     if (!canvas) return;
@@ -471,7 +472,8 @@
 
     const floatW = mapFloat ? mapFloat.offsetWidth : 44;
     const wrapW = wrap ? wrap.offsetWidth : 72;
-    const colW = Math.max(floatW, wrapW, 44);
+    const toolsW = tools ? tools.offsetWidth : 44;
+    const colW = Math.max(floatW, wrapW, toolsW, 44);
 
     let rightBound = cr.width - edge;
     if (rightPanel && rightPanel.style.display !== 'none') {
@@ -494,16 +496,30 @@
       mapFloat.style.setProperty('transform', 'translateX(-50%)', 'important');
     }
 
+    let anchorBottom = topFloat;
+    if (mapFloat) {
+      anchorBottom = Math.round(mapFloat.getBoundingClientRect().bottom - cr.top);
+    }
+
     if (wrap) {
-      let topFinish = topFloat + 120;
-      if (mapFloat) {
-        topFinish = Math.round(mapFloat.getBoundingClientRect().bottom - cr.top + colGap);
-      }
+      const topFinish = Math.round(anchorBottom + colGap);
+      wrap.style.setProperty('position', 'absolute', 'important');
       wrap.style.setProperty('left', centerX + 'px', 'important');
       wrap.style.setProperty('top', topFinish + 'px', 'important');
       wrap.style.setProperty('right', 'auto', 'important');
       wrap.style.setProperty('bottom', 'auto', 'important');
       wrap.style.setProperty('transform', 'translateX(-50%)', 'important');
+      anchorBottom = Math.round(wrap.getBoundingClientRect().bottom - cr.top);
+    }
+
+    if (tools) {
+      const topTools = Math.round(anchorBottom + colGap);
+      tools.style.setProperty('position', 'absolute', 'important');
+      tools.style.setProperty('left', centerX + 'px', 'important');
+      tools.style.setProperty('top', topTools + 'px', 'important');
+      tools.style.setProperty('right', 'auto', 'important');
+      tools.style.setProperty('bottom', 'auto', 'important');
+      tools.style.setProperty('transform', 'translateX(-50%)', 'important');
     }
 
     const coach = $('trial-locate-coach');
@@ -515,9 +531,10 @@
   function bindRightColumnAnchor() {
     const mapFloat = $('map-float-controls');
     const wrap = $('trial-finish-wrap');
+    const tools = $('trial-top-tools');
     const canvas = $('canvas-wrap');
     const rightPanel = $('right-panel');
-    if (!mapFloat && !wrap) return;
+    if (!mapFloat && !wrap && !tools) return;
 
     const reposition = () => requestAnimationFrame(positionTrialRightColumn);
     window.addEventListener('resize', reposition);
@@ -525,6 +542,7 @@
     if (typeof ResizeObserver !== 'undefined') {
       if (mapFloat) new ResizeObserver(reposition).observe(mapFloat);
       if (wrap) new ResizeObserver(reposition).observe(wrap);
+      if (tools) new ResizeObserver(reposition).observe(tools);
       if (canvas) new ResizeObserver(reposition).observe(canvas);
       if (rightPanel) {
         new ResizeObserver(reposition).observe(rightPanel);

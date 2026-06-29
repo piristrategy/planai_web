@@ -269,7 +269,77 @@ body.field-trial-ui .trial-stat-alt .ico svg {
 .trial-stat .t2 { font-size: 10px; color: #6b7686; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 
 body.field-trial-ui.field-mode #top-bar #trial-top-tools {
+  display: none !important;
+}
+
+body.field-trial-ui.field-mode #top-bar #field-lang-switch.trial-lang-switch {
   margin-left: auto;
+}
+
+#trial-top-tools.trial-right-tools {
+  position: absolute;
+  z-index: 131;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+  width: max-content;
+  max-width: min(72px, calc(100vw - 16px));
+}
+
+body.field-trial-ui.field-journey-hub-active #trial-top-tools.trial-right-tools {
+  display: none !important;
+}
+
+#trial-top-tools.trial-right-tools .trial-tool-toggle {
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  min-height: 48px;
+  padding: 5px 3px 4px;
+  gap: 2px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  background: rgba(12, 18, 26, 0.92);
+  box-shadow: var(--trial-card-shadow);
+}
+
+#trial-top-tools.trial-right-tools .trial-tool-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+#trial-top-tools.trial-right-tools .trial-tool-toggle span {
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.05;
+  max-width: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+#trial-top-tools.trial-right-tools .trial-tool-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.20);
+}
+
+#trial-top-tools.trial-right-tools .trial-tool-toggle.active {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.32);
+  color: #f4f7fb;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.10),
+    var(--trial-card-shadow);
+}
+
+#trial-top-tools.trial-right-tools #btn-trial-sun.active {
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    var(--trial-card-shadow);
 }
 
 #trial-top-tools.trial-top-tools {
@@ -459,8 +529,9 @@ body.field-trial-ui.field-trial-sun.field-mode #top-bar {
   box-shadow: var(--trial-glass-shadow) !important;
   align-items: center;
 }
-body.field-trial-ui.field-trial-sun.field-mode #top-bar .trial-tool-toggle.active,
-body.field-trial-ui.field-trial-sun.field-mode #top-bar #btn-trial-sun.active {
+body.field-trial-ui.field-trial-sun.field-mode #trial-top-tools.trial-right-tools .trial-tool-toggle,
+body.field-trial-ui.field-trial-sun.field-mode #trial-top-tools.trial-right-tools .trial-tool-toggle.active,
+body.field-trial-ui.field-trial-sun.field-mode #trial-top-tools.trial-right-tools #btn-trial-sun.active {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22) !important;
 }
 
@@ -479,7 +550,6 @@ body.field-trial-ui.field-trial-sun.field-mode .trial-locate-coach {
 }
 
 body.field-trial-ui.field-trial-sun.field-mode #top-bar .trial-badge,
-body.field-trial-ui.field-trial-sun.field-mode #top-bar .trial-tool-toggle,
 body.field-trial-ui.field-trial-sun.field-mode #top-bar #field-lang-switch.trial-lang-switch {
   background: rgba(255, 255, 255, 0.08) !important;
   border-color: var(--trial-sun-border) !important;
@@ -492,6 +562,14 @@ body.field-trial-ui.field-trial-sun.field-mode #map-float-controls {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
   box-shadow: none !important;
+}
+
+body.field-trial-ui.field-trial-sun.field-mode #trial-top-tools.trial-right-tools .trial-tool-toggle {
+  background: var(--trial-sun-glass) !important;
+  border-color: var(--trial-green-border) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.78) !important;
 }
 
 body.field-trial-ui.field-trial-sun.field-mode #btn-map-locate.trial-locate-btn,
@@ -2356,6 +2434,7 @@ body.field-trial-ui.field-mode #left-bar > .tool-btn,
 body.field-trial-ui.field-mode #left-bar > .field-toolbar-action,
 body.field-trial-ui.field-mode #left-bar > .field-brand-block,
 body.field-trial-ui.field-mode #map-float-controls > .trial-locate-btn,
-body.field-trial-ui.field-mode #map-float-controls > .map-zoom-stack {
+body.field-trial-ui.field-mode #map-float-controls > .map-zoom-stack,
+body.field-trial-ui.field-mode #trial-top-tools.trial-right-tools > .trial-tool-toggle {
   isolation: isolate;
 }
