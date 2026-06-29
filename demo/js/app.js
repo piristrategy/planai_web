@@ -510,6 +510,9 @@ const PA_I18N = {
     'hub.continueInspectionCta': 'İncelemeye Devam Et',
     'trial.finish': 'İncelemeyi tamamla',
     'trial.finishCap': 'İncelemeyi<br>Tamamla',
+    'trial.stopInspection': 'İncelemeyi durdur',
+    'trial.stopLbl': 'STOP',
+    'trial.stopSub': 'İnceleme',
     'trial.sun': 'Güneş',
     'trial.sunTitle': 'Güneş modu — araç çubuklarında yüksek kontrast',
     'trial.videoNote': 'Video Not (15 sn)',
@@ -914,6 +917,9 @@ const PA_I18N = {
     'hub.continueInspectionCta': 'Continue Inspection',
     'trial.finish': 'Complete Inspection',
     'trial.finishCap': 'Complete<br>Inspection',
+    'trial.stopInspection': 'Stop inspection',
+    'trial.stopLbl': 'STOP',
+    'trial.stopSub': 'Inspection',
     'trial.sun': 'Sun',
     'trial.sunTitle': 'Sun mode — high contrast toolbars',
     'trial.videoNote': 'Video Note (15s)',
@@ -1163,6 +1169,9 @@ const PA_I18N = {
     'hub.continueInspectionCta': 'Continue Inspection',
     'trial.finish': 'Complete Inspection',
     'trial.finishCap': 'Complete<br>Inspection',
+    'trial.stopInspection': 'Stop inspection',
+    'trial.stopLbl': 'STOP',
+    'trial.stopSub': 'Inspection',
     'trial.sun': 'Sun',
     'trial.sunTitle': 'Sun mode — high contrast toolbars',
     'trial.videoNote': 'Video Note (15s)',
@@ -1689,12 +1698,10 @@ function applyFieldPanelsI18n() {
 }
 
 function applyTrialFinishI18n() {
-  const cap = document.querySelector('.trial-finish-cap[data-i18n-html]');
-  if (cap) cap.innerHTML = t('trial.finishCap');
-  const btn = document.getElementById('trial-finish-btn');
+  const btn = document.getElementById('trial-stop-inspection');
   if (btn) {
-    btn.title = t('trial.finish');
-    btn.setAttribute('aria-label', t('trial.finish'));
+    btn.title = t('trial.stopInspection');
+    btn.setAttribute('aria-label', t('trial.stopInspection'));
   }
 }
 

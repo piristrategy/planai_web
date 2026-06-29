@@ -19,7 +19,8 @@ body.field-trial-ui.field-mode {
   --trial-tb-muted: #b8c8d8;
   --trial-tb-label-shadow: 0 1px 2px rgba(0, 0, 0, 0.62);
   --trial-finish-locate-gap: 12px;
-  --trial-map-col-inset: 56px;
+  --trial-tools-pen-anchor-gap: 96px;
+  --trial-map-col-inset: 0px;
   --trial-green-border: rgba(34, 197, 94, 0.50);
   --trial-green-border-hover: rgba(34, 197, 94, 0.62);
   --trial-green-border-active: rgba(34, 197, 94, 0.68);
@@ -223,6 +224,32 @@ body.field-trial-ui.field-mode #top-bar #loc-search {
 .trial-badge .lbl { display: flex; flex-direction: column; line-height: 1.12; }
 .trial-badge .l1 { font-size: 12px; font-weight: 700; letter-spacing: 0.35px; }
 .trial-badge.rec .l1 { color: #ef4444; }
+.trial-badge.stop .dot {
+  border-radius: 2px;
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.65);
+  animation: none;
+}
+.trial-badge.stop .l1 { color: #f87171; }
+#trial-inspection-chrome .trial-stop-badge {
+  pointer-events: auto;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  text-align: left;
+}
+#trial-inspection-chrome .trial-stop-badge:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+#trial-inspection-chrome .trial-stop-badge:active { transform: scale(0.97); }
+#trial-inspection-chrome .trial-stop-badge:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
 .trial-badge.gps .l1 { color: #22c55e; }
 .trial-badge.gps.off .l1 { color: #9aa6b4; }
 .trial-badge .l2 { font-size: 10px; color: #9aa6b4; white-space: nowrap; }
@@ -658,18 +685,7 @@ body.field-trial-ui.field-mode #loc-search button:hover {
   color: #7ef0ae !important;
 }
 
-/* İncelemeyi tamamla — canlı konum sütunu altında (lokasyon ile hizalı) */
-body.field-trial-ui.field-journey-hub-active #trial-finish-wrap {
-  display: none !important;
-}
-
-body.field-trial-ui #trial-finish-wrap {
-  position: absolute;
-  z-index: 131;
-  pointer-events: auto;
-  /* top / left → FieldTrialShell.js */
-}
-
+/* İncelemeyi durdur — üst bar REC yanında */
 body.field-trial-ui.field-mode .panel-toggle.right {
   z-index: 132;
 }
@@ -787,65 +803,6 @@ body.field-trial-ui .trial-locate-coach::after {
 }
 body.field-trial-ui.field-journey-hub-active .trial-locate-coach {
   display: none !important;
-}
-
-#trial-finish-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  pointer-events: auto;
-  flex: 0 0 auto;
-  width: max-content;
-  max-width: min(96px, calc(100vw - 16px));
-}
-
-#trial-finish-wrap .trial-finish-circle,
-body.field-trial-ui.field-mode #trial-finish-btn.trial-finish-circle {
-  width: 56px !important;
-  height: 56px !important;
-  min-width: 56px !important;
-  min-height: 56px !important;
-  max-width: none !important;
-  max-height: none !important;
-  border-radius: 50% !important;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(160deg, #22c55e, #15803d);
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4), 0 0 0 2px rgba(34, 197, 94, 0.22);
-  border: none;
-  cursor: pointer;
-  transition: transform 0.15s ease, filter 0.15s ease;
-  padding: 0;
-}
-#trial-finish-wrap .trial-finish-circle:hover,
-body.field-trial-ui.field-mode #trial-finish-btn.trial-finish-circle:hover { filter: brightness(1.08); transform: scale(1.03); }
-#trial-finish-wrap .trial-finish-circle:active,
-body.field-trial-ui.field-mode #trial-finish-btn.trial-finish-circle:active { transform: scale(0.97); }
-#trial-finish-wrap .trial-finish-circle:disabled,
-body.field-trial-ui.field-mode #trial-finish-btn.trial-finish-circle:disabled { opacity: 0.65; cursor: wait; }
-#trial-finish-wrap .trial-finish-circle svg,
-body.field-trial-ui.field-mode #trial-finish-btn.trial-finish-circle svg {
-  width: 26px !important;
-  height: 26px !important;
-  display: block;
-}
-#trial-finish-wrap .trial-finish-cap {
-  font-size: 10px;
-  font-weight: 800;
-  color: #5fe39a;
-  text-align: center;
-  line-height: 1.15;
-  width: max-content;
-  max-width: 88px;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.85), 0 0 12px rgba(0, 0, 0, 0.55);
-}
-
-html.lang-en #trial-finish-wrap .trial-finish-cap {
-  max-width: 102px;
-  font-size: 9.5px;
-  letter-spacing: 0.01em;
 }
 
 /* Zoom +/- — ayrı yüzen kart */
@@ -1548,7 +1505,7 @@ body.field-trial-ui #field-photo-voice-sheet .fpvs-capture-time {
     --trial-left-w: 64px;
     --trial-left-btn-w: 58px;
     --trial-left-btn-h: 62px;
-    --trial-map-col-inset: 48px;
+    --trial-map-col-inset: 0px;
   }
   body.field-trial-ui.field-mode #field-dock {
     --trial-dock-gap: 6px;
@@ -1590,22 +1547,6 @@ body.field-trial-ui #field-photo-voice-sheet .fpvs-capture-time {
     min-width: 34px;
     padding: 5px 8px;
     font-size: 11px;
-  }
-  #trial-finish-wrap .trial-finish-circle,
-  body.field-trial-ui.field-mode #trial-finish-btn.trial-finish-circle {
-    width: 48px !important;
-    height: 48px !important;
-    min-width: 48px !important;
-    min-height: 48px !important;
-  }
-  #trial-finish-wrap .trial-finish-circle svg,
-  body.field-trial-ui.field-mode #trial-finish-btn.trial-finish-circle svg {
-    width: 22px !important;
-    height: 22px !important;
-  }
-  #trial-finish-wrap .trial-finish-cap {
-    font-size: 9px;
-    max-width: 64px;
   }
 }
 

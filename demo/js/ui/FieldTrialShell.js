@@ -456,70 +456,84 @@
   function positionTrialRightColumn() {
     if (!document.body.classList.contains('field-trial-ui') || isHubOpen()) return;
     const mapFloat = $('map-float-controls');
-    const wrap = $('trial-finish-wrap');
     const tools = $('trial-top-tools');
     const canvas = $('canvas-wrap');
     const rightPanel = $('right-panel');
+    const dock = $('field-dock');
+    const topBar = $('top-bar');
+    const selectBtn = document.querySelector('#left-bar .tool-btn[data-tool="select"]');
     if (!canvas) return;
 
     const cr = canvas.getBoundingClientRect();
     const cs = getComputedStyle(document.body);
-    const topBase = parseFloat(cs.getPropertyValue('--field-topbar-h')) || 58;
     const edge = parseFloat(cs.getPropertyValue('--trial-edge')) || 10;
+    const rightEdge = parseFloat(cs.getPropertyValue('--trial-edge-r')) || edge;
+    const bEdge = parseFloat(cs.getPropertyValue('--trial-edge-b')) || edge;
     const gap = parseFloat(cs.getPropertyValue('--trial-gap')) || 8;
     const colGap = parseFloat(cs.getPropertyValue('--trial-finish-locate-gap')) || 12;
-    const rightInset = parseFloat(cs.getPropertyValue('--trial-map-col-inset')) || 56;
+    const penAnchorGap = parseFloat(cs.getPropertyValue('--trial-tools-pen-anchor-gap')) || 96;
+    const topBase = parseFloat(cs.getPropertyValue('--field-topbar-h')) || 58;
 
     const floatW = mapFloat ? mapFloat.offsetWidth : 44;
-    const wrapW = wrap ? wrap.offsetWidth : 72;
     const toolsW = tools ? tools.offsetWidth : 44;
-    const colW = Math.max(floatW, wrapW, toolsW, 44);
+    const colW = Math.max(floatW, toolsW, 44);
 
-    let rightBound = cr.width - edge;
+    let rightBound = cr.width - rightEdge;
     if (rightPanel && rightPanel.style.display !== 'none') {
       const pr = rightPanel.getBoundingClientRect();
-      rightBound = Math.min(rightBound, pr.left - cr.left - 8);
+      rightBound = Math.min(rightBound, pr.left - cr.left - gap);
     }
 
-    let centerX = rightBound - rightInset - colW / 2;
+    let centerX = Math.round(rightBound - colW / 2);
     const minCx = colW / 2 + edge;
     const maxCx = rightBound - colW / 2;
     centerX = Math.round(Math.min(maxCx, Math.max(minCx, centerX)));
 
-    const topFloat = Math.round(topBase + edge + gap);
-
-    if (mapFloat) {
-      mapFloat.style.setProperty('position', 'absolute', 'important');
-      mapFloat.style.setProperty('left', centerX + 'px', 'important');
-      mapFloat.style.setProperty('right', 'auto', 'important');
-      mapFloat.style.setProperty('top', topFloat + 'px', 'important');
-      mapFloat.style.setProperty('transform', 'translateX(-50%)', 'important');
+    let topFloat;
+    if (selectBtn) {
+      topFloat = Math.round(selectBtn.getBoundingClientRect().top - cr.top);
+    } else if (topBar) {
+      const tbr = topBar.getBoundingClientRect();
+      topFloat = Math.round(tbr.bottom - cr.top + gap);
+    } else {
+      topFloat = Math.round(topBase + edge + gap);
     }
 
-    let anchorBottom = topFloat;
-    if (mapFloat) {
-      anchorBottom = Math.round(mapFloat.getBoundingClientRect().bottom - cr.top);
+    const dockH = dock ? dock.offsetHeight : 96;
+    const mapAreaBottom = cr.height - dockH - bEdge - gap;
+
+    function placeColumn(top) {
+      if (mapFloat) {
+        mapFloat.style.setProperty('position', 'absolute', 'important');
+        mapFloat.style.setProperty('left', centerX + 'px', 'important');
+        mapFloat.style.setProperty('right', 'auto', 'important');
+        mapFloat.style.setProperty('top', top + 'px', 'important');
+        mapFloat.style.setProperty('transform', 'translateX(-50%)', 'important');
+      }
+
+      let anchorBottom = top;
+      if (mapFloat) {
+        anchorBottom = Math.round(mapFloat.getBoundingClientRect().bottom - cr.top);
+      }
+
+      if (tools) {
+        const topTools = Math.round(anchorBottom + colGap + penAnchorGap);
+        tools.style.setProperty('position', 'absolute', 'important');
+        tools.style.setProperty('left', centerX + 'px', 'important');
+        tools.style.setProperty('top', topTools + 'px', 'important');
+        tools.style.setProperty('right', 'auto', 'important');
+        tools.style.setProperty('bottom', 'auto', 'important');
+        tools.style.setProperty('transform', 'translateX(-50%)', 'important');
+        anchorBottom = Math.round(tools.getBoundingClientRect().bottom - cr.top);
+      }
+
+      return anchorBottom;
     }
 
-    if (wrap) {
-      const topFinish = Math.round(anchorBottom + colGap);
-      wrap.style.setProperty('position', 'absolute', 'important');
-      wrap.style.setProperty('left', centerX + 'px', 'important');
-      wrap.style.setProperty('top', topFinish + 'px', 'important');
-      wrap.style.setProperty('right', 'auto', 'important');
-      wrap.style.setProperty('bottom', 'auto', 'important');
-      wrap.style.setProperty('transform', 'translateX(-50%)', 'important');
-      anchorBottom = Math.round(wrap.getBoundingClientRect().bottom - cr.top);
-    }
-
-    if (tools) {
-      const topTools = Math.round(anchorBottom + colGap);
-      tools.style.setProperty('position', 'absolute', 'important');
-      tools.style.setProperty('left', centerX + 'px', 'important');
-      tools.style.setProperty('top', topTools + 'px', 'important');
-      tools.style.setProperty('right', 'auto', 'important');
-      tools.style.setProperty('bottom', 'auto', 'important');
-      tools.style.setProperty('transform', 'translateX(-50%)', 'important');
+    let stackBottom = placeColumn(topFloat);
+    if (stackBottom > mapAreaBottom) {
+      topFloat = Math.max(edge, topFloat - (stackBottom - mapAreaBottom));
+      placeColumn(topFloat);
     }
 
     document.body.classList.add('field-trial-ready');
@@ -532,20 +546,22 @@
 
   function bindRightColumnAnchor() {
     const mapFloat = $('map-float-controls');
-    const wrap = $('trial-finish-wrap');
     const tools = $('trial-top-tools');
     const canvas = $('canvas-wrap');
     const rightPanel = $('right-panel');
-    if (!mapFloat && !wrap && !tools) return;
+    const topBar = $('top-bar');
+    const leftBar = $('left-bar');
+    if (!mapFloat && !tools) return;
 
     const reposition = () => requestAnimationFrame(positionTrialRightColumn);
     window.addEventListener('resize', reposition);
     window.addEventListener('orientationchange', () => setTimeout(reposition, 160));
     if (typeof ResizeObserver !== 'undefined') {
       if (mapFloat) new ResizeObserver(reposition).observe(mapFloat);
-      if (wrap) new ResizeObserver(reposition).observe(wrap);
       if (tools) new ResizeObserver(reposition).observe(tools);
       if (canvas) new ResizeObserver(reposition).observe(canvas);
+      if (topBar) new ResizeObserver(reposition).observe(topBar);
+      if (leftBar) new ResizeObserver(reposition).observe(leftBar);
       if (rightPanel) {
         new ResizeObserver(reposition).observe(rightPanel);
         const panelObs = new MutationObserver(reposition);
@@ -692,7 +708,7 @@
 
   async function finishInspection() {
     if (!isInspectionMapActive()) return;
-    const busy = $('trial-finish-btn');
+    const busy = $('trial-stop-inspection');
     if (busy) busy.disabled = true;
     try {
       if (typeof window.scheduleProjectSave === 'function') window.scheduleProjectSave();
@@ -711,7 +727,7 @@
   }
 
   function bindFinish() {
-    const btn = $('trial-finish-btn');
+    const btn = $('trial-stop-inspection');
     if (btn) btn.addEventListener('click', () => finishInspection());
     window.fieldTrialFinishInspection = finishInspection;
   }
