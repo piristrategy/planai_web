@@ -284,7 +284,7 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
   <div id="canvas-wrap">
     <!-- Panel toggle buttons -->
     <div class="panel-toggle" id="left-toggle" style="left:0;" onclick="toggleLeftPanel()">◀</div>
-    <div class="panel-toggle right" id="right-toggle" style="right:0;" onclick="toggleRightPanel()">◀</div>
+    <div class="panel-toggle right" id="right-toggle" style="right:0;" onclick="toggleRightPanel()">▶</div>
     <div id="trial-top-tools" class="trial-top-tools trial-right-tools" aria-label="Etkileşim ve görünüm">
       <button type="button" id="btn-finger-mode" class="trial-tool-toggle active" onclick="setFieldInteractionMode('finger')" title="Parmak modu" aria-pressed="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 11V5a2 2 0 1 1 4 0v6m0-2a2 2 0 1 1 4 0v3m0-1a2 2 0 1 1 4 0v4a6 6 0 0 1-6 6h-2a6 6 0 0 1-5.2-3l-2.3-4a2 2 0 0 1 3.4-2L9 13"/></svg>
@@ -631,10 +631,8 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
             <button type="button" id="pdet-btn-pdf" class="proj-btn report" data-i18n="project.reportPdf">PDF Rapor</button>
             <button type="button" id="pdet-btn-zip" class="proj-btn" data-i18n="project.exportZip">ZIP Dışa Aktar</button>
             <button type="button" id="pdet-btn-geojson" class="proj-btn" data-i18n="phub.exportGeojson">GeoJSON Dışa Aktar</button>
-            <button type="button" id="pdet-btn-gpx" class="proj-btn" data-i18n="phub.exportGpx">GPX Dışa Aktar</button>
             <button type="button" id="pdet-btn-kmz" class="proj-btn" data-i18n="phub.exportKmz">KMZ Dışa Aktar</button>
             <button type="button" id="pdet-btn-share" class="proj-btn" data-i18n="phub.share">Paylaş</button>
-            <button type="button" id="pdet-btn-import" class="proj-btn" data-i18n="project.importZip">İçe Aktar</button>
             <button type="button" id="pdet-btn-demo" class="proj-btn" style="font-size:12px;opacity:.88;border-style:dashed;" data-i18n="project.reportDemo">Demo Simülasyon</button>
           </section>
           <section class="pdet-block pdet-actions">
@@ -660,15 +658,9 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
         <div class="fset-body">
           <div class="fset-panel" data-fset-panel="main">
             <button type="button" class="fset-nav-row" data-fset-go="permissions"><span data-i18n="settings.permissions">İzinler</span><span>›</span></button>
-            <button type="button" class="fset-nav-row" id="fset-btn-loc"><span data-i18n="settings.location">Konum</span><span>›</span></button>
-            <button type="button" class="fset-nav-row" id="fset-btn-cam"><span data-i18n="settings.camera">Kamera</span><span>›</span></button>
-            <button type="button" class="fset-nav-row" id="fset-btn-mic"><span data-i18n="settings.microphone">Mikrofon</span><span>›</span></button>
-            <p class="fset-storage-label" data-i18n="settings.storage">Depolama</p>
-            <p id="fset-storage-info" class="fset-storage-info">—</p>
             <button type="button" class="fset-nav-row" id="fset-btn-offline"><span data-i18n="settings.offlineMaps">Çevrimdışı Haritalar</span><span>›</span></button>
             <button type="button" class="fset-nav-row" data-fset-go="security"><span data-i18n="sec.title">Güvenlik</span><span>›</span></button>
             <button type="button" class="fset-nav-row" id="fset-btn-tutorial-main"><span data-i18n="settings.tutorial">Kullanım Turu</span><span>›</span></button>
-            <button type="button" class="fset-nav-row" data-fset-go="help"><span data-i18n="settings.help">Yardım</span><span>›</span></button>
             <button type="button" class="fset-nav-row" data-fset-go="about"><span data-i18n="settings.about">Hakkında</span><span>›</span></button>
           </div>
           <div class="fset-panel" data-fset-panel="permissions" hidden>
@@ -754,6 +746,7 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
               <li><span class="fjh-feat-ico" aria-hidden="true">📍</span><span data-i18n="hub.featGps">GPS Tracking</span></li>
               <li><span class="fjh-feat-ico" aria-hidden="true">📷</span><span data-i18n="hub.featPhotoCapture">Photo Capture</span></li>
               <li><span class="fjh-feat-ico" aria-hidden="true">🎤</span><span data-i18n="hub.featVoice">Voice Notes</span></li>
+              <li><span class="fjh-feat-ico" aria-hidden="true">🎬</span><span data-i18n="hub.featVideoNote">Video Note</span></li>
               <li><span class="fjh-feat-ico" aria-hidden="true">📋</span><span data-i18n="hub.featReports">Interactive Reports</span></li>
             </ul>
             <button type="button" class="fjh-cta fjh-cta-mission fjh-cta-start" onclick="event.stopPropagation();fieldHubActionNew()" data-i18n="hub.startInspectionCta">Start New Inspection</button>
@@ -1095,14 +1088,14 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
 
   <!-- ── Right panel ── -->
   
-  <div id="right-panel">
+  <div id="right-panel" style="display:none">
     <div class="panel-title" data-i18n="panel.title">Saha Paneli</div>
     <div id="field-panel-active-tool" class="panel-subtitle field-only-sub" data-i18n="tool.select">Seçme aracı</div>
 
     <div id="field-project-block" class="field-project-block">
       <div class="field-proj-header-row">
         <span class="p-label" id="field-ctx-project-label" data-i18n="panel.projects">Saha Çalışmaları</span>
-        <button type="button" id="field-proj-past-toggle" class="field-proj-past-toggle" hidden onclick="toggleFieldPastTripsMenu(event)" data-i18n="panel.pastProjects">Geçmiş çalışmalar ▾</button>
+        <button type="button" id="field-proj-past-toggle" class="field-proj-past-toggle" hidden onclick="toggleFieldPastProjectsMenu(event)" data-i18n="panel.pastProjects">Geçmiş çalışmalar ▾</button>
       </div>
       <div id="field-ctx-project-current" class="field-proj-current" aria-live="polite"></div>
       <div id="field-ctx-project-dropdown" class="field-proj-past-menu" hidden role="menu"></div>
@@ -1476,30 +1469,8 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
 </div>
 <div id="field-camera-overlay" aria-hidden="true">
   <video id="field-camera-video" playsinline autoplay muted></video>
-  <div id="field-camera-pano-guide" class="field-camera-pano-guide" hidden>
-    <div class="field-pano-center-stage">
-      <div class="field-pano-reticle" id="field-pano-reticle" aria-hidden="true">
-        <span class="field-pano-reticle-line"></span>
-        <span class="field-pano-reticle-notch field-pano-reticle-notch-top"></span>
-        <span class="field-pano-reticle-notch field-pano-reticle-notch-bottom"></span>
-      </div>
-      <p id="field-pano-motion-hint" class="field-pano-motion-hint" data-state="idle">Yön seçin, taramak için deklanşöre basın</p>
-    </div>
-    <div class="field-pano-progress-wrap">
-      <div class="field-pano-progress-track" aria-hidden="true">
-        <div class="field-pano-progress-fill" id="field-pano-progress-fill"></div>
-      </div>
-      <span class="field-pano-progress-pct" id="field-pano-progress-pct">0%</span>
-    </div>
-    <canvas id="field-pano-stitch-preview" class="field-pano-stitch-preview" hidden></canvas>
-    <div class="field-pano-dir-row" id="field-pano-dir-row">
-      <button type="button" class="field-pano-dir-btn" id="field-pano-dir-left" onclick="FieldTrialCapture.setPanoDirection('left')">← Sol</button>
-      <button type="button" class="field-pano-dir-btn" id="field-pano-dir-right" onclick="FieldTrialCapture.setPanoDirection('right')">Sağ →</button>
-    </div>
-  </div>
   <div id="field-camera-bar">
     <button type="button" class="fcb-cancel" data-i18n="photo.cancelSheet" onclick="closeFieldCameraCaptureUi()">İptal</button>
-    <button type="button" class="fcb-pano trial-capture-extra" id="field-camera-pano-btn" aria-label="Panorama" title="Panorama" onclick="FieldTrialCapture.togglePanoramaMode()">🌐</button>
     <button type="button" class="fcb-shutter" aria-label="Fotoğraf çek" onclick="fieldCameraShutter()"></button>
     <button type="button" class="fcb-flip" aria-label="Kamera değiştir" onclick="fieldCameraFlip()">🔄</button>
   </div>

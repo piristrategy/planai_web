@@ -9,18 +9,13 @@ const ReportDataBuilder = (function () {
 
   function splitVideos(videos) {
     const all = videos || [];
-    return {
-      videoNotes: all.filter(isVideoNote),
-      videos: all.filter(v => !isVideoNote(v)),
-    };
+    return { videoNotes: all, videos: [] };
   }
 
   function splitPhotos(photos) {
-    const all = photos || [];
-    const panoramas = all.filter(p => p.isPanorama);
-    const regular = all.filter(p => !p.isPanorama);
+    const all = (photos || []).filter(p => !p.isPanorama);
     const voiceNotes = all.filter(p => p.hasVoice);
-    return { photos: regular, panoramas, voiceNotes };
+    return { photos: all, panoramas: [], voiceNotes };
   }
 
   function collectLayers(objects) {
@@ -42,20 +37,8 @@ const ReportDataBuilder = (function () {
     return [...layers.values()];
   }
 
-  async function collectPanoramas(photos) {
-    const panos = (photos || []).filter(p => p.isPanorama);
-    return panos.map(p => ({
-      id: p.id,
-      photoNum: p.photoNum,
-      lat: p.lat,
-      lon: p.lon,
-      timestamp: p.timestamp,
-      caption: p.caption || '',
-      imageDataUrl: p.imageDataUrl || '',
-      heading: p.panoHeading ?? p.heading ?? null,
-      width: p.width || null,
-      height: p.height || null,
-    }));
+  async function collectPanoramas() {
+    return [];
   }
 
   async function collectVoiceNotes(photos) {
@@ -76,6 +59,9 @@ const ReportDataBuilder = (function () {
     const prog = (p, s) => { if (onProgress) onProgress(p, s); };
     const tFn = typeof window.t === 'function' ? window.t : k => k;
     prog(5, tFn('report.doc.progress.collect'));
+    if (typeof window.syncProjectInspectionMetadata === 'function') {
+      await window.syncProjectInspectionMetadata();
+    }
     if (typeof window.saveCurrentProject === 'function') await window.saveCurrentProject(true);
     const snap = typeof serializeProjectSnapshot === 'function' ? serializeProjectSnapshot() : null;
     const generatedAt = new Date().toISOString();
@@ -106,7 +92,7 @@ const ReportDataBuilder = (function () {
     prog(60, tFn('report.doc.progress.notes'));
     const notes = typeof collectReportNotes === 'function' ? await collectReportNotes() : [];
 
-    const panoramas = await collectPanoramas(allPhotos);
+    const panoramas = [];
     const voiceNotes = await collectVoiceNotes(allPhotos);
     const layers = collectLayers(snap?.objects || S.objects);
     const areas = (measurements.items || []).filter(it => it.kind === 'polygon');
@@ -130,9 +116,9 @@ const ReportDataBuilder = (function () {
     const objectCounts = {
       total: S.objects.length,
       photos: photos.length,
-      panoramas: panoramas.length,
-      videos: videos.length,
-      videoNotes: videoNotes.length,
+      panoramas: 0,
+      videos: 0,
+      videoNotes: allVideos.length,
       voiceNotes: voiceNotes.length,
       notes: notes.length,
       sketch: S.objects.filter(o => !o._import && o.type !== 'field_photo' && o.type !== 'field_note' && o.type !== 'field_video').length,
@@ -141,9 +127,10 @@ const ReportDataBuilder = (function () {
       measurements: (measurements.items || []).length,
     };
 
-    const inspectionAt = typeof deriveProjectInspectionDate === 'function'
-      ? deriveProjectInspectionDate(snap, allPhotos, notes, allVideos)
-      : generatedAt;
+    const inspectionAt = FIELD_PROJECT.metadata?.startTime
+      || (typeof deriveProjectInspectionDate === 'function'
+        ? deriveProjectInspectionDate(snap, allPhotos, notes, allVideos)
+        : generatedAt);
 
     const reportMeta = {
       templateId: typeof REPORT_TEMPLATE_ID !== 'undefined' ? REPORT_TEMPLATE_ID : 'planai-field-v2',

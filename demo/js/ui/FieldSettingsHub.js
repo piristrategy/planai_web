@@ -26,7 +26,6 @@ const FieldSettingsHub = (function () {
     showSection('main');
     refreshPermissionsList();
     syncSecuritySummary();
-    refreshStorageInfo();
   }
 
   function close() {
@@ -72,7 +71,10 @@ const FieldSettingsHub = (function () {
         try {
           const st = await FieldPermissions.check(alias);
           granted = st === 'granted';
-          canRequest = FieldPermissions.isNative() || def.id === 'location';
+          canRequest = FieldPermissions.isNative()
+            || def.id === 'location'
+            || (window.isSecureContext && (def.id === 'camera' || def.id === 'microphone'))
+            || def.id === 'photos';
         } catch (_) {}
       }
       const statusKey = granted ? 'settings.permGranted' : 'settings.permNeeds';
@@ -89,8 +91,13 @@ const FieldSettingsHub = (function () {
         btn.onclick = async () => {
           if (typeof FieldPermissions !== 'undefined') {
             const alias = def.storageAlias ? 'photos' : def.id;
-            await FieldPermissions.request(alias);
-            refreshPermissionsList();
+            btn.disabled = true;
+            await FieldPermissions.request(alias, {
+              hintGranted: t('settings.permGranted'),
+              hintDenied: t('perm.denied'),
+            });
+            await refreshPermissionsList();
+            btn.disabled = false;
           } else {
             showHint(t('perm.settingsWeb'));
           }
@@ -151,19 +158,13 @@ const FieldSettingsHub = (function () {
     });
     document.getElementById('fset-btn-tutorial')?.addEventListener('click', launchTutorial);
     document.getElementById('fset-btn-tutorial-main')?.addEventListener('click', launchTutorial);
-    async function requestPerm(id) {
-      if (typeof FieldPermissions !== 'undefined') {
-        await FieldPermissions.request(id);
-        refreshPermissionsList();
+    document.getElementById('fset-btn-offline')?.addEventListener('click', async () => {
+      close();
+      if (typeof cacheVisibleMapTilesForOffline === 'function') {
+        await cacheVisibleMapTilesForOffline();
       } else {
-        showHint(t('perm.settingsWeb'));
+        showHint(t('settings.offlineHint'));
       }
-    }
-    document.getElementById('fset-btn-loc')?.addEventListener('click', () => requestPerm('location'));
-    document.getElementById('fset-btn-cam')?.addEventListener('click', () => requestPerm('camera'));
-    document.getElementById('fset-btn-mic')?.addEventListener('click', () => requestPerm('microphone'));
-    document.getElementById('fset-btn-offline')?.addEventListener('click', () => {
-      showHint(t('settings.offlineHint'));
     });
     document.getElementById('fset-btn-delete-data')?.addEventListener('click', () => {
       if (confirm(t('settings.deleteConfirm'))) {

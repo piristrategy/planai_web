@@ -108,6 +108,7 @@ let _fieldGpsFix = null; // { lat, lon, accuracy, heading, ts }
 let _gpsWatchId = null;
 let _gpsFollow = false;
 let _mapBrowseMode = false;
+let _pendingInitialLiveCenter = false;
 let _gpsLastPanTs = 0;
 let _gpsStatus = 'off'; // off | searching | connected | weak | denied | unavailable
 let _gpsFirstFixTimer = null;
@@ -488,11 +489,12 @@ const PA_I18N = {
     'entry.noRecent': 'Devam edilecek kayıtlı inceleme yok — yeni bir yolculuk başlatın.',
     'entry.noProjects': 'Henüz kayıtlı çalışma yok.',
     'entry.projectsHead': 'Önceki Çalışmalar',
-    'project.reportPdf': 'PDF Rapor', 'project.reportInteractive': 'Saha Yolculuğunu Başlat',
+    'project.reportPdf': 'PDF Rapor', 'project.reportInteractive': 'Sinematik Rapor Oluştur',
     'project.reportDemo': 'Demo İnceleme Simülasyonu',
     'project.exportZip': 'ZIP Dışa Aktar', 'project.importZip': 'İçe Aktar', 'project.recent': 'Son çalışmalar',
     'project.none': 'Henüz saha çalışması yok',
     'project.delete': 'Çalışmayı sil', 'project.deleted': 'Çalışma silindi',
+    'project.deleteConfirm': 'Bu çalışma kalıcı olarak silinsin mi? Bu işlem geri alınamaz.',
     'project.head': 'Saha Çalışmaları', 'project.autosaveNote': 'Değişiklikler otomatik kaydedilir. Durum üst çubukta görünür.',
     'phub.active': 'Aktif Çalışmalar', 'phub.recent': 'Son Çalışmalar', 'phub.archive': 'Arşiv', 'phub.unarchive': 'Arşivden Çıkar',
     'phub.noActive': 'Aktif çalışma yok — yeni oluşturun veya listeden seçin', 'phub.noRecent': 'Son çalışma yok',
@@ -512,6 +514,8 @@ const PA_I18N = {
     'settings.deleteConfirm': 'Tüm yerel veriler silinsin mi? Bu işlem geri alınamaz.',
     'settings.deletePinBlock': 'Önce PIN kilidini kaldırın veya verileri şifre çözülmüş halde silin.',
     'settings.offlineHint': 'Harita karoları görüntüledikçe otomatik önbelleğe alınır.',
+    'settings.offlineCaching': 'Harita karoları önbelleğe alınıyor…',
+    'settings.offlineCached': '{n} harita karosu önbellekte',
     'settings.location': 'Konum', 'settings.camera': 'Kamera', 'settings.microphone': 'Mikrofon',
     'settings.restartTutorial': 'Kullanım Turunu Tekrar Başlat',
     'settings.tutorial': 'Kullanım Turu',
@@ -534,6 +538,7 @@ const PA_I18N = {
     'hub.featGps': 'GPS İzleme',
     'hub.featPhotoCapture': 'Fotoğraf Çekimi',
     'hub.featVoice': 'Ses Notları',
+    'hub.featVideoNote': 'Video Not',
     'hub.featReports': 'İnteraktif Raporlar',
     'hub.cardContinueEmpty': 'Aktif yolculuk yok',
     'hub.cardContinueDesc': 'Son yolculuğa devam edin.',
@@ -731,6 +736,9 @@ const PA_I18N = {
     'report.doc.cover.project': 'Çalışma',
     'report.doc.cover.date': 'Tarih',
     'report.doc.cover.time': 'Saat',
+    'report.doc.cover.startTime': 'Başlangıç',
+    'report.doc.cover.endTime': 'Bitiş',
+    'report.doc.cover.location': 'Konum',
     'report.doc.cover.user': 'Kullanıcı',
     'report.doc.cover.center': 'Merkez koordinat',
     'report.doc.cover.totalObjects': 'Toplam nesne',
@@ -945,11 +953,12 @@ const PA_I18N = {
     'entry.noRecent': 'No saved inspection to continue — start a new project.',
     'entry.noProjects': 'No saved projects yet.',
     'entry.projectsHead': 'Previous Projects',
-    'project.reportPdf': 'PDF Report', 'project.reportInteractive': 'Start Interactive Inspection',
+    'project.reportPdf': 'PDF Report', 'project.reportInteractive': 'Create Cinematic Report',
     'project.reportDemo': 'Demo Inspection Simulation',
     'project.exportZip': 'Export ZIP', 'project.importZip': 'Import', 'project.recent': 'Recent projects',
     'project.none': 'No field projects yet',
     'project.delete': 'Delete project', 'project.deleted': 'Project deleted',
+    'project.deleteConfirm': 'Delete this project permanently? This cannot be undone.',
     'project.head': 'Field Projects', 'project.autosaveNote': 'Changes autosave (IndexedDB). Status shown in top bar.',
     'phub.active': 'Active Projects', 'phub.recent': 'Recent Projects', 'phub.archive': 'Archive', 'phub.unarchive': 'Unarchive',
     'phub.noActive': 'No active project — create one or pick from the list', 'phub.noRecent': 'No recent projects',
@@ -969,6 +978,8 @@ const PA_I18N = {
     'settings.deleteConfirm': 'Delete all local data? This cannot be undone.',
     'settings.deletePinBlock': 'Remove PIN lock first or unlock before deleting encrypted data.',
     'settings.offlineHint': 'Map tiles are cached automatically as you view the map.',
+    'settings.offlineCaching': 'Caching map tiles…',
+    'settings.offlineCached': '{n} map tiles cached',
     'settings.location': 'Location', 'settings.camera': 'Camera', 'settings.microphone': 'Microphone',
     'settings.restartTutorial': 'Restart Tutorial',
     'settings.tutorial': 'Usage Tour',
@@ -991,6 +1002,7 @@ const PA_I18N = {
     'hub.featGps': 'GPS Tracking',
     'hub.featPhotoCapture': 'Photo Capture',
     'hub.featVoice': 'Voice Notes',
+    'hub.featVideoNote': 'Video Note',
     'hub.featReports': 'Interactive Reports',
     'hub.cardContinueEmpty': 'No active project',
     'hub.cardContinueDesc': 'Resume your latest project.',
@@ -1241,11 +1253,12 @@ const PA_I18N = {
     'entry.noRecent': 'No saved inspection to continue — start a new project.',
     'entry.noProjects': 'No saved projects yet.',
     'entry.projectsHead': 'Previous Projects',
-    'project.reportPdf': 'PDF Report', 'project.reportInteractive': 'Start Interactive Inspection',
+    'project.reportPdf': 'PDF Report', 'project.reportInteractive': 'Create Cinematic Report',
     'project.reportDemo': 'Demo Inspection Simulation',
     'project.exportZip': 'Export ZIP', 'project.importZip': 'Import ZIP', 'project.recent': 'Recent projects',
     'project.none': 'No field projects yet',
     'project.delete': 'Delete project', 'project.deleted': 'Project deleted',
+    'project.deleteConfirm': 'Delete this project permanently? This cannot be undone.',
     'project.head': 'Field Projects', 'project.autosaveNote': 'Changes autosave to IndexedDB. Status is shown in the top bar.',
     'hub.title': 'Field Inspection Hub',
     'hub.subtitle': 'Capture routes, observations, photos and field intelligence.',
@@ -1258,6 +1271,7 @@ const PA_I18N = {
     'hub.featGps': 'GPS Tracking',
     'hub.featPhotoCapture': 'Photo Capture',
     'hub.featVoice': 'Voice Notes',
+    'hub.featVideoNote': 'Video Note',
     'hub.featReports': 'Interactive Reports',
     'hub.cardContinueEmpty': 'No active project',
     'hub.cardContinueDesc': 'Resume your latest project.',
@@ -1456,6 +1470,9 @@ const PA_I18N = {
     'report.doc.cover.project': 'Project',
     'report.doc.cover.date': 'Date',
     'report.doc.cover.time': 'Time',
+    'report.doc.cover.startTime': 'Start',
+    'report.doc.cover.endTime': 'End',
+    'report.doc.cover.location': 'Location',
     'report.doc.cover.user': 'User',
     'report.doc.cover.center': 'Center coordinate',
     'report.doc.cover.totalObjects': 'Total objects',
@@ -3614,6 +3631,35 @@ function ensureFieldLiveLocationFollow() {
   _gpsFollow = true;
   document.getElementById('btn-gps-follow')?.classList.add('active');
   document.getElementById('btn-map-locate')?.classList.add('active');
+}
+
+function requestInitialLiveMapCenter() {
+  if (!_gpsFollow) {
+    _pendingInitialLiveCenter = false;
+    return;
+  }
+  const g = getGpsDisplayFix();
+  if (g) {
+    _mapBrowseMode = false;
+    _gpsLastPanTs = 0;
+    zoomMapToFieldLiveLocation(g.lat, g.lon);
+    _pendingInitialLiveCenter = false;
+    return;
+  }
+  _pendingInitialLiveCenter = true;
+}
+
+function expandGpsFieldHudForSession() {
+  const hud = document.getElementById('gps-hud');
+  if (!hud || hud.style.display === 'none') return;
+  hud.classList.remove('gps-hud-collapsed');
+  hud.classList.add('gps-hud-expanded');
+  _gpsHudExpanded = true;
+  const chip = document.getElementById('gps-hud-chip');
+  if (chip) chip.setAttribute('aria-expanded', 'true');
+  const tg = document.getElementById('gps-hud-chip-toggle');
+  if (tg) tg.textContent = '▼';
+  resetGpsHudInactivityTimer();
 }
 
 function disableGpsFollowFromPan() {
@@ -9266,6 +9312,7 @@ async function saveCurrentProject(silent) {
   _projectSaving = true;
   setAutosaveIndicator('saving');
   try {
+    await syncProjectInspectionMetadata();
     await persistAllPlanRasterBlobs();
     const db = await openProjectDb();
     const snap = serializeProjectSnapshot();
@@ -9737,6 +9784,49 @@ async function warmViewportTilesFromDb() {
   } catch (_) {}
 }
 
+async function countMapTilesInDb() {
+  try {
+    const db = await openProjectDb();
+    const all = await idbGetAll(db, 'map_tiles');
+    return all?.length || 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
+async function cacheVisibleMapTilesForOffline() {
+  ensureFieldBasemapOn();
+  if (!navigator.onLine) {
+    warmViewportTilesFromDb();
+    const n = await countMapTilesInDb();
+    showHint(t('settings.offlineCached').replace('{n}', String(n)), 5000);
+    return;
+  }
+  showHint(t('settings.offlineCaching'), 4000);
+  const urls = new Set(getVisibleMapTileUrls());
+  if (!urls.size) {
+    scheduleRender();
+    await new Promise(r => setTimeout(r, 400));
+    getVisibleMapTileUrls().forEach(u => urls.add(u));
+  }
+  let saved = 0;
+  for (const url of urls) {
+    try {
+      const loaded = await loadMapTileFromNetwork(url);
+      if (!loaded?.img) continue;
+      _tileCache[url] = loaded.img;
+      if (loaded.persist) {
+        await persistMapTile(url, loaded.img);
+        saved++;
+      }
+    } catch (_) {}
+  }
+  scheduleRender();
+  const n = await countMapTilesInDb();
+  showHint(t('settings.offlineCached').replace('{n}', String(n)), 6000);
+}
+window.cacheVisibleMapTilesForOffline = cacheVisibleMapTilesForOffline;
+
 function mapTileUseCrossOrigin() {
   if (location.protocol === 'file:') return false;
   if (!window.isSecureContext) return false;
@@ -10099,7 +10189,10 @@ async function createNewProject(name) {
     closeProjectPanel();
     scheduleRender();
     renderFieldProjectReportsList();
-    if (FIELD_MODE) await activateFieldLocationSession(true);
+    if (FIELD_MODE) {
+      await activateFieldLocationSession(false, { liveFollow: true, expandHud: true });
+    }
+    syncProjectInspectionMetadata({ forceLocation: true }).catch(() => {});
   } catch (e) {
     console.error('[New Project]', e);
     showHint('Çalışma oluşturulamadı: ' + (e.message || e));
@@ -10166,6 +10259,7 @@ async function openProjectById(id, opts = {}) {
       : '';
     setAutosaveIndicator('saved', savedAt);
     if (!opts.quiet) showHint(t('phub.openProject') || 'Çalışma açıldı');
+    syncProjectInspectionMetadata().catch(() => {});
     if (!opts.keepHub) hideFieldStartHub();
     scheduleRender();
     warmViewportTilesFromDb();
@@ -10217,6 +10311,9 @@ window.showNewProjectForm = showNewProjectForm;
 window.hideNewProjectForm = hideNewProjectForm;
 window.submitNewProject = submitNewProject;
 window.createNewProject = createNewProject;
+window.syncProjectInspectionMetadata = syncProjectInspectionMetadata;
+window.isoToDatetimeLocalInput = isoToDatetimeLocalInput;
+window.datetimeLocalInputToIso = datetimeLocalInputToIso;
 
 async function snapshotRowExists(db, id) {
   const raw = await new Promise((res, rej) => {
@@ -10669,7 +10766,7 @@ async function createDefaultFieldProject() {
   await saveCurrentProject(true);
   await refreshProjectRecentList();
   await updateFieldCtxProject();
-  await activateFieldLocationSession(true);
+  await activateFieldLocationSession(false, { liveFollow: true, expandHud: true });
 }
 
 async function wipeFieldLocalWorkspace() {
@@ -11633,6 +11730,21 @@ function formatFieldLocalDateTime(iso) {
   return formatReportDateTime(iso, PA_LANG);
 }
 
+function isoToDatetimeLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+    + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+function datetimeLocalInputToIso(val) {
+  if (!val) return '';
+  const d = new Date(val);
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString();
+}
+
 function formatFieldLiveClock() {
   const loc = PA_LANG === 'en' ? 'en-GB' : 'tr-TR';
   return new Date().toLocaleString(loc, {
@@ -12517,6 +12629,7 @@ window.closeFieldReportViewer = closeFieldReportViewer;
 window.shareFieldReportViewer = shareFieldReportViewer;
 window.toggleFieldProjectReportsPanel = toggleFieldProjectReportsPanel;
 window.toggleFieldPastProjectsMenu = toggleFieldPastProjectsMenu;
+window.toggleFieldPastTripsMenu = toggleFieldPastProjectsMenu;
 window.closeFieldPastTripsMenu = closeFieldPastTripsMenu;
 window.deleteProjectReport = deleteProjectReport;
 
@@ -12613,10 +12726,14 @@ function collectFieldInspectionContext() {
     if (trialCtx) return trialCtx;
   }
   const en = PA_LANG === 'en';
+  const md = FIELD_PROJECT.metadata || {};
   const fix = _fieldGpsFix;
-  const lat = fix?.lat ?? S.mapCenter?.lat;
-  const lon = fix?.lon ?? S.mapCenter?.lon;
-  const d = new Date();
+  const lat = fix?.lat ?? md.centerLat ?? S.mapCenter?.lat;
+  const lon = fix?.lon ?? md.centerLon ?? S.mapCenter?.lon;
+  const startIso = md.startTime || md.inspectionAt;
+  const endIso = md.endTime || startIso;
+  const clockRef = endIso || startIso;
+  const d = clockRef ? new Date(clockRef) : new Date();
   let altitude = '—';
   if (fix?.altitude != null && !isNaN(fix.altitude)) altitude = Math.round(fix.altitude) + ' m';
   else {
@@ -12626,13 +12743,16 @@ function collectFieldInspectionContext() {
       if (m) altitude = m[1] + ' m';
     }
   }
+  const locText = md.location && !/GPS bekleniyor|Waiting for GPS/i.test(md.location) ? md.location : '';
   return {
     capturedAt: d.toISOString(),
     clock: d.toLocaleTimeString(en ? 'en-GB' : 'tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    startTime: startIso || null,
+    endTime: endIso || null,
     altitude,
     temperature: '—',
     weatherLabel: en ? 'Weather' : 'Hava',
-    locationLine1: lat != null && lon != null ? formatCoord(lat, lon) : '—',
+    locationLine1: locText || (lat != null && lon != null ? formatCoord(lat, lon) : '—'),
     locationLine2: '—',
     lat: lat ?? null,
     lon: lon ?? null,
@@ -12664,14 +12784,8 @@ function buildReportInspectionContextCoverRows(meta, lang) {
   if (!ctx) return '';
   const L = (key) => tLang(lang, key);
   const loc = [ctx.locationLine1, ctx.locationLine2].filter(v => v && v !== '—').join(' · ') || '—';
-  const temp = ctx.temperature && ctx.temperature !== '—'
-    ? ctx.temperature + (ctx.weatherLabel && !/^(Hava|Weather)$/i.test(ctx.weatherLabel) ? ' · ' + ctx.weatherLabel : '')
-    : (ctx.weatherLabel || '—');
   return `
-    <tr><td>${L('report.doc.context.altitude')}</td><td>${escapeHtml(ctx.altitude || '—')}</td></tr>
-    <tr><td>${L('report.doc.context.time')}</td><td>${escapeHtml(ctx.clock || '—')}</td></tr>
-    <tr><td>${L('report.doc.context.location')}</td><td>${escapeHtml(loc)}</td></tr>
-    <tr><td>${L('report.doc.context.temperature')}</td><td>${escapeHtml(temp)}</td></tr>`;
+    <tr><td>${L('report.doc.context.altitude')}</td><td>${escapeHtml(ctx.altitude || '—')}</td></tr>`;
 }
 
 function appendInspectionContextInsights(insights, ctx, tr) {
@@ -12690,14 +12804,19 @@ function appendInspectionContextInsights(insights, ctx, tr) {
 function buildInteractiveInspectionContextHtml(ctx, tr) {
   if (!ctx) return '';
   const loc = [ctx.locationLine1, ctx.locationLine2].filter(v => v && v !== '—').join(' · ') || '—';
-  const temp = ctx.temperature && ctx.temperature !== '—'
-    ? ctx.temperature + (ctx.weatherLabel && !/^(Hava|Weather)$/i.test(ctx.weatherLabel) ? ' · ' + ctx.weatherLabel : '')
-    : '—';
+  const fmt = (iso) => {
+    if (!iso) return '—';
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString(tr ? 'tr-TR' : 'en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        + ' ' + d.toLocaleTimeString(tr ? 'tr-TR' : 'en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+    } catch (_) { return '—'; }
+  };
   const items = [
-    { label: tr ? 'Rakım' : 'Altitude', value: ctx.altitude || '—' },
-    { label: tr ? 'Saat' : 'Time', value: ctx.clock || '—' },
     { label: tr ? 'Konum' : 'Location', value: loc },
-    { label: tr ? 'Sıcaklık' : 'Temperature', value: temp },
+    { label: tr ? 'Başlangıç' : 'Start', value: fmt(ctx.startTime) },
+    { label: tr ? 'Bitiş' : 'End', value: fmt(ctx.endTime) },
+    { label: tr ? 'Rakım' : 'Altitude', value: ctx.altitude || '—' },
   ];
   return '<div class="ir-context">' + items.map(it =>
     '<span><i>' + escapeHtml(it.label) + '</i> <b>' + escapeHtml(it.value) + '</b></span>',
@@ -12742,6 +12861,7 @@ async function generateProjectReport(onProgress) {
   }
   const prog = (p, s) => { if (onProgress) onProgress(p, s); };
   prog(5, t('report.doc.progress.collect'));
+  await syncProjectInspectionMetadata();
   await saveCurrentProject(true);
   const snap = serializeProjectSnapshot();
   const generatedAt = new Date().toISOString();
@@ -12778,14 +12898,16 @@ async function generateProjectReport(onProgress) {
 
   const objectCounts = {
     total: S.objects.length,
-    photos: photos.length,
-    videos: videos.length,
+    photos: photos.filter(p => !p.isPanorama).length,
+    videos: 0,
+    videoNotes: videos.length,
     notes: notes.length,
     sketch: S.objects.filter(o => !o._import && o.type !== 'field_photo' && o.type !== 'field_note' && o.type !== 'field_video').length,
     imports: S.objects.filter(o => o._import).length,
   };
 
-  const inspectionAt = deriveProjectInspectionDate(snap, photos, notes, videos);
+  const inspectionAt = FIELD_PROJECT.metadata?.startTime
+    || deriveProjectInspectionDate(snap, photos, notes, videos);
 
   const reportMeta = {
     templateId: REPORT_TEMPLATE_ID,
@@ -12838,9 +12960,8 @@ function buildReportHTML(data) {
     layers, areas, gpsTrack,
   } = data;
   const allVideos = videos || [];
-  const allVideoNotes = videoNotes || (allVideos.filter(v => v.isVideoNote !== false));
-  const regularVideos = (videos || []).filter(v => v.isVideoNote === false);
-  const panoList = panoramas || (photos || []).filter(p => p.isPanorama);
+  const allVideoNotes = videoNotes || allVideos;
+  const regularVideos = [];
   const photoList = (photos || []).filter(p => !p.isPanorama);
   const voiceList = voiceNotes || (photos || []).filter(p => p.hasVoice);
   const layerList = layers || [];
@@ -12850,8 +12971,15 @@ function buildReportHTML(data) {
   const rptPage = (title, body, show) => (show && body) ? `<section class="rpt-page"><h2>${title}</h2>${body}</section>` : '';
   const name = escapeHtml(project.name || L('report.doc.projectDefault'));
   const user = escapeHtml(meta.userName || '—');
-  const inspectionIso = meta.inspectionAt || project.createdAt || meta.generatedAt;
-  const inspection = formatReportDateTime(inspectionIso, lang);
+  const md = project.metadata || {};
+  const inspectionStartIso = md.startTime || meta.inspectionAt || project.createdAt || meta.generatedAt;
+  const inspectionEndIso = md.endTime || inspectionStartIso;
+  const inspectionStart = formatReportDateTime(inspectionStartIso, lang);
+  const inspectionEnd = formatReportDateTime(inspectionEndIso, lang);
+  const inspectionDate = inspectionStart.split(' ')[0] || inspectionStart;
+  const inspectionStartTime = inspectionStart.split(' ')[1] || '—';
+  const inspectionEndTime = inspectionEnd.split(' ')[1] || '—';
+  const locationLabel = escapeHtml(md.location || meta.inspectionContext?.locationLine1 || '—');
   const gen = formatReportDateTime(meta.generatedAt, lang);
   const created = formatReportDateTime(project.createdAt, lang);
   const center = formatCoord(meta.mapCenter?.lat, meta.mapCenter?.lon);
@@ -12899,28 +13027,13 @@ function buildReportHTML(data) {
   const videoNoteBlocks = allVideoNotes.map(v => `
     <article class="rpt-card">
       <div class="rpt-photo-grid">
-        ${v.thumbDataUrl ? `<img src="${v.thumbDataUrl}" alt="VN${v.videoNum}"/>` : `<div class="rpt-noimg">🎥</div>`}
+        ${v.thumbDataUrl ? `<img src="${v.thumbDataUrl}" alt="VN${v.videoNum}"/>` : `<div class="rpt-noimg">🎬</div>`}
         <dl>
           <dt>${L('report.doc.videos.videoNo')}</dt><dd>VN${v.videoNum || '—'}</dd>
           <dt>${L('report.doc.photos.coordinate')}</dt><dd>${formatCoord(v.lat, v.lon)}</dd>
           <dt>${L('report.doc.photos.dateTime')}</dt><dd>${formatReportDateTime(v.timestamp, lang)}</dd>
           <dt>${L('report.doc.videos.duration')}</dt><dd>${v.duration ? Math.round(v.duration) + ' sn' : '—'}</dd>
           <dt>${L('report.doc.photos.caption')}</dt><dd>${escapeHtml(v.description || v.title || '—')}</dd>
-        </dl>
-      </div>
-    </article>`).join('');
-
-  const panoBlocks = panoList.map(p => `
-    <article class="rpt-card">
-      <div class="rpt-photo-grid">
-        ${p.imageDataUrl ? `<img src="${p.imageDataUrl}" alt="Pano ${p.photoNum}"/>` : `<div class="rpt-noimg">🌐</div>`}
-        <dl>
-          <dt>${L('report.doc.photos.photoNo')}</dt><dd>P${p.photoNum || '—'}</dd>
-          <dt>${L('report.doc.photos.coordinate')}</dt><dd>${formatCoord(p.lat, p.lon)}</dd>
-          <dt>${L('report.doc.photos.dateTime')}</dt><dd>${formatReportDateTime(p.timestamp, lang)}</dd>
-          <dt>${L('report.doc.panoramas.heading')}</dt><dd>${p.heading != null ? Math.round(p.heading) + '°' : '—'}</dd>
-          <dt>${L('report.doc.panoramas.resolution')}</dt><dd>${p.width && p.height ? p.width + '×' + p.height : '—'}</dd>
-          <dt>${L('report.doc.photos.caption')}</dt><dd>${escapeHtml(p.caption || '—')}</dd>
         </dl>
       </div>
     </article>`).join('');
@@ -13022,8 +13135,10 @@ ${secureMark}
   <p class="sub">${L('report.doc.subtitle')}</p>
   <table>
     <tr><td>${L('report.doc.cover.project')}</td><td>${name}</td></tr>
-    <tr><td>${L('report.doc.cover.date')}</td><td>${inspection.split(' ')[0] || inspection}</td></tr>
-    <tr><td>${L('report.doc.cover.time')}</td><td>${inspection.split(' ')[1] || '—'}</td></tr>
+    <tr><td>${L('report.doc.cover.date')}</td><td>${inspectionDate}</td></tr>
+    <tr><td>${L('report.doc.cover.startTime')}</td><td>${inspectionStartTime}</td></tr>
+    <tr><td>${L('report.doc.cover.endTime')}</td><td>${inspectionEndTime}</td></tr>
+    <tr><td>${L('report.doc.cover.location')}</td><td>${locationLabel}</td></tr>
     <tr><td>${L('report.doc.cover.user')}</td><td>${user}</td></tr>
     <tr><td>${L('report.doc.cover.center')}</td><td>${center}</td></tr>
     ${contextCoverRows}
@@ -13037,10 +13152,8 @@ ${contextSection}
   <h2>${L('report.doc.summary.title')}</h2>
   <div class="rpt-summary">
     <div class="rpt-stat"><b>${meta.objectCounts?.photos ?? photoList.length}</b><span>${L('report.doc.summary.photos')}</span></div>
-    <div class="rpt-stat"><b>${meta.objectCounts?.videos ?? regularVideos.length}</b><span>${L('report.doc.videos.title')}</span></div>
     <div class="rpt-stat"><b>${meta.objectCounts?.videoNotes ?? allVideoNotes.length}</b><span>${L('report.doc.videoNotes.title')}</span></div>
     <div class="rpt-stat"><b>${meta.objectCounts?.voiceNotes ?? voiceList.length}</b><span>${L('report.doc.voiceNotes.title')}</span></div>
-    <div class="rpt-stat"><b>${meta.objectCounts?.panoramas ?? panoList.length}</b><span>${L('report.doc.panoramas.title')}</span></div>
     <div class="rpt-stat"><b>${meta.objectCounts?.notes ?? (notes || []).length}</b><span>${L('report.doc.summary.notes')}</span></div>
     <div class="rpt-stat"><b>${measurements.items?.length ?? 0}</b><span>${L('report.doc.summary.measured')}</span></div>
     <div class="rpt-stat"><b>${formatLengthReport(totals.totalPolylineM)}</b><span>${L('report.doc.summary.totalLine')}</span></div>
@@ -13066,13 +13179,9 @@ ${slopeSection}
 
 ${rptPage(L('report.doc.photos.title'), photoBlocks, photoList.length)}
 
-${rptPage(L('report.doc.videos.title'), videoBlocks, regularVideos.length)}
-
 ${rptPage(L('report.doc.videoNotes.title'), videoNoteBlocks, allVideoNotes.length)}
 
 ${rptPage(L('report.doc.voiceNotes.title'), voiceBlocks, voiceList.length)}
-
-${rptPage(L('report.doc.panoramas.title'), panoBlocks, panoList.length)}
 
 ${rptPage(L('report.doc.notes.title'), noteBlocks, (notes || []).length)}
 
@@ -13271,11 +13380,10 @@ function buildInspectionPlaybackPayload(data) {
   const { meta, notes } = data;
   const allPhotos = data.allPhotos || data.photos || [];
   const photoList = allPhotos.filter(p => !p.isPanorama);
-  const panoramas = data.panoramas || allPhotos.filter(p => p.isPanorama);
   const voiceNotes = data.voiceNotes || allPhotos.filter(p => p.hasVoice);
-  const allVideos = data.videos || data.videoNotes ? [...(data.videos || []), ...(data.videoNotes || [])] : [];
-  const videoNotes = data.videoNotes || allVideos.filter(v => v.isVideoNote !== false);
-  const videos = (data.videos || []).filter(v => v.isVideoNote === false);
+  const allVideos = data.videos || data.videoNotes || [];
+  const videoNotes = allVideos;
+  const videos = [];
   const layers = data.layers || [];
   const measurements = data.measurements || meta?.measurements || {};
   const lang = resolveReportLang(data);
@@ -13333,39 +13441,12 @@ function buildInspectionPlaybackPayload(data) {
       voiceDuration: p.voiceDuration || 0,
     });
   });
-  panoramas.forEach(p => {
-    timeline.push({
-      id: p.id || ('pano_' + p.photoNum),
-      kind: 'panorama',
-      label: (tr ? 'Panorama ' : 'Panorama ') + (p.photoNum || ''),
-      text: p.caption || '',
-      ts: p.timestamp,
-      lat: p.lat,
-      lon: p.lon,
-      imageDataUrl: p.imageDataUrl || '',
-      heading: p.heading ?? p.panoHeading ?? null,
-    });
-  });
   videoNotes.forEach(v => {
     timeline.push({
       id: v.id || ('vn_' + v.videoNum),
       kind: 'videoNote',
-      label: 'VN' + (v.videoNum || ''),
+      label: (tr ? 'Video not ' : 'Video note ') + (v.videoNum || ''),
       text: v.description || v.title || '',
-      ts: v.timestamp,
-      lat: v.lat,
-      lon: v.lon,
-      thumbDataUrl: v.thumbDataUrl || '',
-      videoDataUrl: v.videoDataUrl || '',
-      duration: v.duration || 0,
-    });
-  });
-  videos.forEach(v => {
-    timeline.push({
-      id: v.id || ('v_' + v.videoNum),
-      kind: 'video',
-      label: 'V' + (v.videoNum || ''),
-      text: v.title || '',
       ts: v.timestamp,
       lat: v.lat,
       lon: v.lon,
@@ -13431,11 +13512,6 @@ function buildInspectionPlaybackPayload(data) {
       ? 'İnceleme boyunca saha aktivitesi yoğunlaştı.'
       : 'Inspection activity concentrated along the project corridor.');
   }
-  if (panoramas.length) {
-    insights.push(tr
-      ? panoramas.length + ' panorama kaydı eklendi.'
-      : panoramas.length + ' panorama capture(s) recorded.');
-  }
   if (videoNotes.length) {
     insights.push(tr
       ? videoNotes.length + ' video not kaydı.'
@@ -13445,13 +13521,21 @@ function buildInspectionPlaybackPayload(data) {
     ? 'İnceleme süresi: ' + Math.round(durationMin) + ' dakika.'
     : 'Inspection duration: ' + Math.round(durationMin) + ' minutes.');
 
-  const inspectionContext = meta?.inspectionContext || collectFieldInspectionContext();
+  const md = project?.metadata || {};
+  const inspectionContext = {
+    ...(meta?.inspectionContext || collectFieldInspectionContext()),
+    startTime: md.startTime || meta?.inspectionAt || null,
+    endTime: md.endTime || md.startTime || null,
+    locationLine1: md.location || meta?.inspectionContext?.locationLine1 || '—',
+  };
   appendInspectionContextInsights(insights, inspectionContext, tr);
 
   return {
     lang,
     projectName: project?.name || (tr ? 'Saha Çalışması' : 'Field Project'),
-    generatedAt: meta?.inspectionAt || meta?.generatedAt || new Date().toISOString(),
+    generatedAt: md.startTime || meta?.inspectionAt || meta?.generatedAt || new Date().toISOString(),
+    inspectionStartAt: md.startTime || meta?.inspectionAt || null,
+    inspectionEndAt: md.endTime || md.startTime || null,
     inspectorName: meta?.userName || '',
     basemapUrl,
     brandLogoUrl: data.brandLogoUrl || embeddedBrandLogoDataUrl() || '',
@@ -13463,10 +13547,9 @@ function buildInspectionPlaybackPayload(data) {
     inspectionContext,
     sections: {
       photos: photoList,
-      videos,
+      videos: [],
       videoNotes,
       voiceNotes,
-      panoramas,
       notes: notes || [],
       measurements: measurements.items || [],
       layers,
@@ -13476,16 +13559,16 @@ function buildInspectionPlaybackPayload(data) {
       routeKm,
       durationMin,
       photoCount: photoList.length,
-      videoCount: videos.length,
+      videoCount: 0,
       videoNoteCount: videoNotes.length,
-      panoramaCount: panoramas.length,
+      panoramaCount: 0,
       voiceNoteCount: voiceNotes.length,
       noteCount: (notes || []).length,
       layerCount: layers.length,
       measurementCount: (measurements.items || []).length,
       audioCount,
-      startTime: first?.ts,
-      endTime: last?.ts,
+      startTime: md.startTime || first?.ts,
+      endTime: md.endTime || last?.ts,
       gpsQuality: meta?.gpsAccuracy != null
         ? (meta.gpsAccuracy <= 6 ? (tr ? 'Yüksek hassasiyet' : 'High precision') : (tr ? 'Orta hassasiyet' : 'Medium precision'))
         : (tr ? '—' : '—'),
@@ -13513,7 +13596,6 @@ async function buildCinematicInteractiveReportHTML(data, opts) {
       data.allPhotos = enriched;
       data.photos = enriched.filter(p => !p.isPanorama);
       data.voiceNotes = enriched.filter(p => p.hasVoice);
-      data.panoramas = enriched.filter(p => p.isPanorama);
       const voiceMissing = enriched.find(p => p.hasVoice && !p.audioDataUrl);
       if (voiceMissing && data.meta?.simulation) {
         voiceMissing.audioDataUrl = await synthesizeDemoVoiceDataUrl(voiceMissing.voiceDuration || 12);
@@ -14104,6 +14186,7 @@ function onGpsPosition(pos) {
   updateGpsMovementState(_fieldGpsFix);
   ensureGpsMotionLoop();
   updateGpsHud();
+  if (_pendingInitialLiveCenter && _gpsFollow) requestInitialLiveMapCenter();
   gpsTrackOnPosition(pos);
   gpsScheduleAgpsRefresh(acc > GPS_AGPS_WEAK_THRESHOLD_M);
 }
@@ -14201,7 +14284,8 @@ function ensureFieldGpsSessionActive(silent) {
 }
 
 /** After hub / project open: request location permission, then keep GPS + follow on. */
-async function activateFieldLocationSession(silent) {
+async function activateFieldLocationSession(silent, opts) {
+  opts = opts || {};
   if (!FIELD_MODE || !FIELD_PROJECT.id) return false;
   if (typeof FieldPermissions !== 'undefined') {
     const ok = await FieldPermissions.request('location', {
@@ -14210,6 +14294,13 @@ async function activateFieldLocationSession(silent) {
     if (!ok && FieldPermissions.isNative()) return false;
   }
   const started = ensureFieldGpsSessionActive(!!silent);
+  if (opts.liveFollow) {
+    _mapBrowseMode = false;
+    ensureFieldLiveLocationFollow();
+    requestInitialLiveMapCenter();
+    if (!silent) showHint(t('gps.hint.liveOn'), 3200);
+  }
+  if (opts.expandHud && _fieldGpsOn) expandGpsFieldHudForSession();
   if (started || _fieldGpsOn) updateGpsHud();
   return started || _fieldGpsOn;
 }
@@ -14812,8 +14903,7 @@ function selectNoteFromLayer(id) {
   const n = S.objects.find(o => o.id === id);
   if (!n) return;
   setActiveLayer('notes');
-  const b = { minLat: n.lat, maxLat: n.lat, minLon: n.lon, maxLon: n.lon, ok: true };
-  fitMapToLatLonBounds(b);
+  centerMapOnFieldObject(n);
   scheduleRender();
   requestAnimationFrame(() => showNotePopup(n));
 }
@@ -15515,10 +15605,8 @@ function selectGpsTrackFromLayer(id) {
   S.selectedIds = [tr.id];
   setDeleteButtonVisible(true);
   updateSelPanel(tr);
-  const b = boundsForGpsTrack(tr);
-  if (b.ok) fitMapToLatLonBounds(b);
+  centerMapOnFieldObject(tr);
   buildLayerPanel();
-  scheduleRender();
 }
 
 function deleteFieldGpsTrackById(objId, ev) {
@@ -15582,16 +15670,14 @@ function selectPhotoFromLayer(id) {
   if (p.type === 'field_video') {
     setActiveLayer(FIELD_PHOTOS_LAYER);
     normalizeFieldVideoObject(p);
-    const b = { minLat: p.lat, maxLat: p.lat, minLon: p.lon, maxLon: p.lon, ok: true };
-    fitMapToLatLonBounds(b);
+    centerMapOnFieldObject(p);
     scheduleRender();
     requestAnimationFrame(() => showFieldObservationPopup(p));
     return;
   }
   normalizeFieldPhotoObject(p);
   setActiveLayer(FIELD_PHOTOS_LAYER);
-  const b = { minLat: p.lat, maxLat: p.lat, minLon: p.lon, maxLon: p.lon, ok: true };
-  fitMapToLatLonBounds(b);
+  centerMapOnFieldObject(p);
   scheduleRender();
   requestAnimationFrame(() => showFieldObservationPopup(p));
 }
@@ -16169,6 +16255,17 @@ async function ingestFieldVideo(blob, mime, durationSec) {
       scheduleProjectSave();
     }
   })();
+}
+
+function setRightPanelCollapsed(collapsed) {
+  const panel = document.getElementById('right-panel');
+  const btn = document.getElementById('right-toggle');
+  if (!panel) return;
+  panel.style.display = collapsed ? 'none' : '';
+  if (btn) btn.textContent = collapsed ? '▶' : '◀';
+  document.body.classList.toggle('field-panel-right', !collapsed);
+  document.body.classList.toggle('field-panel-right-hidden', collapsed);
+  resizeCanvas();
 }
 
 function ensureRightPanelVisible() {
@@ -17110,8 +17207,7 @@ function applyFieldModeBoot() {
   S.planningCat = 'none';
   S.showPafta = false;
   if (LAYOUT.mode !== 'off') cancelLayoutDraw();
-  document.body.classList.add('field-panel-right');
-  document.body.classList.remove('field-panel-right-hidden');
+  setRightPanelCollapsed(true);
   initFieldInteractionUx();
   initFieldBrandLogo();
   setDeleteButtonVisible(false);
@@ -18021,6 +18117,186 @@ function deriveProjectInspectionDate(project, photos, notes, videos) {
   }
   if (stamps.length) return new Date(Math.min(...stamps)).toISOString();
   return project?.createdAt || new Date().toISOString();
+}
+
+let _projMetaGeocodeCache = { key: '', at: 0, text: '' };
+
+function deriveObjectActivityTimes() {
+  const stamps = [];
+  const push = (ts) => {
+    if (!ts) return;
+    const t = Date.parse(ts);
+    if (Number.isFinite(t)) stamps.push(t);
+  };
+  S.objects.forEach(o => {
+    push(o.timestamp || o.createdAt);
+    if (o.type === 'field_gps_track') {
+      (o.vertices || o.points || []).forEach(v => push(v.ts || v.timestamp));
+    }
+  });
+  return stamps;
+}
+
+async function resolveInspectionLocationLabel(lat, lon) {
+  if (lat == null || lon == null) return '';
+  if (typeof window.getFieldTrialInspectionContext === 'function') {
+    const ctx = window.getFieldTrialInspectionContext();
+    const loc = [ctx?.locationLine1, ctx?.locationLine2]
+      .filter(v => v && v !== '—' && !/GPS bekleniyor|Waiting for GPS/i.test(v))
+      .join(' · ');
+    if (loc) return loc;
+  }
+  const key = lat.toFixed(4) + ',' + lon.toFixed(4);
+  const now = Date.now();
+  if (_projMetaGeocodeCache.key === key && now - _projMetaGeocodeCache.at < 120000) {
+    return _projMetaGeocodeCache.text;
+  }
+  try {
+    const lang = PA_LANG === 'en' ? 'en' : 'tr';
+    const url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat='
+      + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon)
+      + '&zoom=18&addressdetails=1&accept-language=' + lang;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (res.ok) {
+      const data = await res.json();
+      const addr = data.address || {};
+      const line1 = [addr.road, addr.house_number].filter(Boolean).join(' ')
+        || addr.suburb || addr.neighbourhood || addr.town || addr.city || addr.village || '';
+      const line2 = addr.state || addr.county || '';
+      const text = [line1, line2].filter(Boolean).join(' · ') || formatCoord(lat, lon);
+      _projMetaGeocodeCache = { key, at: now, text };
+      return text;
+    }
+  } catch (e) {
+    console.warn('[ProjectMeta] geocode', e);
+  }
+  return formatCoord(lat, lon);
+}
+
+async function syncProjectInspectionMetadata(opts = {}) {
+  if (!FIELD_PROJECT.id) return;
+  const md = FIELD_PROJECT.metadata || (FIELD_PROJECT.metadata = {});
+  const now = new Date();
+  const stamps = deriveObjectActivityTimes();
+  if (!md.startTime) {
+    md.startTime = stamps.length ? new Date(Math.min(...stamps)).toISOString() : now.toISOString();
+  } else if (stamps.length) {
+    const existing = Date.parse(md.startTime);
+    const earliest = Math.min(...stamps);
+    if (Number.isFinite(existing) && earliest < existing) md.startTime = new Date(earliest).toISOString();
+  }
+  if (stamps.length) md.endTime = new Date(Math.max(...stamps)).toISOString();
+  else md.endTime = now.toISOString();
+  md.inspectionAt = md.startTime;
+  const fix = _fieldGpsFix;
+  const lat = fix?.lat ?? S.mapCenter?.lat;
+  const lon = fix?.lon ?? S.mapCenter?.lon;
+  if (lat != null && lon != null) {
+    md.centerLat = lat;
+    md.centerLon = lon;
+    if (!md.location || /GPS bekleniyor|Waiting for GPS/i.test(md.location) || opts.forceLocation) {
+      const loc = await resolveInspectionLocationLabel(lat, lon);
+      if (loc) md.location = loc;
+    }
+  }
+}
+
+function boundsForFieldObject(obj) {
+  const b = freshGeoBounds();
+  if (!obj) return b;
+  if (obj.type === 'field_gps_track') return boundsForGpsTrack(obj);
+  if (obj.lat != null && obj.lon != null) {
+    expandBounds(b, obj.lat, obj.lon);
+    return b;
+  }
+  (obj.rings || []).forEach(ring => ring.forEach(c => { if (c.lat != null) expandBounds(b, c.lat, c.lon); }));
+  (obj.vertices || []).forEach(c => {
+    if (c.lat != null) expandBounds(b, c.lat, c.lon);
+    else if (c.x != null && c.y != null) {
+      const g = worldToLatLon(c.x, c.y);
+      expandBounds(b, g.lat, g.lon);
+    }
+  });
+  if (obj.points?.length >= 2 && !obj.vertices?.length) {
+    for (let i = 0; i < obj.points.length; i += 2) {
+      const g = worldToLatLon(obj.points[i], obj.points[i + 1]);
+      expandBounds(b, g.lat, g.lon);
+    }
+  }
+  if (obj.cx != null && obj.cy != null && obj.r != null) {
+    const ring = analysisRegionLatLonRing(obj);
+    if (ring) ring.forEach(c => expandBounds(b, c.lat, c.lon));
+  }
+  if (obj.wgsBounds?.ok) {
+    expandBounds(b, obj.wgsBounds.minLat, obj.wgsBounds.minLon);
+    expandBounds(b, obj.wgsBounds.maxLat, obj.wgsBounds.maxLon);
+  }
+  return b;
+}
+
+function worldBoundsForFieldObject(obj) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, ok = false;
+  const add = (x, y) => {
+    if (!isFinite(x) || !isFinite(y)) return;
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+    ok = true;
+  };
+  if (!obj) return { minX, minY, maxX, maxY, ok };
+  (obj.vertices || []).forEach(c => { if (c.x != null) add(c.x, c.y); });
+  if (obj.points?.length >= 2) {
+    for (let i = 0; i < obj.points.length; i += 2) add(obj.points[i], obj.points[i + 1]);
+  }
+  if (obj.cx != null && obj.cy != null && obj.r != null) {
+    add(obj.cx - obj.r, obj.cy - obj.r);
+    add(obj.cx + obj.r, obj.cy + obj.r);
+  }
+  return { minX, minY, maxX, maxY, ok };
+}
+
+function centerMapOnFieldObject(obj) {
+  if (!obj) return;
+  const b = boundsForFieldObject(obj);
+  if (b.ok) {
+    const cLat = (b.minLat + b.maxLat) / 2;
+    const cLon = (b.minLon + b.maxLon) / 2;
+    const lat = obj.lat ?? cLat;
+    const lon = obj.lon ?? cLon;
+    const latSpan = Math.abs(b.maxLat - b.minLat);
+    const lonSpan = Math.abs(b.maxLon - b.minLon);
+    if (latSpan < 0.0003 && lonSpan < 0.0003) {
+      if (S.scale < 2) S.scale = Math.min(6, Math.max(S.scale, 2.5));
+      panViewportToLatLon(lat, lon, 1);
+      S.mapCenter = { lat, lon };
+    } else {
+      fitMapToLatLonBounds(b);
+    }
+    scheduleRender();
+    return;
+  }
+  const wb = worldBoundsForFieldObject(obj);
+  if (wb.ok) {
+    fitMapToWorldBounds(wb.minX, wb.minY, wb.maxX, wb.maxY);
+    return;
+  }
+  showHint(t('layer.goMissing'));
+}
+
+function goToSketchFromLayer(objId) {
+  const o = S.objects.find(x => x.id === objId);
+  if (!o) return;
+  setActiveLayer('sketch');
+  S.selectedIds = [o.id];
+  setDeleteButtonVisible(true);
+  updateSelPanel(o);
+  centerMapOnFieldObject(o);
+  buildLayerPanel();
+}
+
+function goToFieldObjectFromLayer(objId) {
+  const o = S.objects.find(x => x.id === objId);
+  if (!o) return;
+  centerMapOnFieldObject(o);
 }
 
 function computeFieldProjectBounds() {
@@ -19977,11 +20253,9 @@ function preloadFieldPhotoPinIcon() {
 }
 preloadFieldPhotoPinIcon();
 
-function drawFieldPhotoPinIcon(ctx, cx, cy, size, isPanorama) {
+function drawFieldPhotoPinIcon(ctx, cx, cy, size) {
   preloadFieldPhotoPinIcon();
-  const img = isPanorama
-    ? (_fieldPanoPinIcon?.complete && _fieldPanoPinIcon.naturalWidth ? _fieldPanoPinIcon : null)
-    : (_fieldPhotoPinIcon?.complete && _fieldPhotoPinIcon.naturalWidth ? _fieldPhotoPinIcon : null);
+  const img = (_fieldPhotoPinIcon?.complete && _fieldPhotoPinIcon.naturalWidth ? _fieldPhotoPinIcon : null);
   const w = size;
   const h = size;
   const x = cx - w / 2;
@@ -19995,7 +20269,7 @@ function drawFieldPhotoPinIcon(ctx, cx, cy, size, isPanorama) {
   ctx.font = `bold ${Math.max(14, size * 0.55)}px Inter,sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(isPanorama ? '🌐' : '📷', cx, cy);
+  ctx.fillText('📷', cx, cy);
   ctx.restore();
 }
 
@@ -23117,6 +23391,77 @@ function showHint(msg, ms) {
   clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none', ms || 2500);
 }
 
+let _fieldConfirmResolve = null;
+
+function ensureFieldConfirmOverlay() {
+  let el = document.getElementById('field-confirm-overlay');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'field-confirm-overlay';
+  el.setAttribute('aria-hidden', 'true');
+  el.innerHTML =
+    '<div class="field-confirm-panel" role="dialog" aria-modal="true" aria-labelledby="field-confirm-title" onclick="event.stopPropagation()">' +
+      '<h2 id="field-confirm-title" class="field-confirm-title"></h2>' +
+      '<p id="field-confirm-msg" class="field-confirm-msg"></p>' +
+      '<div class="field-confirm-actions">' +
+        '<button type="button" id="field-confirm-cancel" class="field-confirm-btn"></button>' +
+        '<button type="button" id="field-confirm-ok" class="field-confirm-btn primary"></button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(el);
+  el.addEventListener('click', () => dismissFieldConfirm(false));
+  document.getElementById('field-confirm-cancel')?.addEventListener('click', () => dismissFieldConfirm(false));
+  document.getElementById('field-confirm-ok')?.addEventListener('click', () => dismissFieldConfirm(true));
+  if (!document.body.dataset.fieldConfirmEsc) {
+    document.body.dataset.fieldConfirmEsc = '1';
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && _fieldConfirmResolve) dismissFieldConfirm(false);
+    });
+  }
+  return el;
+}
+
+function dismissFieldConfirm(ok) {
+  const el = document.getElementById('field-confirm-overlay');
+  if (el) {
+    el.style.display = 'none';
+    el.setAttribute('aria-hidden', 'true');
+  }
+  document.body.classList.remove('field-confirm-open');
+  const resolve = _fieldConfirmResolve;
+  _fieldConfirmResolve = null;
+  if (resolve) resolve(!!ok);
+}
+
+function showFieldConfirmDialog(opts) {
+  opts = opts || {};
+  return new Promise(resolve => {
+    const el = ensureFieldConfirmOverlay();
+    _fieldConfirmResolve = resolve;
+    const title = document.getElementById('field-confirm-title');
+    const msg = document.getElementById('field-confirm-msg');
+    const cancel = document.getElementById('field-confirm-cancel');
+    const okBtn = document.getElementById('field-confirm-ok');
+    if (title) title.textContent = opts.title || t('common.confirm');
+    if (msg) {
+      msg.textContent = opts.message || '';
+      msg.hidden = !opts.message;
+    }
+    if (cancel) cancel.textContent = opts.cancelText || t('common.cancel');
+    if (okBtn) {
+      okBtn.textContent = opts.confirmText || t('common.confirm');
+      okBtn.classList.toggle('danger', !!opts.danger);
+      okBtn.classList.toggle('primary', !opts.danger);
+    }
+    el.style.display = 'flex';
+    el.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('field-confirm-open');
+    if (typeof window.fieldUiRaise === 'function') window.fieldUiRaise('field-confirm-overlay');
+    setTimeout(() => okBtn?.focus(), 40);
+  });
+}
+window.showFieldConfirmDialog = showFieldConfirmDialog;
+
 // ─────────────────────────────────────────────────────────────
 // COLLAPSIBLE SECTIONS
 // ─────────────────────────────────────────────────────────────
@@ -23765,6 +24110,22 @@ function showLayerListDeleteConfirm(item, wrap, trashBtn, onDelete) {
   _activeLayerDelConfirm = { wrap, trash: trashBtn, item };
 }
 
+function appendLayerListGoButton(item, onGo) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'ln-go lyr-btn lyr-btn-go';
+  btn.title = t('layer.go');
+  btn.setAttribute('aria-label', t('layer.go'));
+  btn.textContent = PA_LANG === 'tr' ? 'Git' : 'Go';
+  btn.onclick = ev => {
+    ev.stopPropagation();
+    onGo();
+  };
+  const delWrap = item.querySelector('.ln-del-wrap');
+  if (delWrap) item.insertBefore(btn, delWrap);
+  else item.appendChild(btn);
+}
+
 function appendLayerListDeleteButton(item, onDelete) {
   const wrap = document.createElement('div');
   wrap.className = 'ln-del-wrap';
@@ -24015,7 +24376,7 @@ function buildLayerPanel() {
           item.innerHTML = '<span class="ln-num">#' + (idx + 1) + '</span><span class="ln-text">' +
             escapeHtml(preview.slice(0, 80)) + '</span>';
           item.onclick = ev => {
-            if (ev.target.closest('.ln-del-wrap')) return;
+            if (ev.target.closest('.ln-del-wrap') || ev.target.closest('.ln-go')) return;
             setActiveLayer('sketch');
             S.selectedIds = [o.id];
             setDeleteButtonVisible(true);
@@ -24023,6 +24384,7 @@ function buildLayerPanel() {
             buildLayerPanel();
             scheduleRender();
           };
+          appendLayerListGoButton(item, () => goToSketchFromLayer(o.id));
           appendLayerListDeleteButton(item, ev => deleteFieldSketchObjectById(o.id, ev));
           slist.appendChild(item);
         });
@@ -24041,7 +24403,8 @@ function buildLayerPanel() {
           const preview = getNoteText(n) || (noteHasHandwriting(n) ? 'El yazısı' : 'Not');
           item.innerHTML = '<span class="ln-num">#' + (n.noteNum || '?') + '</span><span class="ln-text">' +
             escapeHtml(preview.slice(0, 80)) + '</span>';
-          item.onclick = ev => { if (ev.target.closest('.ln-del-wrap')) return; selectNoteFromLayer(n.id); };
+          item.onclick = ev => { if (ev.target.closest('.ln-del-wrap') || ev.target.closest('.ln-go')) return; selectNoteFromLayer(n.id); };
+          appendLayerListGoButton(item, () => selectNoteFromLayer(n.id));
           appendLayerListDeleteButton(item, ev => deleteFieldNoteFromLayer(n.id, ev));
           list.appendChild(item);
         });
@@ -24062,10 +24425,11 @@ function buildLayerPanel() {
             ? (p.title || t('type.field_video'))
             : ((p.description || p.title || p.caption || '').trim() || t('type.field_photo'));
           const num = p.photoNum || p.videoNum || '?';
-          const badge = isVideo ? '' : (p.isPanorama ? ' 🌐' : '') + (p.hasVoice ? ' 🎤' : '');
+          const badge = isVideo ? '' : (p.hasVoice ? ' 🎤' : '');
           item.innerHTML = '<span class="ln-num">#' + num + '</span><span class="ln-text">' +
             escapeHtml(preview.slice(0, 80)) + badge + '</span>';
-          item.onclick = ev => { if (ev.target.closest('.ln-del-wrap')) return; selectPhotoFromLayer(p.id); };
+          item.onclick = ev => { if (ev.target.closest('.ln-del-wrap') || ev.target.closest('.ln-go')) return; selectPhotoFromLayer(p.id); };
+          appendLayerListGoButton(item, () => selectPhotoFromLayer(p.id));
           appendLayerListDeleteButton(item, ev => deleteFieldPhotoFromLayer(p.id, ev));
           list.appendChild(item);
         });
@@ -24087,7 +24451,8 @@ function buildLayerPanel() {
             escapeHtml(preview.slice(0, 80)) + '</span>' +
             '<button type="button" class="ln-playback-btn" title="' + (PA_LANG === 'tr' ? 'Rota oynat' : 'Play track') + '">▶</button>';
           item.querySelector('.ln-playback-btn').onclick = ev => { ev.stopPropagation(); playGpsTrackScrub(tr.id); };
-          item.onclick = ev => { if (ev.target.closest('.ln-del-wrap') || ev.target.closest('.ln-playback-btn')) return; selectGpsTrackFromLayer(tr.id); };
+          item.onclick = ev => { if (ev.target.closest('.ln-del-wrap') || ev.target.closest('.ln-go') || ev.target.closest('.ln-playback-btn')) return; selectGpsTrackFromLayer(tr.id); };
+          appendLayerListGoButton(item, () => selectGpsTrackFromLayer(tr.id));
           appendLayerListDeleteButton(item, ev => deleteFieldGpsTrackFromLayer(tr.id, ev));
           list.appendChild(item);
         });
@@ -24111,10 +24476,14 @@ function buildLayerPanel() {
             escapeHtml(preview.slice(0, 80)) +
             '<small>' + t('layer.geom', { n: entry.geomN }) + tag + '</small></span>';
           item.onclick = ev => {
-            if (ev.target.closest('.ln-del-wrap')) return;
+            if (ev.target.closest('.ln-del-wrap') || ev.target.closest('.ln-go')) return;
             if (entry.overlay) openPlanOverlayPanel(imp.id);
             else selectImportLayerFromPanel(imp.id);
           };
+          appendLayerListGoButton(item, () => {
+            if (entry.overlay) openPlanOverlayPanel(imp.id);
+            else selectImportLayerFromPanel(imp.id);
+          });
           if (!entry.overlay) appendLayerListDeleteButton(item, ev => deleteImportLayerFromPanel(imp.id, ev));
           list.appendChild(item);
         });
@@ -25106,13 +25475,8 @@ function toggleLeftPanel() {
 
 function toggleRightPanel() {
   const panel = document.getElementById('right-panel');
-  const btn = document.getElementById('right-toggle');
-  const collapsed = panel.style.display === 'none';
-  panel.style.display = collapsed ? 'block' : 'none';
-  btn.textContent = collapsed ? '▶' : '◀';
-  document.body.classList.toggle('field-panel-right', collapsed);
-  document.body.classList.toggle('field-panel-right-hidden', !collapsed);
-  resizeCanvas();
+  if (!panel) return;
+  setRightPanelCollapsed(panel.style.display !== 'none');
 }
 
 // Draggable pafta manager

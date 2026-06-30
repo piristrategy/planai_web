@@ -170,14 +170,19 @@
     if (!ctx) return '';
     const tr = lang === 'tr';
     const loc = [ctx.locationLine1, ctx.locationLine2].filter(v => v && v !== '—').join(' · ') || '—';
-    const temp = ctx.temperature && ctx.temperature !== '—'
-      ? ctx.temperature + (ctx.weatherLabel && !/^(Hava|Weather)$/i.test(ctx.weatherLabel) ? ' · ' + ctx.weatherLabel : '')
-      : '—';
+    const fmtTime = (iso) => {
+      if (!iso) return '—';
+      try {
+        const d = new Date(iso);
+        return d.toLocaleDateString(tr ? 'tr-TR' : 'en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+          + ' ' + d.toLocaleTimeString(tr ? 'tr-TR' : 'en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+      } catch (_) { return '—'; }
+    };
     const items = [
-      { label: tr ? 'Rakım' : 'Altitude', value: ctx.altitude || '—' },
-      { label: tr ? 'Saat' : 'Time', value: ctx.clock || '—' },
       { label: tr ? 'Konum' : 'Location', value: loc },
-      { label: tr ? 'Sıcaklık' : 'Temperature', value: temp },
+      { label: tr ? 'Başlangıç' : 'Start', value: fmtTime(ctx.startTime) },
+      { label: tr ? 'Bitiş' : 'End', value: fmtTime(ctx.endTime) },
+      { label: tr ? 'Rakım' : 'Altitude', value: ctx.altitude || '—' },
     ];
     const css = '<style>#planai-ctx-bar{position:fixed;top:0;left:0;right:0;z-index:99999;display:flex;flex-wrap:wrap;gap:8px 16px;padding:8px 14px;background:rgba(12,18,26,.94);border-bottom:1px solid rgba(64,192,87,.4);font:600 11px/1.35 system-ui,-apple-system,sans-serif;color:#e8eef4;pointer-events:none;box-sizing:border-box}#planai-ctx-bar span{display:inline-flex;gap:6px;align-items:baseline}#planai-ctx-bar b{color:#40c057;font-weight:700;font-size:12px}#planai-ctx-bar i{font-style:normal;color:#8a96a6;font-weight:500;font-size:10px;text-transform:uppercase;letter-spacing:.04em}body.planai-has-ctx-bar{padding-top:44px!important}</style>';
     const html = '<div id="planai-ctx-bar">' + items.map(it =>

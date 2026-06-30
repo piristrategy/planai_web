@@ -2308,6 +2308,9 @@ body.field-trial-ui #field-note-popup.open {
   max-width: 400px !important;
   max-height: min(88dvh, 620px) !important;
   height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
   border-radius: 18px !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
   background: rgba(12, 16, 22, 0.97) !important;
@@ -2349,6 +2352,9 @@ body.field-trial-ui #field-note-popup .fnp-close {
 
 body.field-trial-ui #field-note-popup .fnp-body {
   color: #e8edf3 !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
 }
 
 body.field-trial-ui #field-note-popup .fnp-section-title,
@@ -2392,6 +2398,28 @@ body.field-trial-ui #field-note-popup .fnp-hand,
 body.field-trial-ui #field-note-popup .fnp-photo-img-wrap {
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   background: rgba(255, 255, 255, 0.04) !important;
+  width: 100% !important;
+  max-height: min(280px, 44dvh) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+body.field-trial-ui #field-note-popup .fnp-photo-block.fnp-primary .fnp-photo-img-wrap {
+  max-height: min(320px, 50dvh) !important;
+}
+
+body.field-trial-ui #field-note-popup .fnp-photo-img {
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: min(280px, 44dvh) !important;
+  height: auto !important;
+  object-fit: contain !important;
+}
+
+body.field-trial-ui #field-note-popup .fnp-photo-block.fnp-primary .fnp-photo-img {
+  max-height: min(320px, 50dvh) !important;
 }
 
 body.field-trial-ui #field-note-popup .fnp-actions {

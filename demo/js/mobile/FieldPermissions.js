@@ -107,34 +107,34 @@ const FieldPermissions = (function () {
   }
 
   async function check(id) {
+    if (_status[id] === 'granted') return 'granted';
+    let st = 'unknown';
     if (isNative()) {
-      let st = await nativeCheck(id);
-      if (st !== null) return st;
-      if (id === 'camera') {
+      const nativeSt = await nativeCheck(id);
+      if (nativeSt !== null) st = nativeSt;
+      else if (id === 'camera') {
         const cam = getCameraPlugin();
         if (cam?.checkPermissions) {
           try {
             const r = await cam.checkPermissions();
-            return normalizeState(r?.camera);
+            st = normalizeState(r?.camera);
           } catch (_) {}
         }
-      }
-      if (id === 'microphone') {
+      } else if (id === 'microphone') {
         const dict = getDictationPlugin();
         if (dict?.checkPermissions) {
           try {
             const r = await dict.checkPermissions();
-            return normalizeState(r?.microphone);
+            st = normalizeState(r?.microphone);
           } catch (_) {}
         }
       }
-      return 'unknown';
-    }
-    if (id === 'location') return webCheckLocation();
-    if (id === 'microphone') return webCheckMic();
-    if (id === 'camera') return webCheckCamera();
-    if (id === 'photos') return 'granted';
-    return 'unknown';
+    } else if (id === 'location') st = await webCheckLocation();
+    else if (id === 'microphone') st = await webCheckMic();
+    else if (id === 'camera') st = await webCheckCamera();
+    else if (id === 'photos') st = 'granted';
+    if (st === 'granted') _status[id] = 'granted';
+    return st;
   }
 
   async function checkAll() {
@@ -187,13 +187,25 @@ const FieldPermissions = (function () {
     } else if (id === 'location') {
       ok = await requestWebLocation();
     } else if (id === 'camera') {
+      if (!window.isSecureContext) {
+        if (typeof showHint === 'function') showHint(t('perm.settingsWeb'), 7000);
+        _status[id] = 'denied';
+        renderList();
+        return false;
+      }
       ok = await requestWebMedia('camera');
     } else if (id === 'microphone') {
+      if (!window.isSecureContext) {
+        if (typeof showHint === 'function') showHint(t('perm.settingsWeb'), 7000);
+        _status[id] = 'denied';
+        renderList();
+        return false;
+      }
       ok = await requestWebMedia('microphone');
     } else if (id === 'photos') {
       ok = true;
     }
-    _status[id] = ok ? 'granted' : 'denied';
+    _status[id] = ok ? 'granted' : (ok === false ? 'denied' : _status[id] || 'denied');
     if (!ok && opts.hintDenied && typeof showHint === 'function') {
       showHint(opts.hintDenied, 7000);
     } else if (!ok && typeof showHint === 'function') {

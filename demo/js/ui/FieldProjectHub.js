@@ -69,10 +69,8 @@ const FieldProjectHub = (function () {
         '<span class="phub-card-edited">' + t('phub.lastEdited') + ': ' + esc(editedStr) + '</span>' +
         '<div class="phub-card-stats">' +
           statChip('📷', stats.photos, t('phub.photos')) +
-          statChip('🎬', stats.videos, t('phub.videos')) +
-          statChip('🎥', stats.videoNotes || 0, t('phub.videoNotes')) +
+          statChip('🎬', (stats.videoNotes || 0) + (stats.videos || 0), t('phub.videoNotes')) +
           statChip('🎤', stats.voice, t('phub.voice')) +
-          statChip('🌐', stats.panoramas, t('phub.panoramas')) +
           statChip('📝', stats.notes, t('phub.notes')) +
         '</div>' +
         '<div class="phub-card-footer">' +

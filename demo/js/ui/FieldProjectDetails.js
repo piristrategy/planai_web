@@ -47,8 +47,9 @@ const FieldProjectDetails = (function () {
     set('pdet-description', md.description);
     set('pdet-location', md.location);
     set('pdet-inspector', md.inspector);
-    set('pdet-start', md.startTime ? String(md.startTime).slice(0, 16) : '');
-    set('pdet-end', md.endTime ? String(md.endTime).slice(0, 16) : '');
+    const toLocal = typeof isoToDatetimeLocalInput === 'function' ? isoToDatetimeLocalInput : (iso) => iso ? String(iso).slice(0, 16) : '';
+    set('pdet-start', toLocal(md.startTime));
+    set('pdet-end', toLocal(md.endTime));
   }
 
   function renderFieldData(stats) {
@@ -56,9 +57,8 @@ const FieldProjectDetails = (function () {
     if (!el) return;
     const rows = [
       ['phub.photos', stats.photos],
-      ['phub.videos', stats.videos],
+      ['phub.videoNotes', (stats.videoNotes || 0) + (stats.videos || 0)],
       ['phub.voice', stats.voice],
-      ['phub.panoramas', stats.panoramas],
       ['phub.notes', stats.notes],
       ['phub.gpsPoints', stats.gpsPoints],
       ['phub.measurements', stats.measurements],
@@ -73,6 +73,10 @@ const FieldProjectDetails = (function () {
     if (!projectId) return;
     _projectId = projectId;
     _meta = await loadMeta(projectId);
+    if (FIELD_PROJECT.id === projectId && typeof syncProjectInspectionMetadata === 'function') {
+      await syncProjectInspectionMetadata().catch(() => {});
+      _meta.metadata = FIELD_PROJECT.metadata || _meta.metadata;
+    }
     const overlay = document.getElementById('project-details-overlay');
     if (!overlay) return;
     const isCurrent = FIELD_PROJECT.id === projectId;
@@ -108,12 +112,13 @@ const FieldProjectDetails = (function () {
 
   async function saveGeneralInfo() {
     if (!_projectId) return;
+    const toIso = typeof datetimeLocalInputToIso === 'function' ? datetimeLocalInputToIso : (v) => v || '';
     const md = {
       description: document.getElementById('pdet-description')?.value?.trim() || '',
       location: document.getElementById('pdet-location')?.value?.trim() || '',
       inspector: document.getElementById('pdet-inspector')?.value?.trim() || '',
-      startTime: document.getElementById('pdet-start')?.value || '',
-      endTime: document.getElementById('pdet-end')?.value || '',
+      startTime: toIso(document.getElementById('pdet-start')?.value || ''),
+      endTime: toIso(document.getElementById('pdet-end')?.value || ''),
     };
     const newName = document.getElementById('pdet-name')?.value?.trim();
     const db = await openProjectDb();
@@ -204,7 +209,15 @@ const FieldProjectDetails = (function () {
     document.getElementById('pdet-btn-archive')?.addEventListener('click', () => toggleArchive());
     document.getElementById('pdet-btn-delete')?.addEventListener('click', async () => {
       if (!_projectId) return;
-      if (!confirm(t('project.delete') + '?')) return;
+      const ok = typeof showFieldConfirmDialog === 'function'
+        ? await showFieldConfirmDialog({
+            title: t('project.delete'),
+            message: t('project.deleteConfirm'),
+            confirmText: t('project.delete'),
+            danger: true,
+          })
+        : confirm(t('project.deleteConfirm'));
+      if (!ok) return;
       const id = _projectId;
       close(false);
       if (typeof FieldProjectHub !== 'undefined') FieldProjectHub.close();
@@ -216,9 +229,7 @@ const FieldProjectDetails = (function () {
     document.getElementById('pdet-btn-interactive')?.addEventListener('click', () => runOnCurrent(createInteractiveFieldReport));
     document.getElementById('pdet-btn-demo')?.addEventListener('click', () => runOnCurrent(createSimulatedFieldReports));
     document.getElementById('pdet-btn-zip')?.addEventListener('click', () => runOnCurrent(exportProjectZip));
-    document.getElementById('pdet-btn-import')?.addEventListener('click', () => { close(false); showFieldImportSheet(); });
     document.getElementById('pdet-btn-geojson')?.addEventListener('click', () => runOnCurrent(exportProjectGeoJson));
-    document.getElementById('pdet-btn-gpx')?.addEventListener('click', () => runOnCurrent(exportProjectGpx));
     document.getElementById('pdet-btn-kmz')?.addEventListener('click', () => runOnCurrent(exportProjectKmz));
     document.getElementById('pdet-btn-share')?.addEventListener('click', () => runOnCurrent(exportProjectZip));
   }
