@@ -81,11 +81,8 @@
     'var blobUrl="";',
     'try{blobUrl=URL.createObjectURL(new Blob([html],{type:"text/html;charset=utf-8"}));}catch(e){}',
     'if(isIOS()){',
-    // iOS WebKit bir <iframe>'i blob: URL'sine yönlendiremez → kare beyaz kalır.
-    // iOS'ta her zaman srcdoc kullan (uygulama önizlemesindeki kanıtlanmış düzeltmenin aynısı).
-    // blob sadece srcdoc bir nedenle başarısız olursa son çare olarak kalsın.
-    'try{mountFrame(html);return;}catch(e){}',
     'if(blobUrl)mountFrame("",blobUrl);',
+    'else mountFrame(html);',
     'return;',
     '}',
     'if(blobUrl){',

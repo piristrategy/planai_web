@@ -474,6 +474,7 @@ body.field-mode .field-dock-label{color:var(--text) !important;}
 
 /* ---- F) Geziler paneli sabit açık tonları ---- */
 .proj-new-form{background:rgba(255,255,255,.04) !important;border:1px solid var(--border) !important;}
+.proj-new-form[hidden]{display:none!important;}
 .proj-row{background:rgba(255,255,255,.04) !important;border:1px solid var(--border) !important;color:var(--text) !important;}
 .proj-row:hover{border-color:rgba(34,197,94,.4) !important;background:rgba(34,197,94,.08) !important;}
 .proj-empty{color:var(--muted) !important;}

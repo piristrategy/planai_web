@@ -151,7 +151,7 @@
     'function eventFeatures(){',
     'var feats=[];',
     '(R.events||[]).forEach(function(e){',
-    'if(!e||(e.kind!=="photo"&&e.kind!=="note"&&e.kind!=="audio"))return;',
+    'if(!e||(e.kind!=="photo"&&e.kind!=="note"&&e.kind!=="audio"&&e.kind!=="video"))return;',
     'var lon=normLon(e);',
     'if(!Number.isFinite(e.lat)||!Number.isFinite(lon))return;',
     'feats.push({type:"Feature",properties:{kind:e.kind,label:e.label||""},geometry:{type:"Point",coordinates:[lon,e.lat]}});',

@@ -17,6 +17,8 @@
 // Set FIELD_MODE = false to restore full planning prototype surface.
 // ═══════════════════════════════════════════════════════════════
 const FIELD_MODE = true;
+/** Default pen width for field measure (polyline) and area (polygon) drawings. */
+const FIELD_DEFAULT_STROKE_WIDTH = 10;
 /** Claude build: Android/tablet GPS validation over http://LAN:port (not file://). */
 /** Debug UI only — must NOT gate GPS tracking, filtering, smoothing, or watchdog logic. */
 const GPS_TEST_BUILD = false;
@@ -282,7 +284,7 @@ let _noteHandStrokes = [];
 let _noteHandDrawing = false;
 let _noteHandCurrent = null;
 
-const FIELD_PROJECT = { id: null, name: 'Adsız Gezi', createdAt: null };
+const FIELD_PROJECT = { id: null, name: 'Adsız Çalışma', createdAt: null, archived: false, metadata: {} };
 const PLANAI_FIELD_APP_VERSION = '1.0.0';
 
 function spatialDebugLog() {
@@ -321,8 +323,8 @@ function loadStoredAppLanguage() {
 let PA_LANG = loadStoredAppLanguage();
 const PA_I18N = {
   tr: {
-    'panel.title': 'Saha Paneli', 'panel.project': 'Gezi', 'panel.projects': 'Geziler',
-    'panel.reports': 'Saha Yolculukları',
+    'panel.title': 'Saha Paneli', 'panel.project': 'Çalışma', 'panel.projects': 'Saha Çalışmaları', 'panel.pastProjects': 'Geçmiş çalışmalar ▾',
+    'panel.reports': 'Raporlar',
     'info.title': 'Özellik bilgisi', 'info.back': 'Seçime dön', 'info.noAttrs': 'Bu öğe için ek özellik yok.',
     'info.noPick': 'Özellik yok — boş alana dokunun, panel kapanır',
     'info.measure': 'Ölçü',
@@ -353,9 +355,9 @@ const PA_I18N = {
     'gps.hud.guide': 'Hedef', 'gps.hud.debugOn': 'GPS geliştirici modu açık', 'gps.hud.debugOff': 'GPS geliştirici modu kapalı',
     'guide.go': 'Buraya Git', 'guide.arrived': 'Varıldı', 'guide.clear': 'Hedefi kaldır',
     'guide.hint': 'Düz rota hazır — HUD yönüne göre yürüyün', 'guide.needGps': 'Önce GPS\'i açın',
-    'guide.replayPoint': 'Rota noktasına git', 'guide.route': 'Düz rota',
+    'guide.trackPoint': 'Rota noktasına git', 'guide.route': 'Düz rota',
     'guide.showRoute': 'Rotayı göster', 'guide.walk': 'Bu yönde yürü',
-    'dock.projects': 'Geziler', 'dock.import': 'İçe Aktar', 'dock.gps': 'GPS', 'dock.photo': 'Foto', 'dock.video': 'Video',
+    'dock.projects': 'Saha Çalışmaları', 'dock.import': 'İçe Aktar', 'dock.gps': 'GPS', 'dock.photo': 'Foto', 'dock.video': 'Video',
     'tlbl.select': 'Seç', 'tlbl.info': 'Bilgi', 'tlbl.point': 'Nokta', 'tlbl.line': 'Ölçüm', 'tlbl.polyline': 'Kırık', 'tlbl.area': 'Alan', 'tlbl.slope': 'Eğim', 'tlbl.layers': 'Katman', 'tlbl.undo': 'Geri', 'tlbl.delete': 'Sil',
     'dock.notes': 'Notlar', 'basemap.none': 'Kapalı', 'basemap.osm': 'OSM', 'basemap.satellite': 'Uydu', 'basemap.topo': 'Topo',
     'basemap.hint.none': 'Altlık kapalı', 'basemap.hint.osm': 'OSM harita', 'basemap.hint.satellite': 'Uydu görüntüsü', 'basemap.hint.topo': 'Topoğrafya',
@@ -373,17 +375,17 @@ const PA_I18N = {
     'track.idle': 'Rota kaydı kapalı', 'track.recording': 'Kayıt', 'track.paused': 'Duraklatıldı',
     'track.dist': 'Mesafe', 'track.time': 'Süre', 'track.points': 'Nokta',
     'report.interactive': 'Yolculuğu paylaş veya Drive\'a kaydet',
-    'report.savedToProject': 'Yolculuk geziye kaydedildi',
+    'report.savedToProject': 'Rapor çalışmaya kaydedildi',
     'report.mapSkipped': 'Harita görüntüsü atlandı (uydu katmanı dışa aktarılamadı)',
     'report.none': 'Henüz kayıt yok — PDF veya mekansal inceleme tekrarı oluşturun',
     'report.view': 'Aç',
     'report.share': 'Paylaş',
     'report.pdf': 'PDF Rapor',
-    'report.interactiveShort': 'Yolculuk',
+    'report.interactiveShort': 'İnceleme',
     'report.html': 'Mekansal Tekrar',
     'report.viewerTitle': 'Önizleme',
     'report.playbackViewerTitle': 'Mekansal İnceleme Tekrarı',
-    'report.missing': 'Yolculuk dosyası bulunamadı',
+    'report.missing': 'Rapor dosyası bulunamadı',
     'report.demoReady': 'Demo yolculuk kaydedildi — sağ panelden açın',
     'report.demoRunning': 'Demo yolculuk hazırlanıyor…',
     'report.count': '{n} kayıt',
@@ -470,35 +472,64 @@ const PA_I18N = {
     'export.openingShare': 'Gönder menüsü açılıyor…',
     'feat.landUse': 'Alan türü', 'feat.plan': 'Plan kararı', 'feat.far': 'Emsal', 'feat.height': 'Yükseklik', 'feat.type': 'Tür',
     'autosave.idle': 'Otomatik kayıt', 'autosave.pending': '○ Kaydedilecek…', 'autosave.saving': '… Kaydediliyor',
-    'project.menu': 'Gezi', 'project.new': '+ Yeni Gezi', 'project.newName': 'Gezi adı', 'project.create': 'Oluştur', 'project.cancel': 'İptal', 'project.rename': 'Yeniden Adlandır', 'project.save': 'Kaydet',
-    'entry.tagline': 'Mekansal İnceleme Tekrar Platformu',
-    'entry.headline': 'Mekansal İnceleme Yolculuğunuza Başlayın',
+    'project.menu': 'Saha Çalışması', 'project.new': '+ Yeni Saha Çalışması', 'project.newName': 'Çalışma adı', 'project.create': 'Oluştur', 'project.cancel': 'İptal',     'project.rename': 'Yeniden Adlandır', 'project.save': 'Kaydet', 'project.saved': 'Çalışma kaydedildi',
+    'entry.tagline': 'Saha İnceleme ve Rapor Platformu',
+    'entry.headline': 'Saha İncelemenize Başlayın',
     'entry.subheadline': 'Rotaları, notları, fotoğrafları ve mekansal gözlemleri sinematik bir saha deneyimi içinde kaydedin.',
     'entry.startTitle': 'Yeni İnceleme Başlat',
     'entry.startDesc': 'GPS takibi, notlar, fotoğraflar ve mekansal tekrar ile yeni bir saha yolculuğu oluşturun.',
     'entry.continueTitle': 'İncelemeye Devam Et',
     'entry.continueDesc': 'Mevcut inceleme yolculuğunuza kaldığınız yerden devam edin.',
-    'entry.exploreTitle': 'Önceki Yolculukları Keşfet',
+    'entry.exploreTitle': 'Önceki Çalışmaları Keşfet',
     'entry.exploreDesc': 'Tamamlanan incelemeleri gözden geçirin ve saha yolculuklarını tekrar oynatın.',
-    'entry.journeyName': 'Yolculuk adı',
-    'entry.createJourney': 'Yolculuğu Başlat',
+    'entry.projectName': 'Çalışma adı',
+    'entry.createProject': 'İncelemeyi Başlat',
     'entry.back': 'Geri',
     'entry.noRecent': 'Devam edilecek kayıtlı inceleme yok — yeni bir yolculuk başlatın.',
-    'entry.noJourneys': 'Henüz kayıtlı yolculuk yok.',
-    'entry.journeysHead': 'Önceki Yolculuklar',
+    'entry.noProjects': 'Henüz kayıtlı çalışma yok.',
+    'entry.projectsHead': 'Önceki Çalışmalar',
     'project.reportPdf': 'PDF Rapor', 'project.reportInteractive': 'Saha Yolculuğunu Başlat',
-    'project.reportDemo': 'Demo Yolculuk Simülasyonu',
-    'project.exportZip': 'Dışa Aktar (ZIP)', 'project.importZip': 'ZIP İçe Aktar', 'project.recent': 'Son geziler',
-    'project.none': 'Henüz gezi yok',
-    'project.delete': 'Geziyi sil', 'project.deleted': 'Gezi silindi',
-    'project.head': 'Geziler', 'project.autosaveNote': 'Değişiklikler otomatik kaydedilir. Durum üst çubukta görünür.',
-    'hub.title': 'Saha Yolculuk Merkezi',
+    'project.reportDemo': 'Demo İnceleme Simülasyonu',
+    'project.exportZip': 'ZIP Dışa Aktar', 'project.importZip': 'İçe Aktar', 'project.recent': 'Son çalışmalar',
+    'project.none': 'Henüz saha çalışması yok',
+    'project.delete': 'Çalışmayı sil', 'project.deleted': 'Çalışma silindi',
+    'project.head': 'Saha Çalışmaları', 'project.autosaveNote': 'Değişiklikler otomatik kaydedilir. Durum üst çubukta görünür.',
+    'phub.active': 'Aktif Çalışmalar', 'phub.recent': 'Son Çalışmalar', 'phub.archive': 'Arşiv', 'phub.unarchive': 'Arşivden Çıkar',
+    'phub.noActive': 'Aktif çalışma yok — yeni oluşturun veya listeden seçin', 'phub.noRecent': 'Son çalışma yok',
+    'phub.noArchive': 'Arşiv boş', 'phub.lastEdited': 'Son düzenleme', 'phub.photos': 'Fotoğraf', 'phub.videos': 'Video',
+    'phub.videoNotes': 'Video Not', 'phub.notes': 'Not', 'phub.panoramas': 'Panorama', 'phub.voice': 'Sesli not', 'phub.gpsPoints': 'GPS noktası',
+    'phub.measurements': 'Ölçüm', 'phub.layers': 'Katman', 'phub.gpsRecorded': 'GPS kayıtlı', 'phub.gpsNone': 'GPS yok',
+    'phub.pdfReady': 'PDF hazır', 'phub.interactiveReady': 'İnteraktif rapor', 'phub.noReport': 'Rapor yok',
+    'phub.openProject': 'Çalışmayı Aç', 'phub.continueWork': 'Devam Et', 'phub.details': 'Detay & Raporlar', 'phub.generalInfo': 'Genel Bilgiler',
+    'phub.description': 'Açıklama', 'phub.location': 'Konum', 'phub.inspector': 'İnceleyen', 'phub.startTime': 'Başlangıç',
+    'phub.endTime': 'Bitiş', 'phub.saveInfo': 'Bilgileri Kaydet', 'phub.fieldData': 'Saha Verisi', 'phub.reports': 'Raporlar',
+    'phub.exportGeojson': 'GeoJSON Dışa Aktar', 'phub.exportGpx': 'GPX Dışa Aktar', 'phub.exportKmz': 'KMZ Dışa Aktar',
+    'phub.share': 'Paylaş', 'phub.saved': 'Kaydedildi', 'phub.archived': 'Arşivlendi', 'phub.unarchived': 'Arşivden çıkarıldı',
+    'settings.title': 'Ayarlar', 'settings.permissions': 'İzinler', 'settings.help': 'Yardım', 'settings.about': 'Hakkında',
+    'settings.offlineMaps': 'Çevrimdışı Haritalar', 'settings.storage': 'Depolama', 'settings.storageSummary': '{n} saha çalışması kayıtlı',
+    'settings.permGranted': 'İzin verildi', 'settings.permNeeds': 'İzin gerekli', 'settings.grantPermission': 'İzin Ver',
+    'settings.openSecurity': 'Güvenlik Ayarları', 'settings.deleteLocal': 'Yerel Verileri Sil',
+    'settings.deleteConfirm': 'Tüm yerel veriler silinsin mi? Bu işlem geri alınamaz.',
+    'settings.deletePinBlock': 'Önce PIN kilidini kaldırın veya verileri şifre çözülmüş halde silin.',
+    'settings.offlineHint': 'Harita karoları görüntüledikçe otomatik önbelleğe alınır.',
+    'settings.location': 'Konum', 'settings.camera': 'Kamera', 'settings.microphone': 'Mikrofon',
+    'settings.restartTutorial': 'Kullanım Turunu Tekrar Başlat',
+    'settings.tutorial': 'Kullanım Turu',
+    'stop.title': 'İncelemeyi Durdur', 'stop.confirm': 'Bu saha çalışmasını sonlandırmak istediğinize emin misiniz?',
+    'stop.continue': 'Devam Et', 'stop.finish': 'Sonlandır',
+    'report.doc.panoramas.title': 'Panoramalar', 'report.doc.voiceNotes.title': 'Sesli Notlar',
+    'report.doc.videoNotes.title': 'Video Notlar', 'report.doc.layers.title': 'Katmanlar',
+    'report.doc.areas.title': 'Alanlar', 'report.doc.gpsRoute.title': 'GPS Rotası',
+    'report.doc.ai.title': 'AI Özeti', 'report.doc.ai.placeholder': 'AI inceleme özeti yakında bu bölümde görünecek.',
+    'report.doc.conclusion.title': 'Sonuç', 'report.doc.conclusion.body': 'Saha incelemesi tamamlandı. Tüm veriler bu raporda özetlenmiştir.',
+    'report.doc.panoramas.heading': 'Yön', 'report.doc.panoramas.resolution': 'Çözünürlük',
+    'hub.title': 'Saha İnceleme Merkezi',
     'hub.subtitle': 'Rotaları, gözlemleri, fotoğrafları ve saha verisini kaydedin.',
     'hub.newInspection': 'Yeni İnceleme',
     'hub.tagline': 'GPS İzleme • Fotoğraf • Ses Notları • Raporlar',
     'hub.missionNewTitle': 'Yeni İnceleme Başlat',
     'hub.missionNewSub': 'Saha verisini tek akışta kaydedin.',
-    'hub.activeJourney': 'Aktif Yolculuk',
+    'hub.activeProject': 'Aktif Çalışma',
     'hub.heroCta': 'İncelemeyi Başlat',
     'hub.featGps': 'GPS İzleme',
     'hub.featPhotoCapture': 'Fotoğraf Çekimi',
@@ -527,6 +558,15 @@ const PA_I18N = {
     'trial.panoStep': 'Panorama karesi',
     'trial.panoStart': 'Çizgiye hizalayın, deklanşöre basın',
     'trial.panoStartScan': 'Yön seçin, taramak için deklanşöre basın',
+    'trial.panoKeepMoving': 'Çevirmeye devam edin…',
+    'trial.panoTooFast': 'Çok hızlı',
+    'trial.panoTooSlow': 'Çok yavaş',
+    'trial.panoMoveUp': 'Yukarı kaydırın',
+    'trial.panoMoveDown': 'Aşağı kaydırın',
+    'trial.panoReturnGuide': 'Çizgiye dönün',
+    'trial.panoFailed': 'Panorama başarısız. Daha yavaş hareket edin.',
+    'trial.panoLoadingCv': 'Panorama motoru yükleniyor…',
+    'trial.panoCvFailed': 'Panorama motoru yüklenemedi',
     'trial.panoScanLeft': 'Telefonu yavaşça sola çevirin (~15°)',
     'trial.panoScanRight': 'Telefonu yavaşça sağa çevirin (~15°)',
     'trial.panoScanFallback': 'Şerit boyunca çok yavaş çevirin',
@@ -546,19 +586,19 @@ const PA_I18N = {
     'hub.snapshotMissing': 'İnceleme verisi eksik veya kilitli.',
     'hub.saveFailed': 'İnceleme kaydedilemedi. Kapatmadan önce tekrar deneyin.',
     'hub.startInspectionCta': 'Yeni İnceleme Başlat',
-    'hub.archiveLink': 'Tüm Yolculukları Gör',
+    'hub.archiveLink': 'Tüm Çalışmaları Gör',
     'hub.lastActivity': 'Son aktivite:',
-    'hub.recentKicker': 'Son Yolculuklar',
-    'hub.viewAllJourneys': 'Tüm Yolculukları Gör',
+    'hub.recentKicker': 'Son Çalışmalar',
+    'hub.viewAllProjects': 'Tüm Çalışmaları Gör',
     'hub.recentEmpty': 'Başka kayıtlı yolculuk yok',
-    'hub.colName': 'Yolculuk',
+    'hub.colName': 'Çalışma',
     'hub.colDistance': 'Mesafe',
     'hub.colPhotos': 'Fotoğraf',
     'hub.colDate': 'Tarih',
     'hub.datasetImport': 'Veri İçe Aktar',
     'hub.importFormats': 'PlanGML · GML · GeoTIFF · KML · KMZ · GeoJSON',
     'hub.importCtaFull': 'Veri İçe Aktar',
-    'hub.asideJourneys': 'Yolculuk',
+    'hub.asideProjects': 'Çalışma',
     'hub.asidePhotos': 'Fotoğraf',
     'hub.asideNotes': 'Not',
     'hub.asideDistance': 'Mesafe',
@@ -599,7 +639,7 @@ const PA_I18N = {
     'gate.pinShort': 'PIN 4–12 karakter olmalı',
     'gate.forgot': 'PIN\'i unuttum',
     'gate.setupRecoveryNote': 'Kurtarma kodu yalnızca bir kez gösterilir. Saha verileriniz silinmez.',
-    'gate.recoverSub': 'Yolculuklarınız korunur. Yeni PIN için kurtarma kodunuzu kullanın.',
+    'gate.recoverSub': 'Saha çalışmalarınız korunur. Yeni PIN için kurtarma kodunuzu kullanın.',
     'gate.recoverUseCode': 'Kurtarma kodu ile PIN sıfırla',
     'gate.recoverCodeSub': 'PIN oluştururken kaydettiğiniz kurtarma kodunu girin.',
     'gate.recoveryCode': 'Kurtarma kodu',
@@ -683,12 +723,12 @@ const PA_I18N = {
     'import.err.noGeom': 'Dosyada görüntülenebilir geometri bulunamadı',
     'report.pdfReady': 'PDF rapor hazır',
     'report.interactiveReady': 'Mekansal inceleme tekrarı hazır',
-    'report.journeyBundleReady': 'Yolculuk ve PDF rapor kaydedildi',
+    'report.projectBundleReady': 'Çalışma ve PDF rapor kaydedildi',
     'report.previewFirst': 'Yolculuğu önizleyin, kaydedin veya paylaşın',
     'report.doc.titleSuffix': 'PlanAI Field Raporu',
     'report.doc.subtitle': 'Saha İnceleme Raporu',
-    'report.doc.projectDefault': 'Saha Gezisi',
-    'report.doc.cover.project': 'Gezi',
+    'report.doc.projectDefault': 'Saha Çalışması',
+    'report.doc.cover.project': 'Çalışma',
     'report.doc.cover.date': 'Tarih',
     'report.doc.cover.time': 'Saat',
     'report.doc.cover.user': 'Kullanıcı',
@@ -701,15 +741,15 @@ const PA_I18N = {
     'report.doc.context.temperature': 'Sıcaklık',
     'report.doc.context.weather': 'Hava durumu',
     'report.doc.context.coords': 'Koordinat',
-    'report.doc.summary.title': 'Gezi Özeti',
+    'report.doc.summary.title': 'Çalışma Özeti',
     'report.doc.summary.photos': 'Fotoğraf',
     'report.doc.summary.notes': 'Not',
     'report.doc.summary.measured': 'Ölçülü çizim',
     'report.doc.summary.imports': 'İçe aktarım',
     'report.doc.summary.totalLine': 'Toplam ölçüm uzunluğu',
     'report.doc.summary.totalArea': 'Toplam alan',
-    'report.doc.projectInfo': 'Gezi bilgisi',
-    'report.doc.projectId': 'Gezi ID',
+    'report.doc.projectInfo': 'Çalışma bilgisi',
+    'report.doc.projectId': 'Çalışma ID',
     'report.doc.created': 'Oluşturulma',
     'report.doc.updated': 'Son güncelleme',
     'report.doc.map.title': 'Harita Görünümü',
@@ -725,6 +765,12 @@ const PA_I18N = {
     'report.doc.measure.kindArea': 'Alan',
     'report.doc.measure.empty': 'Ölçülü çizim yok',
     'report.doc.photos.title': 'Fotoğraflar',
+    'report.doc.videos.title': 'Video notlar',
+    'report.doc.videos.videoNo': 'Video no',
+    'report.doc.videos.duration': 'Süre',
+    'report.doc.videos.empty': 'Video notu yok',
+    'report.doc.videos.interactiveHint': 'Tam video interaktif raporda oynatılır',
+    'report.doc.map.routeCaption': 'Saha çalışması GPS rotası ve kayıt noktaları',
     'report.doc.photos.noImage': 'Görsel yok',
     'report.doc.photos.photoNo': 'Foto No',
     'report.doc.photos.coordinate': 'Koordinat',
@@ -742,7 +788,7 @@ const PA_I18N = {
     'report.doc.tech.template': 'Rapor şablonu',
     'report.doc.tech.gpsInstant': 'GPS hassasiyeti (anlık)',
     'report.doc.tech.generated': 'Rapor oluşturulma',
-    'report.doc.progress.collect': 'Gezi verisi toplanıyor…',
+    'report.doc.progress.collect': 'Saha verisi toplanıyor…',
     'report.doc.progress.map': 'Harita görüntüsü alınıyor…',
     'report.doc.progress.photos': 'Fotoğraflar işleniyor…',
     'report.doc.progress.notes': 'Notlar işleniyor…',
@@ -754,7 +800,7 @@ const PA_I18N = {
     'point.deleteConfirm': 'Nokta {n} silinsin mi?', 'point.deleted': 'Nokta silindi',
     'photo.deleteConfirm': '{name} silinsin mi?', 'photo.deleted': 'Fotoğraf silindi',
     'obj.deleteConfirm': '{name} silinsin mi?', 'obj.deleted': 'Öğe silindi',
-    'photo.desc': 'Açıklama', 'photo.voice': '🎤 Sesli not', 'photo.noVoice': 'Ses kaydı yok',
+    'photo.desc': 'Açıklama', 'photo.noteLabel': 'Not', 'photo.voice': '🎤 Sesli not', 'photo.noVoice': 'Ses kaydı yok',
     'photo.record': '🎤 Kaydet', 'photo.play': '▶ Oynat', 'photo.delVoice': '🗑 Sil',
     'photo.centerMap': '🎯 Ortala', 'photo.save': '💾 Kaydet', 'photo.delete': '🗑 Sil',
     'photo.micDenied': 'Mikrofon izni verilmedi — tekrar deneyin',
@@ -783,8 +829,8 @@ const PA_I18N = {
     'draw.widthWithVal': 'Kalınlık · {n}px',
     'draw.sizeWithVal': 'Boyut · {n}px',
     'draw.opacityWithVal': 'Şeffaflık · {n}%',
-    'project.untitled': 'Adsız Gezi',
-    'project.namePrefix': 'Saha Yolculuğu',
+    'project.untitled': 'Adsız Çalışma',
+    'project.namePrefix': 'Saha Çalışması',
     'common.confirm': 'Onayla', 'common.cancel': 'İptal',
     'ctx.pointLabel': 'Nokta #{n}',
     'photo.openCamera': '📷 Kamerayı Aç', 'photo.fromGallery': '🖼 Galeriden Seç', 'photo.cancelSheet': 'İptal',
@@ -802,8 +848,8 @@ const PA_I18N = {
     'onboard.badge': 'Kullanım turu',
     'onboard.welcome.title': 'PlanAI Field\'a hoş geldiniz',
     'onboard.welcome.body': 'Saha incelemenizi adım adım öğrenin. İkonların yerini göstererek kısa bir tanıtım turu atalım.',
-    'onboard.s1.title': '1 · Gezi oluştur',
-    'onboard.s1.body': 'Alttaki Geziler düğmesinden yeni gezi oluşturun veya son gezilerden birini açın. Tüm saha verileri geziye kaydedilir.',
+    'onboard.s1.title': '1 · Çalışma oluştur',
+    'onboard.s1.body': 'Alttaki Saha Çalışmaları düğmesinden yeni çalışma oluşturun veya son çalışmalardan birini açın. Tüm saha verileri çalışmaya kaydedilir.',
     'onboard.s2.title': '2 · İçe aktar',
     'onboard.s2.body': 'KML, KMZ, GML, GeoJSON, SHP, GeoTIFF veya DXF dosyalarını İçe Aktar ile haritaya ekleyin. WhatsApp veya Drive\'dan paylaşılan dosyalar da açılabilir.',
     'onboard.s3.title': '3 · Bilgi aracı',
@@ -831,7 +877,7 @@ const PA_I18N = {
     'onboard.s14.title': '14 · Renk ve kalınlık',
     'onboard.s14.body': 'Çizim rengi ve kalınlığını sağ panelden ayarlayın. Bir çizgi veya poligon seçtiğinizde aynı panelden düzenleyebilirsiniz.',
     'onboard.s15.title': '15 · Mekansal Hikâye Anlatımı',
-    'onboard.s15.body': 'Geziler menüsünden PDF saha özeti veya mekansal inceleme tekrarı oluşturun; WhatsApp, Mail veya Drive ile paylaşın.',
+    'onboard.s15.body': 'Saha Çalışmaları menüsünden PDF saha özeti veya mekansal inceleme oynatması oluşturun; WhatsApp, Mail veya Drive ile paylaşın.',
     'offline.badge': 'Çevrimdışı',
     'offline.tilesCached': 'Harita önbelleği kullanılıyor',
     'onboard.start': 'Tura başla',
@@ -841,11 +887,11 @@ const PA_I18N = {
     'onboard.done': 'Tamam',
     'onboard.stepOf': '{n} / {t}',
     'onboard.finished': 'Tanıtım tamamlandı — iyi çalışmalar!',
-    'onboard.replay': 'Kullanım turunu tekrar göster',
+    'onboard.showTutorial': 'Kullanım turunu tekrar göster',
   },
   en: {
-    'panel.title': 'Field Panel', 'panel.project': 'Journey', 'panel.projects': 'Journeys',
-    'panel.reports': 'Field Journeys',
+    'panel.title': 'Field Panel', 'panel.project': 'Project', 'panel.projects': 'Field Projects', 'panel.pastProjects': 'Past projects ▾',
+    'panel.reports': 'Reports',
     'info.title': 'Feature info', 'info.back': 'Back to select', 'info.noAttrs': 'No attributes for this feature.',
     'info.noPick': 'No feature — tap empty map to close panel',
     'info.measure': 'Measure',
@@ -876,49 +922,78 @@ const PA_I18N = {
     'gps.hud.guide': 'Target', 'gps.hud.debugOn': 'GPS developer mode on', 'gps.hud.debugOff': 'GPS developer mode off',
     'guide.go': 'Go here', 'guide.arrived': 'Arrived', 'guide.clear': 'Clear target',
     'guide.hint': 'Direct route ready — walk per HUD bearing', 'guide.needGps': 'Turn on GPS first',
-    'guide.replayPoint': 'Go to track point', 'guide.route': 'Direct route',
+    'guide.trackPoint': 'Go to track point', 'guide.route': 'Direct route',
     'guide.showRoute': 'Show route', 'guide.walk': 'Walk this way',
-    'dock.projects': 'Journeys', 'dock.import': 'Import', 'dock.gps': 'GPS', 'dock.photo': 'Photo', 'dock.video': 'Video',
+    'dock.projects': 'Field Projects', 'dock.import': 'Import', 'dock.gps': 'GPS', 'dock.photo': 'Photo', 'dock.video': 'Video',
     'tlbl.select': 'Select', 'tlbl.info': 'Info', 'tlbl.point': 'Point', 'tlbl.line': 'Measure', 'tlbl.polyline': 'Polyline', 'tlbl.area': 'Area', 'tlbl.slope': 'Slope', 'tlbl.layers': 'Layers', 'tlbl.undo': 'Undo', 'tlbl.delete': 'Delete',
     'dock.notes': 'Notes', 'basemap.none': 'Off', 'basemap.osm': 'OSM', 'basemap.satellite': 'Satellite', 'basemap.topo': 'Topo',
     'basemap.hint.none': 'Basemap off', 'basemap.hint.osm': 'OSM map', 'basemap.hint.satellite': 'Satellite imagery', 'basemap.hint.topo': 'Topography',
     'layer.sketch': 'Field', 'layer.points': 'Points', 'layer.imported': 'Other imports', 'layer.photos': 'Photos', 'layer.notes': 'Notes', 'layer.gps': 'GPS track',
-    'project.menu': 'Journey', 'project.new': '+ New journey', 'project.newName': 'Journey name', 'project.create': 'Create', 'project.cancel': 'Cancel', 'project.rename': 'Rename', 'project.save': 'Save',
+    'project.menu': 'Field Project', 'project.new': '+ New Field Project', 'project.newName': 'Project name', 'project.create': 'Create', 'project.cancel': 'Cancel',     'project.rename': 'Rename', 'project.save': 'Save', 'project.saved': 'Project saved',
     'entry.tagline': 'Spatial Inspection Playback Platform',
-    'entry.headline': 'Start Your Spatial Inspection Journey',
+    'entry.headline': 'Start Your Field Inspection',
     'entry.subheadline': 'Capture routes, notes, photos and spatial observations within a cinematic field experience.',
     'entry.startTitle': 'Start New Inspection',
-    'entry.startDesc': 'Create a new field journey with GPS tracking, notes, photos and spatial playback.',
+    'entry.startDesc': 'Create a new field project with GPS tracking, notes, photos and spatial playback.',
     'entry.continueTitle': 'Continue Inspection',
-    'entry.continueDesc': 'Resume an existing inspection journey and continue spatial playback.',
-    'entry.exploreTitle': 'Explore Previous Journeys',
-    'entry.exploreDesc': 'Review completed inspections and replay field journeys.',
-    'entry.journeyName': 'Journey name',
-    'entry.createJourney': 'Start Journey',
+    'entry.continueDesc': 'Resume an existing field project and continue spatial playback.',
+    'entry.exploreTitle': 'Explore Previous Projects',
+    'entry.exploreDesc': 'Review completed inspections and open field projects.',
+    'entry.projectName': 'Project name',
+    'entry.createProject': 'Start Inspection',
     'entry.back': 'Back',
-    'entry.noRecent': 'No saved inspection to continue — start a new journey.',
-    'entry.noJourneys': 'No saved journeys yet.',
-    'entry.journeysHead': 'Previous Journeys',
-    'project.reportPdf': 'PDF Report', 'project.reportInteractive': 'Start Field Journey',
-    'project.reportDemo': 'Demo Journey Simulation',
-    'project.exportZip': 'Export ZIP', 'project.importZip': 'Import ZIP', 'project.recent': 'Recent journeys',
-    'project.none': 'No journeys yet',
-    'project.delete': 'Delete journey', 'project.deleted': 'Journey deleted',
-    'project.head': 'Journeys', 'project.autosaveNote': 'Changes autosave (IndexedDB). Status shown in top bar.',
-    'hub.title': 'Field Journey Hub',
+    'entry.noRecent': 'No saved inspection to continue — start a new project.',
+    'entry.noProjects': 'No saved projects yet.',
+    'entry.projectsHead': 'Previous Projects',
+    'project.reportPdf': 'PDF Report', 'project.reportInteractive': 'Start Interactive Inspection',
+    'project.reportDemo': 'Demo Inspection Simulation',
+    'project.exportZip': 'Export ZIP', 'project.importZip': 'Import', 'project.recent': 'Recent projects',
+    'project.none': 'No field projects yet',
+    'project.delete': 'Delete project', 'project.deleted': 'Project deleted',
+    'project.head': 'Field Projects', 'project.autosaveNote': 'Changes autosave (IndexedDB). Status shown in top bar.',
+    'phub.active': 'Active Projects', 'phub.recent': 'Recent Projects', 'phub.archive': 'Archive', 'phub.unarchive': 'Unarchive',
+    'phub.noActive': 'No active project — create one or pick from the list', 'phub.noRecent': 'No recent projects',
+    'phub.noArchive': 'Archive is empty', 'phub.lastEdited': 'Last edited', 'phub.photos': 'Photos', 'phub.videos': 'Videos',
+    'phub.videoNotes': 'Video Notes', 'phub.notes': 'Notes', 'phub.panoramas': 'Panoramas', 'phub.voice': 'Voice notes', 'phub.gpsPoints': 'GPS points',
+    'phub.measurements': 'Measurements', 'phub.layers': 'Layers', 'phub.gpsRecorded': 'GPS recorded', 'phub.gpsNone': 'No GPS',
+    'phub.pdfReady': 'PDF ready', 'phub.interactiveReady': 'Interactive report', 'phub.noReport': 'No report',
+    'phub.openProject': 'Open Project', 'phub.continueWork': 'Continue', 'phub.details': 'Details & Reports', 'phub.generalInfo': 'General Information',
+    'phub.description': 'Description', 'phub.location': 'Location', 'phub.inspector': 'Reviewer', 'phub.startTime': 'Start',
+    'phub.endTime': 'End', 'phub.saveInfo': 'Save Info', 'phub.fieldData': 'Field Data', 'phub.reports': 'Reports',
+    'phub.exportGeojson': 'Export GeoJSON', 'phub.exportGpx': 'Export GPX', 'phub.exportKmz': 'Export KMZ',
+    'phub.share': 'Share', 'phub.saved': 'Saved', 'phub.archived': 'Archived', 'phub.unarchived': 'Unarchived',
+    'settings.title': 'Settings', 'settings.permissions': 'Permissions', 'settings.help': 'Help', 'settings.about': 'About',
+    'settings.offlineMaps': 'Offline Maps', 'settings.storage': 'Storage', 'settings.storageSummary': '{n} field projects saved',
+    'settings.permGranted': 'Granted', 'settings.permNeeds': 'Needs permission', 'settings.grantPermission': 'Grant Permission',
+    'settings.openSecurity': 'Security Settings', 'settings.deleteLocal': 'Delete Local Data',
+    'settings.deleteConfirm': 'Delete all local data? This cannot be undone.',
+    'settings.deletePinBlock': 'Remove PIN lock first or unlock before deleting encrypted data.',
+    'settings.offlineHint': 'Map tiles are cached automatically as you view the map.',
+    'settings.location': 'Location', 'settings.camera': 'Camera', 'settings.microphone': 'Microphone',
+    'settings.restartTutorial': 'Restart Tutorial',
+    'settings.tutorial': 'Usage Tour',
+    'stop.title': 'Stop Inspection', 'stop.confirm': 'Are you sure you want to end this field project?',
+    'stop.continue': 'Continue', 'stop.finish': 'End Inspection',
+    'report.doc.panoramas.title': 'Panoramas', 'report.doc.voiceNotes.title': 'Voice Notes',
+    'report.doc.videoNotes.title': 'Video Notes', 'report.doc.layers.title': 'Layers',
+    'report.doc.areas.title': 'Areas', 'report.doc.gpsRoute.title': 'GPS Route',
+    'report.doc.ai.title': 'AI Summary', 'report.doc.ai.placeholder': 'AI inspection summary will appear here in a future release.',
+    'report.doc.conclusion.title': 'Conclusion', 'report.doc.conclusion.body': 'Field inspection completed. All collected data is summarized in this report.',
+    'report.doc.panoramas.heading': 'Heading', 'report.doc.panoramas.resolution': 'Resolution',
+    'hub.title': 'Field Inspection Hub',
     'hub.subtitle': 'Capture routes, observations, photos and field intelligence.',
     'hub.newInspection': 'New Inspection',
     'hub.tagline': 'GPS Tracking • Photos • Voice Notes • Reports',
     'hub.missionNewTitle': 'Start New Inspection',
     'hub.missionNewSub': 'Capture field data in one simple workflow.',
-    'hub.activeJourney': 'Active Journey',
+    'hub.activeProject': 'Active Project',
     'hub.heroCta': 'Start Inspection',
     'hub.featGps': 'GPS Tracking',
     'hub.featPhotoCapture': 'Photo Capture',
     'hub.featVoice': 'Voice Notes',
     'hub.featReports': 'Interactive Reports',
-    'hub.cardContinueEmpty': 'No active journey',
-    'hub.cardContinueDesc': 'Resume your latest journey.',
+    'hub.cardContinueEmpty': 'No active project',
+    'hub.cardContinueDesc': 'Resume your latest project.',
     'hub.continueCta': 'Continue',
     'hub.continueInspectionCta': 'Continue Inspection',
     'trial.finish': 'Complete Inspection',
@@ -940,6 +1015,15 @@ const PA_I18N = {
     'trial.panoStep': 'Panorama frame',
     'trial.panoStart': 'Align with the line, tap shutter',
     'trial.panoStartScan': 'Choose direction, tap shutter to scan',
+    'trial.panoKeepMoving': 'Keep moving…',
+    'trial.panoTooFast': 'Too fast',
+    'trial.panoTooSlow': 'Too slow',
+    'trial.panoMoveUp': 'Move up',
+    'trial.panoMoveDown': 'Move down',
+    'trial.panoReturnGuide': 'Return to guide',
+    'trial.panoFailed': 'Panorama failed. Please move slower.',
+    'trial.panoLoadingCv': 'Loading panorama engine…',
+    'trial.panoCvFailed': 'Panorama engine unavailable',
     'trial.panoScanLeft': 'Turn phone slowly left (~15°)',
     'trial.panoScanRight': 'Turn phone slowly right (~15°)',
     'trial.panoScanFallback': 'Pan very slowly along the strip',
@@ -959,19 +1043,19 @@ const PA_I18N = {
     'hub.snapshotMissing': 'Inspection data is missing or locked.',
     'hub.saveFailed': 'Inspection could not be saved. Try again before closing the app.',
     'hub.startInspectionCta': 'Start New Inspection',
-    'hub.archiveLink': 'View All Journeys',
+    'hub.archiveLink': 'View All Projects',
     'hub.lastActivity': 'Last activity:',
-    'hub.recentKicker': 'Recent Journeys',
-    'hub.viewAllJourneys': 'View All Journeys',
-    'hub.recentEmpty': 'No other saved journeys',
-    'hub.colName': 'Journey',
+    'hub.recentKicker': 'Recent Projects',
+    'hub.viewAllProjects': 'View All Projects',
+    'hub.recentEmpty': 'No other saved projects',
+    'hub.colName': 'Project',
     'hub.colDistance': 'Distance',
     'hub.colPhotos': 'Photos',
     'hub.colDate': 'Date',
     'hub.datasetImport': 'Dataset Import',
     'hub.importFormats': 'PlanGML · GML · GeoTIFF · KML · KMZ · GeoJSON',
     'hub.importCtaFull': 'Import Dataset',
-    'hub.asideJourneys': 'Journeys',
+    'hub.asideProjects': 'Projects',
     'hub.asidePhotos': 'Photos',
     'hub.asideNotes': 'Notes',
     'hub.asideDistance': 'Distance',
@@ -1012,7 +1096,7 @@ const PA_I18N = {
     'gate.pinShort': 'PIN must be 4–12 characters',
     'gate.forgot': 'Forgot PIN?',
     'gate.setupRecoveryNote': 'A recovery code is shown once. Your field data is never deleted.',
-    'gate.recoverSub': 'Your journeys are preserved. Use your recovery code to set a new PIN.',
+    'gate.recoverSub': 'Your field projects are preserved. Use your recovery code to set a new PIN.',
     'gate.recoverUseCode': 'Reset PIN with recovery code',
     'gate.recoverCodeSub': 'Enter the recovery code you saved when creating your PIN.',
     'gate.recoveryCode': 'Recovery code',
@@ -1043,24 +1127,24 @@ const PA_I18N = {
     'track.stopHud': 'STOP ROUTE', 'track.stopHudHint': 'Route stopped — GPS and follow still on',
     'track.idle': 'Track recording off', 'track.recording': 'Recording', 'track.paused': 'Paused',
     'track.dist': 'Distance', 'track.time': 'Duration', 'track.points': 'Points',
-    'report.interactive': 'Share journey or save to Drive',
-    'report.savedToProject': 'Journey saved',
+    'report.interactive': 'Share report or save to Drive',
+    'report.savedToProject': 'Saved to project',
     'report.mapSkipped': 'Map snapshot skipped (basemap could not be exported)',
-    'report.none': 'No journeys yet — create PDF or spatial inspection playback',
+    'report.none': 'No reports yet — create PDF or spatial inspection playback',
     'report.view': 'Open',
     'report.share': 'Share',
     'report.pdf': 'PDF Report',
-    'report.interactiveShort': 'Journey',
+    'report.interactiveShort': 'Inspection',
     'report.html': 'Spatial Playback',
     'report.viewerTitle': 'Preview',
     'report.playbackViewerTitle': 'Spatial Inspection Playback',
-    'report.missing': 'Journey file not found',
-    'report.demoReady': 'Demo journey saved — open from the right panel',
-    'report.demoRunning': 'Preparing demo journey…',
-    'report.count': '{n} journeys',
+    'report.missing': 'Report file not found',
+    'report.demoReady': 'Demo inspection saved — open from the right panel',
+    'report.demoRunning': 'Preparing demo inspection…',
+    'report.count': '{n} reports',
     'report.delete': 'Delete',
-    'report.deleted': 'Journey deleted',
-    'report.deleteConfirm': 'Delete this journey?',
+    'report.deleted': 'Report deleted',
+    'report.deleteConfirm': 'Delete this report?',
     'export.sheetTitle': 'Send file',
     'export.sendFile': 'Send file',
     'export.sendFileHint': 'WhatsApp, Mail, Drive, Bluetooth…',
@@ -1141,42 +1225,42 @@ const PA_I18N = {
     'export.openingShare': 'Opening share menu…',
     'feat.landUse': 'Land use', 'feat.plan': 'Plan decision', 'feat.far': 'FAR', 'feat.height': 'Height', 'feat.type': 'Type',
     'autosave.idle': 'Autosave', 'autosave.pending': '○ Pending save…', 'autosave.saving': '… Saving',
-    'project.menu': 'Journey', 'project.new': '+ New journey', 'project.newName': 'Journey name', 'project.create': 'Create', 'project.cancel': 'Cancel', 'project.rename': 'Rename', 'project.save': 'Save',
+    'project.menu': 'Field Project', 'project.new': '+ New Field Project', 'project.newName': 'Project name', 'project.create': 'Create', 'project.cancel': 'Cancel',     'project.rename': 'Rename', 'project.save': 'Save', 'project.saved': 'Project saved',
     'entry.tagline': 'Spatial Inspection Playback Platform',
-    'entry.headline': 'Start Your Spatial Inspection Journey',
+    'entry.headline': 'Start Your Field Inspection',
     'entry.subheadline': 'Capture routes, notes, photos and spatial observations within a cinematic field experience.',
     'entry.startTitle': 'Start New Inspection',
-    'entry.startDesc': 'Create a new field journey with GPS tracking, notes, photos and spatial playback.',
+    'entry.startDesc': 'Create a new field project with GPS tracking, notes, photos and spatial playback.',
     'entry.continueTitle': 'Continue Inspection',
-    'entry.continueDesc': 'Resume an existing inspection journey and continue spatial playback.',
-    'entry.exploreTitle': 'Explore Previous Journeys',
-    'entry.exploreDesc': 'Review completed inspections and replay field journeys.',
-    'entry.journeyName': 'Journey name',
-    'entry.createJourney': 'Start Journey',
+    'entry.continueDesc': 'Resume an existing field project and continue spatial playback.',
+    'entry.exploreTitle': 'Explore Previous Projects',
+    'entry.exploreDesc': 'Review completed inspections and open field projects.',
+    'entry.projectName': 'Project name',
+    'entry.createProject': 'Start Inspection',
     'entry.back': 'Back',
-    'entry.noRecent': 'No saved inspection to continue — start a new journey.',
-    'entry.noJourneys': 'No saved journeys yet.',
-    'entry.journeysHead': 'Previous Journeys',
-    'project.reportPdf': 'PDF Report', 'project.reportInteractive': 'Start Field Journey',
-    'project.reportDemo': 'Demo Journey Simulation',
-    'project.exportZip': 'Export ZIP', 'project.importZip': 'Import ZIP', 'project.recent': 'Recent journeys',
-    'project.none': 'No journeys yet',
-    'project.delete': 'Delete journey', 'project.deleted': 'Journey deleted',
-    'project.head': 'Journeys', 'project.autosaveNote': 'Changes autosave to IndexedDB. Status is shown in the top bar.',
-    'hub.title': 'Field Journey Hub',
+    'entry.noRecent': 'No saved inspection to continue — start a new project.',
+    'entry.noProjects': 'No saved projects yet.',
+    'entry.projectsHead': 'Previous Projects',
+    'project.reportPdf': 'PDF Report', 'project.reportInteractive': 'Start Interactive Inspection',
+    'project.reportDemo': 'Demo Inspection Simulation',
+    'project.exportZip': 'Export ZIP', 'project.importZip': 'Import ZIP', 'project.recent': 'Recent projects',
+    'project.none': 'No field projects yet',
+    'project.delete': 'Delete project', 'project.deleted': 'Project deleted',
+    'project.head': 'Field Projects', 'project.autosaveNote': 'Changes autosave to IndexedDB. Status is shown in the top bar.',
+    'hub.title': 'Field Inspection Hub',
     'hub.subtitle': 'Capture routes, observations, photos and field intelligence.',
     'hub.newInspection': 'New Inspection',
     'hub.tagline': 'GPS Tracking • Photos • Voice Notes • Reports',
     'hub.missionNewTitle': 'Start New Inspection',
     'hub.missionNewSub': 'Capture field data in one simple workflow.',
-    'hub.activeJourney': 'Active Journey',
+    'hub.activeProject': 'Active Project',
     'hub.heroCta': 'Start Inspection',
     'hub.featGps': 'GPS Tracking',
     'hub.featPhotoCapture': 'Photo Capture',
     'hub.featVoice': 'Voice Notes',
     'hub.featReports': 'Interactive Reports',
-    'hub.cardContinueEmpty': 'No active journey',
-    'hub.cardContinueDesc': 'Resume your latest journey.',
+    'hub.cardContinueEmpty': 'No active project',
+    'hub.cardContinueDesc': 'Resume your latest project.',
     'hub.continueCta': 'Continue',
     'hub.continueInspectionCta': 'Continue Inspection',
     'trial.finish': 'Complete Inspection',
@@ -1198,6 +1282,15 @@ const PA_I18N = {
     'trial.panoStep': 'Panorama frame',
     'trial.panoStart': 'Align with the line, tap shutter',
     'trial.panoStartScan': 'Choose direction, tap shutter to scan',
+    'trial.panoKeepMoving': 'Keep moving…',
+    'trial.panoTooFast': 'Too fast',
+    'trial.panoTooSlow': 'Too slow',
+    'trial.panoMoveUp': 'Move up',
+    'trial.panoMoveDown': 'Move down',
+    'trial.panoReturnGuide': 'Return to guide',
+    'trial.panoFailed': 'Panorama failed. Please move slower.',
+    'trial.panoLoadingCv': 'Loading panorama engine…',
+    'trial.panoCvFailed': 'Panorama engine unavailable',
     'trial.panoScanLeft': 'Turn phone slowly left (~15°)',
     'trial.panoScanRight': 'Turn phone slowly right (~15°)',
     'trial.panoScanFallback': 'Pan very slowly along the strip',
@@ -1217,19 +1310,19 @@ const PA_I18N = {
     'hub.snapshotMissing': 'Inspection data is missing or locked.',
     'hub.saveFailed': 'Inspection could not be saved. Try again before closing the app.',
     'hub.startInspectionCta': 'Start New Inspection',
-    'hub.archiveLink': 'View All Journeys',
+    'hub.archiveLink': 'View All Projects',
     'hub.lastActivity': 'Last activity:',
-    'hub.recentKicker': 'Recent Journeys',
-    'hub.viewAllJourneys': 'View All Journeys',
-    'hub.recentEmpty': 'No other saved journeys',
-    'hub.colName': 'Journey',
+    'hub.recentKicker': 'Recent Projects',
+    'hub.viewAllProjects': 'View All Projects',
+    'hub.recentEmpty': 'No other saved projects',
+    'hub.colName': 'Project',
     'hub.colDistance': 'Distance',
     'hub.colPhotos': 'Photos',
     'hub.colDate': 'Date',
     'hub.datasetImport': 'Dataset Import',
     'hub.importFormats': 'PlanGML · GML · GeoTIFF · KML · KMZ · GeoJSON',
     'hub.importCtaFull': 'Import Dataset',
-    'hub.asideJourneys': 'Journeys',
+    'hub.asideProjects': 'Projects',
     'hub.asidePhotos': 'Photos',
     'hub.asideNotes': 'Notes',
     'hub.asideDistance': 'Distance',
@@ -1270,7 +1363,7 @@ const PA_I18N = {
     'gate.pinShort': 'PIN must be 4–12 characters',
     'gate.forgot': 'Forgot PIN?',
     'gate.setupRecoveryNote': 'A recovery code is shown once. Your field data is never deleted.',
-    'gate.recoverSub': 'Your journeys are preserved. Use your recovery code to set a new PIN.',
+    'gate.recoverSub': 'Your field projects are preserved. Use your recovery code to set a new PIN.',
     'gate.recoverUseCode': 'Reset PIN with recovery code',
     'gate.recoverCodeSub': 'Enter the recovery code you saved when creating your PIN.',
     'gate.recoveryCode': 'Recovery code',
@@ -1355,12 +1448,12 @@ const PA_I18N = {
     'import.err.noGeom': 'No displayable geometry found in file',
     'report.pdfReady': 'PDF report ready',
     'report.interactiveReady': 'Spatial playback ready',
-    'report.journeyBundleReady': 'Journey and PDF report saved',
-    'report.previewFirst': 'Preview, save, or share the journey',
+    'report.projectBundleReady': 'Project and PDF report saved',
+    'report.previewFirst': 'Preview, save, or share the report',
     'report.doc.titleSuffix': 'PlanAI Field Report',
     'report.doc.subtitle': 'Field Inspection Report',
-    'report.doc.projectDefault': 'Field Journey',
-    'report.doc.cover.project': 'Journey',
+    'report.doc.projectDefault': 'Field Project',
+    'report.doc.cover.project': 'Project',
     'report.doc.cover.date': 'Date',
     'report.doc.cover.time': 'Time',
     'report.doc.cover.user': 'User',
@@ -1373,15 +1466,15 @@ const PA_I18N = {
     'report.doc.context.temperature': 'Temperature',
     'report.doc.context.weather': 'Weather',
     'report.doc.context.coords': 'Coordinates',
-    'report.doc.summary.title': 'Journey Summary',
+    'report.doc.summary.title': 'Project Summary',
     'report.doc.summary.photos': 'Photos',
     'report.doc.summary.notes': 'Notes',
     'report.doc.summary.measured': 'Measured drawings',
     'report.doc.summary.imports': 'Imports',
     'report.doc.summary.totalLine': 'Total measure length',
     'report.doc.summary.totalArea': 'Total area',
-    'report.doc.projectInfo': 'Journey information',
-    'report.doc.projectId': 'Journey ID',
+    'report.doc.projectInfo': 'Project information',
+    'report.doc.projectId': 'Project ID',
     'report.doc.created': 'Created',
     'report.doc.updated': 'Last updated',
     'report.doc.map.title': 'Map View',
@@ -1397,6 +1490,12 @@ const PA_I18N = {
     'report.doc.measure.kindArea': 'Area',
     'report.doc.measure.empty': 'No measured drawings',
     'report.doc.photos.title': 'Photos',
+    'report.doc.videos.title': 'Video notes',
+    'report.doc.videos.videoNo': 'Video no',
+    'report.doc.videos.duration': 'Duration',
+    'report.doc.videos.empty': 'No video notes',
+    'report.doc.videos.interactiveHint': 'Full video plays in the interactive report',
+    'report.doc.map.routeCaption': 'Field project GPS route and capture points',
     'report.doc.photos.noImage': 'No image',
     'report.doc.photos.photoNo': 'Photo No',
     'report.doc.photos.coordinate': 'Coordinate',
@@ -1414,7 +1513,7 @@ const PA_I18N = {
     'report.doc.tech.template': 'Report template',
     'report.doc.tech.gpsInstant': 'GPS accuracy (instant)',
     'report.doc.tech.generated': 'Report generated',
-    'report.doc.progress.collect': 'Collecting journey data…',
+    'report.doc.progress.collect': 'Collecting field data…',
     'report.doc.progress.map': 'Capturing map snapshot…',
     'report.doc.progress.photos': 'Processing photos…',
     'report.doc.progress.notes': 'Processing notes…',
@@ -1426,7 +1525,7 @@ const PA_I18N = {
     'point.deleteConfirm': 'Delete point {n}?', 'point.deleted': 'Point deleted',
     'photo.deleteConfirm': 'Delete {name}?', 'photo.deleted': 'Photo deleted',
     'obj.deleteConfirm': 'Delete {name}?', 'obj.deleted': 'Item deleted',
-    'photo.desc': 'Description', 'photo.voice': '🎤 Voice note', 'photo.noVoice': 'No voice recording',
+    'photo.desc': 'Description', 'photo.noteLabel': 'Note', 'photo.voice': '🎤 Voice note', 'photo.noVoice': 'No voice recording',
     'photo.record': '🎤 Record', 'photo.play': '▶ Play', 'photo.delVoice': '🗑 Delete',
     'photo.centerMap': '🎯 Center', 'photo.save': '💾 Save', 'photo.delete': '🗑 Delete',
     'photo.micDenied': 'Microphone not allowed — try again',
@@ -1455,8 +1554,8 @@ const PA_I18N = {
     'draw.widthWithVal': 'Width · {n}px',
     'draw.sizeWithVal': 'Size · {n}px',
     'draw.opacityWithVal': 'Opacity · {n}%',
-    'project.untitled': 'Untitled journey',
-    'project.namePrefix': 'Field Journey',
+    'project.untitled': 'Untitled project',
+    'project.namePrefix': 'Field Project',
     'common.confirm': 'Confirm', 'common.cancel': 'Cancel',
     'ctx.pointLabel': 'Point #{n}',
     'photo.openCamera': '📷 Open camera', 'photo.fromGallery': '🖼 Choose from gallery', 'photo.cancelSheet': 'Cancel',
@@ -1474,8 +1573,8 @@ const PA_I18N = {
     'onboard.badge': 'Quick tour',
     'onboard.welcome.title': 'Welcome to PlanAI Field',
     'onboard.welcome.body': 'Learn the field workflow step by step. We will highlight each icon on screen.',
-    'onboard.s1.title': '1 · Create a journey',
-    'onboard.s1.body': 'Use Journeys at the bottom to create a new journey or open a recent one. All field data is saved to the journey.',
+    'onboard.s1.title': '1 · Create a project',
+    'onboard.s1.body': 'Use Field Projects to create a new project or open a recent one. All field data is saved to the project.',
     'onboard.s2.title': '2 · Import data',
     'onboard.s2.body': 'Import KML, KMZ, GML, GeoJSON, SHP, GeoTIFF or DXF via Import. Files shared from WhatsApp or Drive can be opened too.',
     'onboard.s3.title': '3 · Info tool',
@@ -1502,8 +1601,8 @@ const PA_I18N = {
     'onboard.s13.body': 'Manage notes, photos, GPS tracks and imports in the Layers section of the right panel.',
     'onboard.s14.title': '14 · Color & width',
     'onboard.s14.body': 'Set draw color and stroke width in the right panel. Select a line or polygon to edit it there too.',
-    'onboard.s15.title': '15 · Spatial Storytelling',
-    'onboard.s15.body': 'From Journeys, create a PDF field summary or spatial inspection playback — share via WhatsApp, Mail or Drive.',
+    'onboard.s15.title': '15 · Reports & playback',
+    'onboard.s15.body': 'From Field Projects, create a PDF field summary or spatial inspection playback — share via WhatsApp, Mail or Drive.',
     'offline.badge': 'Offline',
     'offline.tilesCached': 'Using cached map tiles',
     'onboard.start': 'Start tour',
@@ -1513,7 +1612,7 @@ const PA_I18N = {
     'onboard.done': 'Done',
     'onboard.stepOf': '{n} / {t}',
     'onboard.finished': 'Tour complete — happy mapping!',
-    'onboard.replay': 'Show quick tour again',
+    'onboard.showTutorial': 'Show quick tour again',
   },
 };
 const FIELD_HINT_KEYS = {
@@ -1555,8 +1654,8 @@ function resolveReportLang(data) {
   return lang === 'tr' ? 'tr' : 'en';
 }
 
-const PROJECT_UNTITLED_NAMES = new Set(['Adsız Gezi', 'Adsız Proje', 'Untitled journey', 'Untitled project', 'Untitled Project']);
-const PROJECT_NAME_PREFIX_RE = /^(?:Saha(?:\s+Yolculuğu)?|Gezi(?:ler)?|Proje(?:ler)?|Journey(?:s)?|Project|Field(?:\s+Journey)?)\s+(.+)$/i;
+const PROJECT_UNTITLED_NAMES = new Set(['Adsız Çalışma', 'Adsız Proje', 'Untitled project', 'Untitled Project']);
+const PROJECT_NAME_PREFIX_RE = /^(?:Saha(?:\s+Çalışması)?|Çalışma(?:lar)?|Proje(?:ler)?|Project(?:s)?|Field(?:\s+Project)?)\s+(.+)$/i;
 
 function formatProjectDefaultDate(d) {
   const date = d || new Date();
@@ -1779,7 +1878,7 @@ function applyFieldI18n() {
   buildLayerPanel();
   updateProjectTitleUi();
   refreshFieldDrawPanelLabels();
-  updateFieldJourneyHubI18n();
+  updateFieldStartHubI18n();
   applyTrialFinishI18n();
   if (_slopeState.stats) renderSlopeStatsPanel(_slopeState.stats);
   refreshSlopeLegends();
@@ -2985,9 +3084,9 @@ function guideFromFeaturePanel() {
   startGpsGuidanceFromObject(obj);
 }
 
-function guideToReplayPoint() {
-  if (!_gpsTrackReplay.pos) return;
-  startGpsGuidance(_gpsTrackReplay.pos.lat, _gpsTrackReplay.pos.lon, t('guide.replayPoint'));
+function guideToTrackPoint() {
+  if (!_gpsTrackScrub.pos) return;
+  startGpsGuidance(_gpsTrackScrub.pos.lat, _gpsTrackScrub.pos.lon, t('guide.trackPoint'));
 }
 
 function fieldMapRightClickAllowed() {
@@ -3020,11 +3119,11 @@ function showFieldMapContextMenu(clientX, clientY, wp) {
     cls: 'guide-primary',
     fn: () => startGpsGuidanceFromMapPoint(wp),
   });
-  if (_gpsTrackReplay.pos) {
+  if (_gpsTrackScrub.pos) {
     items.push({
-      label: t('guide.replayPoint'),
+      label: t('guide.trackPoint'),
       cls: 'guide-primary',
-      fn: () => guideToReplayPoint(),
+      fn: () => guideToTrackPoint(),
     });
   }
   if (_gpsGuidanceActive) {
@@ -3797,7 +3896,7 @@ function syncGpsTrackObject() {
 
 function beginGpsTrackRecording() {
   if (_gpsTrack.state !== 'idle') return false;
-  stopGpsTrackReplay();
+  stopGpsTrackScrub();
   _gpsTrack.state = 'recording';
   _gpsTrack.points = [];
   _gpsTrack.startTs = Date.now();
@@ -4269,9 +4368,9 @@ function updateGpsTrackHud() {
   updateGpsGuidanceHud();
   if (_gpsTrack.state === 'idle') {
     if (route) {
-      if (_gpsTrackReplay.pos) {
-        route.textContent = (PA_LANG === 'tr' ? 'Rota oynatılıyor' : 'Track replay') +
-          ' · ' + t('guide.replayPoint');
+      if (_gpsTrackScrub.pos) {
+        route.textContent = (PA_LANG === 'tr' ? 'Rota oynatılıyor' : 'Track playback') +
+          ' · ' + t('guide.trackPoint');
       } else route.textContent = '';
     }
     if (bPause) { bPause.disabled = true; bPause.textContent = '⏸'; bPause.classList.remove('active'); }
@@ -5779,7 +5878,7 @@ function addPlanRasterGeorefObject({ dataUrl, img, w, h, corners, fileName, boun
 async function importPlanRasterFile(file) {
   if (!file) return;
   if (typeof SpatialSecurity !== 'undefined') SpatialSecurity.assertImportFile(file);
-  if (!FIELD_PROJECT.id) { openProjectPanel(); showHint('Önce gezi oluşturun veya açın'); return; }
+  if (!FIELD_PROJECT.id) { openProjectPanel(); showHint('Önce saha çalışması oluşturun veya açın'); return; }
   const name = file.name || 'plan.tif';
   const ext = (name.split('.').pop() || '').toLowerCase();
   showHint('Plan raster analiz ediliyor…');
@@ -8572,7 +8671,7 @@ async function importFieldFile(file, opts) {
         const hasShp = entries.some(p => /\.shp$/i.test(p));
         if (hasShp) { await importShapefileZip(file); return; }
       }
-      showHint('ZIP: Shapefile (.shp) veya gezi ZIP kullanın');
+      showHint('ZIP: Shapefile (.shp) veya çalışma ZIP kullanın');
       return;
     }
     if (ext === 'geojson' || ext === 'json') {
@@ -8681,7 +8780,7 @@ function ensureFieldImportProject() {
       return true;
     }
     openProjectPanel();
-    showHint('Önce gezi oluşturun veya açın');
+    showHint('Önce saha çalışması oluşturun veya açın');
     return false;
   }
   return true;
@@ -8776,14 +8875,14 @@ async function routeSharedFieldFile(file) {
   if (!FIELD_PROJECT.id) {
     if (!bootstrapFieldProjectSync()) {
       openProjectPanel();
-      showHint('Önce gezi oluşturun veya açın — ardından dosyayı tekrar paylaşın: ' + name);
+      showHint('Önce saha çalışması oluşturun — ardından dosyayı tekrar paylaşın: ' + name);
       return;
     }
     ensureFieldProjectId().catch(() => {});
   }
   if (ext === 'zip' || name.endsWith('.planai.zip')) {
     await importProjectZipFile(file);
-    showHint('📥 Gezi ZIP içe aktarıldı: ' + name);
+    showHint('📥 Çalışma ZIP içe aktarıldı: ' + name);
     return;
   }
   if (ext === 'html' || ext === 'htm') {
@@ -8936,6 +9035,9 @@ function serializeProjectSnapshot() {
     return c;
   });
   if (!FIELD_PROJECT.createdAt) FIELD_PROJECT.createdAt = new Date().toISOString();
+  const stats = typeof FieldProjectStats !== 'undefined'
+    ? FieldProjectStats.fromObjects(S.objects, _fieldProjectReports)
+    : null;
   const photos = S.objects.filter(o => o.type === 'field_photo').map(p => ({
     id: p.photoId || p.id, photoNum: p.photoNum, lat: p.lat, lon: p.lon,
     timestamp: p.timestamp || p.createdAt, description: p.description || p.caption || '',
@@ -8947,11 +9049,14 @@ function serializeProjectSnapshot() {
     timestamp: n.timestamp || n.createdAt,
   }));
   return {
-    version: 2,
+    version: 3,
     id: FIELD_PROJECT.id,
     name: FIELD_PROJECT.name,
     createdAt: FIELD_PROJECT.createdAt,
     updatedAt: new Date().toISOString(),
+    archived: !!FIELD_PROJECT.archived,
+    metadata: { ...(FIELD_PROJECT.metadata || {}) },
+    stats,
     mapState: {
       center: { ...S.mapCenter },
       geoAnchor: { ...getGeoAnchor() },
@@ -8987,8 +9092,10 @@ function applyProjectSnapshot(snap) {
   if (!snap) return;
   finalizeFieldInspectionPanels();
   FIELD_PROJECT.id = snap.id;
-  FIELD_PROJECT.name = snap.name || 'Gezi';
+  FIELD_PROJECT.name = snap.name || t('project.untitled');
   FIELD_PROJECT.createdAt = snap.createdAt || snap.updatedAt || new Date().toISOString();
+  FIELD_PROJECT.metadata = snap.metadata || {};
+  FIELD_PROJECT.archived = !!(snap.archived || snap.metadata?.archived);
   const mapRef = snap.mapState || snap.map;
   S.geoAnchor = mapRef?.geoAnchor ? { ...mapRef.geoAnchor }
     : (mapRef?.center ? { ...mapRef.center } : (S.geoAnchor || S.mapCenter));
@@ -9138,7 +9245,7 @@ async function ensureFieldProjectId() {
   bootstrapFieldProjectSync();
   try {
     await saveCurrentProject(true);
-    showHint('Gezi otomatik oluşturuldu: ' + FIELD_PROJECT.name);
+    showHint('Çalışma otomatik oluşturuldu: ' + FIELD_PROJECT.name);
   } catch (_) {}
   return true;
 }
@@ -9162,7 +9269,17 @@ async function saveCurrentProject(silent) {
     await persistAllPlanRasterBlobs();
     const db = await openProjectDb();
     const snap = serializeProjectSnapshot();
-    const meta = { id: FIELD_PROJECT.id, name: FIELD_PROJECT.name, updatedAt: snap.updatedAt };
+    const stats = snap.stats || (typeof FieldProjectStats !== 'undefined'
+      ? FieldProjectStats.fromObjects(S.objects, _fieldProjectReports) : null);
+    const meta = {
+      id: FIELD_PROJECT.id,
+      name: FIELD_PROJECT.name,
+      createdAt: FIELD_PROJECT.createdAt,
+      updatedAt: snap.updatedAt,
+      archived: !!FIELD_PROJECT.archived,
+      metadata: FIELD_PROJECT.metadata || {},
+      stats,
+    };
     const snapRow = { id: FIELD_PROJECT.id, json: JSON.stringify(snap) };
     await idbPut(db, 'snapshots', snapRow);
     await idbPut(db, 'projects', meta);
@@ -9170,7 +9287,7 @@ async function saveCurrentProject(silent) {
     _projectDirty = false;
     const t = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
     setAutosaveIndicator('saved', t);
-    if (!silent) showHint('Gezi kaydedildi');
+    if (!silent) showHint(t('project.saved') || 'Çalışma kaydedildi');
     return true;
   } catch (e) {
     console.error('[Project Save]', e);
@@ -9750,6 +9867,10 @@ function updateProjectTitleUi() {
 }
 
 function openProjectPanel() {
+  if (typeof FieldProjectHub !== 'undefined') {
+    FieldProjectHub.open();
+    return;
+  }
   const open = () => {
     document.getElementById('project-overlay').style.display = 'flex';
     hideNewProjectForm();
@@ -9759,7 +9880,8 @@ function openProjectPanel() {
   else open();
 }
 function closeProjectPanel() {
-  document.getElementById('project-overlay').style.display = 'none';
+  if (typeof FieldProjectHub !== 'undefined') FieldProjectHub.close();
+  else document.getElementById('project-overlay').style.display = 'none';
 }
 
 async function fetchProjectListSorted() {
@@ -9822,6 +9944,10 @@ function renderProjectListRows(container, projects, opts) {
 }
 
 async function refreshProjectRecentList() {
+  if (typeof FieldProjectHub !== 'undefined') {
+    await FieldProjectHub.refresh();
+    return;
+  }
   const el = document.getElementById('project-recent');
   if (!el) return;
   try {
@@ -9845,13 +9971,13 @@ function escapeHtml(s) {
 
 async function renameCurrentProject() {
   if (!FIELD_PROJECT.id) return;
-  const name = prompt('Gezi adı:', FIELD_PROJECT.name);
+  const name = prompt(t('project.newName') + ':', FIELD_PROJECT.name);
   if (!name || !name.trim()) return;
   FIELD_PROJECT.name = name.trim();
   updateProjectTitleUi();
   await saveCurrentProject(false);
   refreshProjectRecentList();
-  showHint('Gezi adı güncellendi');
+  showHint(t('phub.saved') || 'Çalışma adı güncellendi');
 }
 
 function showNewProjectForm() {
@@ -9862,7 +9988,7 @@ function showNewProjectForm() {
     createNewProject(defaultProjectName());
     return;
   }
-  if (btn) btn.style.display = 'none';
+  if (btn) btn.hidden = true;
   form.hidden = false;
   inp.value = defaultProjectName();
   setTimeout(() => { inp.focus(); inp.select(); }, 30);
@@ -9872,7 +9998,7 @@ function hideNewProjectForm() {
   const form = document.getElementById('project-new-form');
   const btn = document.getElementById('btn-project-new');
   if (form) form.hidden = true;
-  if (btn) btn.style.display = '';
+  if (btn) btn.hidden = false;
 }
 
 async function submitNewProject() {
@@ -9916,7 +10042,7 @@ function clearFieldInspectionWorkspaceState() {
 }
 
 function resetGpsTrackForFreshInspection() {
-  stopGpsTrackReplay();
+  stopGpsTrackScrub();
   _gpsTrack.state = 'idle';
   _gpsTrack.points = [];
   _gpsTrack.objId = null;
@@ -9938,6 +10064,8 @@ async function createNewProject(name) {
     FIELD_PROJECT.id = 'prj_' + Date.now();
     FIELD_PROJECT.name = projName;
     FIELD_PROJECT.createdAt = new Date().toISOString();
+    FIELD_PROJECT.metadata = {};
+    FIELD_PROJECT.archived = false;
     S.objects = [];
     S.history = [[]];
     S.histIdx = 0;
@@ -9961,10 +10089,10 @@ async function createNewProject(name) {
       showHint(t('hub.saveFailed'), 8000);
       scheduleProjectSaveDebounced();
     } else {
-      showHint((PA_LANG === 'tr' ? 'Gezi oluşturuldu: ' : 'Inspection created: ') + projectDisplayName(projName));
+      showHint((PA_LANG === 'tr' ? 'Çalışma oluşturuldu: ' : 'Project created: ') + projectDisplayName(projName));
     }
     _fieldHubProjects = await reloadFieldHubProjects();
-    refreshFieldJourneyHubUi();
+    refreshFieldStartHubUi();
     await refreshProjectRecentList();
     await updateFieldCtxProject();
     hideNewProjectForm();
@@ -9974,7 +10102,7 @@ async function createNewProject(name) {
     if (FIELD_MODE) await activateFieldLocationSession(true);
   } catch (e) {
     console.error('[New Project]', e);
-    showHint('Gezi oluşturulamadı: ' + (e.message || e));
+    showHint('Çalışma oluşturulamadı: ' + (e.message || e));
   }
 }
 
@@ -10021,6 +10149,11 @@ async function openProjectById(id, opts = {}) {
     const meta = await idbGet(db, 'projects', id);
     finalizeFieldInspectionPanels();
     applyProjectSnapshot(JSON.parse(row.json));
+    if (meta) {
+      FIELD_PROJECT.metadata = meta.metadata || FIELD_PROJECT.metadata || {};
+      FIELD_PROJECT.archived = !!(meta.archived || FIELD_PROJECT.archived);
+      if (meta.name) FIELD_PROJECT.name = meta.name;
+    }
     _projectDirty = false;
     localStorage.setItem('planai_field_last_project', id);
     closeProjectPanel();
@@ -10032,8 +10165,8 @@ async function openProjectById(id, opts = {}) {
       ? new Date(meta.updatedAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
       : '';
     setAutosaveIndicator('saved', savedAt);
-    if (!opts.quiet) showHint('Gezi açıldı');
-    if (!opts.keepHub) hideFieldJourneyHub();
+    if (!opts.quiet) showHint(t('phub.openProject') || 'Çalışma açıldı');
+    if (!opts.keepHub) hideFieldStartHub();
     scheduleRender();
     warmViewportTilesFromDb();
     return true;
@@ -10063,10 +10196,10 @@ async function deleteProject(id) {
       localStorage.removeItem('planai_field_last_project');
       S.objects = [];
       resetFieldWorkspaceShell();
-      showFieldJourneyHub();
+      showFieldStartHub();
     }
     _fieldHubProjects = await reloadFieldHubProjects();
-    refreshFieldJourneyHubUi();
+    refreshFieldStartHubUi();
     refreshProjectRecentList();
     updateFieldCtxProject();
     showHint(t('project.deleted'));
@@ -10075,6 +10208,9 @@ async function deleteProject(id) {
   }
 }
 
+window.exportProjectGeoJson = exportProjectGeoJson;
+window.exportProjectGpx = exportProjectGpx;
+window.exportProjectKmz = exportProjectKmz;
 window.openProjectPanel = openProjectPanel;
 window.closeProjectPanel = closeProjectPanel;
 window.showNewProjectForm = showNewProjectForm;
@@ -10196,11 +10332,11 @@ function formatHubRelativeActivity(iso) {
 }
 
 function updateHubSummaryChips(totals) {
-  const j = document.getElementById('fjh-chip-journeys');
+  const j = document.getElementById('fjh-chip-projects');
   const p = document.getElementById('fjh-chip-photos');
   const n = document.getElementById('fjh-chip-notes');
   const d = document.getElementById('fjh-chip-distance');
-  if (j) j.textContent = String(totals.journeys || 0);
+  if (j) j.textContent = String(totals.projects || 0);
   if (p) p.textContent = String(totals.photos || 0);
   if (n) n.textContent = String(totals.notes || 0);
   if (d) d.textContent = formatHubDistanceKm(totals.distanceM || 0);
@@ -10211,22 +10347,22 @@ function scheduleHubLayoutRefresh() {
   if (_hubResizeTimer) clearTimeout(_hubResizeTimer);
   _hubResizeTimer = setTimeout(() => {
     _hubResizeTimer = null;
-    if (isFieldJourneyHubOpen()) refreshFieldJourneyHubUi();
+    if (isFieldStartHubOpen()) refreshFieldStartHubUi();
   }, 120);
 }
 
-function updateFieldJourneyHubI18n() {
-  document.querySelectorAll('#field-journey-hub-overlay [data-i18n], #field-security-settings-overlay [data-i18n]').forEach(el => {
+function updateFieldStartHubI18n() {
+  document.querySelectorAll('#field-start-hub-overlay [data-i18n], #field-security-settings-overlay [data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (key) el.textContent = t(key);
   });
   document.getElementById('btn-hub-lang-tr')?.classList.toggle('active', PA_LANG === 'tr');
   document.getElementById('btn-hub-lang-en')?.classList.toggle('active', PA_LANG === 'en');
-  refreshFieldJourneyHubUi();
+  refreshFieldStartHubUi();
   syncFieldSecuritySettingsUi();
 }
 
-async function refreshFieldJourneyHubUi() {
+async function refreshFieldStartHubUi() {
   const gen = ++_hubRefreshGen;
   const projects = _fieldHubProjects || [];
   const continueCard = document.getElementById('fjh-card-continue');
@@ -10241,7 +10377,7 @@ async function refreshFieldJourneyHubUi() {
   if (!projects.length) {
     if (continueCard) continueCard.hidden = true;
     if (newCard) newCard.classList.add('fjh-mission-new--solo');
-    updateHubSummaryChips({ journeys: 0, photos: 0, notes: 0, distanceM: 0 });
+    updateHubSummaryChips({ projects: 0, photos: 0, notes: 0, distanceM: 0 });
     return;
   }
 
@@ -10284,21 +10420,21 @@ async function refreshFieldJourneyHubUi() {
     continueActivity.textContent = formatHubRelativeActivity(latest?.updatedAt);
   }
   updateHubSummaryChips({
-    journeys: projects.length,
+    projects: projects.length,
     photos: totalPhotos,
     notes: totalNotes,
     distanceM: totalDistM,
   });
 }
-function showFieldJourneyHub() {
-  const overlay = document.getElementById('field-journey-hub-overlay');
+function showFieldStartHub() {
+  const overlay = document.getElementById('field-start-hub-overlay');
   if (!overlay) return;
   if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
   if (typeof FieldAccessGate !== 'undefined') FieldAccessGate.hideOverlay();
-  updateFieldJourneyHubI18n();
+  updateFieldStartHubI18n();
   overlay.style.display = 'flex';
   overlay.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('field-journey-hub-active');
+  document.body.classList.add('field-start-hub-active');
   if (!window._fjhResizeBound) {
     window._fjhResizeBound = true;
     window.addEventListener('resize', scheduleHubLayoutRefresh, { passive: true });
@@ -10306,25 +10442,25 @@ function showFieldJourneyHub() {
   }
 }
 
-function hideFieldJourneyHub() {
-  const overlay = document.getElementById('field-journey-hub-overlay');
+function hideFieldStartHub() {
+  const overlay = document.getElementById('field-start-hub-overlay');
   if (!overlay) return;
   overlay.style.display = 'none';
   overlay.setAttribute('aria-hidden', 'true');
-  document.body.classList.remove('field-journey-hub-active');
+  document.body.classList.remove('field-start-hub-active');
 }
 
-function isFieldJourneyHubOpen() {
-  return document.getElementById('field-journey-hub-overlay')?.style.display === 'flex';
+function isFieldStartHubOpen() {
+  return document.getElementById('field-start-hub-overlay')?.style.display === 'flex';
 }
 
 async function fieldHubEnterMapAfterAction() {
-  hideFieldJourneyHub();
+  hideFieldStartHub();
   scheduleEnsureFieldGpsSessionActive();
 }
 
 async function fieldHubActionNew() {
-  hideFieldJourneyHub();
+  hideFieldStartHub();
   await createNewProject(defaultProjectName());
   maybeStartFieldOnboarding();
 }
@@ -10339,22 +10475,23 @@ async function fieldHubActionContinue() {
     }
     const last = localStorage.getItem('planai_field_last_project');
     const targetId = (last && projects.some(p => p.id === last)) ? last : projects[0].id;
-    hideFieldJourneyHub();
+    hideFieldStartHub();
     const opened = await openProjectById(targetId);
     if (opened) {
       scheduleEnsureFieldGpsSessionActive();
+      maybeStartFieldOnboarding();
       return;
     }
-    showFieldJourneyHub();
+    showFieldStartHub();
     showHint(t('hub.openFailed'), 8000);
   } catch (e) {
     console.error('[Hub] continue', e);
-    showFieldJourneyHub();
+    showFieldStartHub();
     showHint(t('hub.openFailed') + ' ' + (e.message || ''), 8000);
   }
 }
 
-async function fieldHubOpenJourney(id) {
+async function fieldHubOpenProject(id) {
   if (!id) return;
   const opened = await openProjectById(id);
   if (opened) await fieldHubEnterMapAfterAction();
@@ -10364,9 +10501,18 @@ function fieldHubActionPrevious() {
   openProjectPanel();
 }
 
+function fieldHubActionDetails() {
+  const id = FIELD_PROJECT.id || localStorage.getItem('planai_field_last_project');
+  if (!id) {
+    openProjectPanel();
+    return;
+  }
+  if (typeof FieldProjectDetails !== 'undefined') FieldProjectDetails.open(id);
+}
+
 async function fieldHubActionImport() {
   const run = () => {
-    hideFieldJourneyHub();
+    hideFieldStartHub();
     showFieldImportSheet();
   };
   if (typeof FieldAccessGate !== 'undefined') {
@@ -10458,7 +10604,7 @@ async function fieldSecurityRegenRecovery() {
 
 window.fieldHubActionNew = fieldHubActionNew;
 window.fieldHubActionContinue = fieldHubActionContinue;
-window.fieldHubOpenJourney = fieldHubOpenJourney;
+window.fieldHubOpenProject = fieldHubOpenProject;
 window.scheduleProjectSave = scheduleProjectSave;
 window.ingestFieldVideo = ingestFieldVideo;
 window.getPhotoBlobRecord = getPhotoBlobRecord;
@@ -10466,12 +10612,13 @@ window.markLastPhotoPanorama = markLastPhotoPanorama;
 window.isFieldGpsOn = () => _fieldGpsOn;
 window.openFieldPhotoDetail = openFieldPhotoDetail;
 window.flushProjectSave = flushProjectSave;
-window.showFieldJourneyHub = showFieldJourneyHub;
+window.showFieldStartHub = showFieldStartHub;
 window.reloadFieldHubProjects = reloadFieldHubProjects;
-window.refreshFieldJourneyHubUi = refreshFieldJourneyHubUi;
+window.refreshFieldStartHubUi = refreshFieldStartHubUi;
 window.stopFieldGpsSession = stopFieldGpsSession;
 window.getFieldGpsDisplayFix = getGpsDisplayFix;
 window.fieldHubActionPrevious = fieldHubActionPrevious;
+window.fieldHubActionDetails = fieldHubActionDetails;
 window.fieldHubActionImport = fieldHubActionImport;
 window.openFieldSecuritySettings = openFieldSecuritySettings;
 window.closeFieldSecuritySettings = closeFieldSecuritySettings;
@@ -10506,7 +10653,7 @@ async function createDefaultFieldProject() {
     FIELD_PROJECT.id = 'prj_' + Date.now();
     FIELD_PROJECT.name = defaultProjectName();
     FIELD_PROJECT.createdAt = new Date().toISOString();
-  } else if (!FIELD_PROJECT.name || FIELD_PROJECT.name === 'Adsız Gezi' || FIELD_PROJECT.name === 'Adsız Proje') {
+  } else if (!FIELD_PROJECT.name || FIELD_PROJECT.name === 'Adsız Çalışma' || FIELD_PROJECT.name === 'Adsız Proje') {
     FIELD_PROJECT.name = defaultProjectName();
   }
   finalizeFieldInspectionPanels();
@@ -10542,7 +10689,7 @@ async function wipeFieldLocalWorkspace() {
   }
   try { localStorage.removeItem('planai_field_last_project'); } catch (_) {}
   FIELD_PROJECT.id = null;
-  FIELD_PROJECT.name = typeof t === 'function' ? t('project.untitled') : 'Adsız Gezi';
+  FIELD_PROJECT.name = typeof t === 'function' ? t('project.untitled') : 'Adsız Çalışma';
   FIELD_PROJECT.createdAt = null;
   S.objects = [];
   S.history = [[]];
@@ -10562,11 +10709,11 @@ async function initProjectWorkspace() {
     resetFieldWorkspaceShell();
     await reloadFieldHubProjects();
     await refreshProjectRecentList();
-    await refreshFieldJourneyHubUi();
-    showFieldJourneyHub();
+    await refreshFieldStartHubUi();
+    showFieldStartHub();
   } catch (e) {
     console.warn('[Project] workspace init', e);
-    showFieldJourneyHub();
+    showFieldStartHub();
   }
 }
 
@@ -10591,7 +10738,7 @@ let _fieldExportReturnToSheet = false;
 let _fieldProjectReports = [];
 
 function safeProjectExportFilename(ext) {
-  const base = (FIELD_PROJECT.name || 'gezi').replace(/[^\w\-\.]+/g, '_').replace(/_+/g, '_');
+  const base = (FIELD_PROJECT.name || 'project').replace(/[^\w\-\.]+/g, '_').replace(/_+/g, '_');
   return base + ext;
 }
 
@@ -10750,7 +10897,7 @@ function prepareInteractiveHtmlForPreview(html) {
   return injectPreviewMapResizeBoot(html);
 }
 
-function nudgePreviewReplayMap(frame) {
+function nudgePreviewInspectionMap(frame) {
   if (!frame) return;
   try {
     const win = frame.contentWindow;
@@ -10804,7 +10951,7 @@ function mountInteractiveReportInViewerFrame(frame, html, blob) {
   openFieldReportViewerModal();
   const loadContent = () => {
     const onFrameLoad = () => {
-      nudgePreviewReplayMap(frame);
+      nudgePreviewInspectionMap(frame);
     };
     frame.addEventListener('load', onFrameLoad, { once: true });
     if (html && previewIframePrefersSrcdoc()) {
@@ -11212,7 +11359,7 @@ function fieldExportActionPreview() {
 }
 
 async function exportProjectZip() {
-  if (!FIELD_PROJECT.id) { showHint('Önce gezi oluşturun'); return; }
+  if (!FIELD_PROJECT.id) { showHint(t('project.none')); return; }
   await saveCurrentProject(true);
   const zip = new JSZip();
   setReportProgress(0, 'ZIP ve rapor hazırlanıyor…');
@@ -11256,6 +11403,133 @@ async function exportProjectZip() {
   } finally {
     hideReportProgress();
   }
+}
+
+function fieldProjectToGeoJson(objects) {
+  const features = [];
+  const imports = importObjectsToGeoJson(objects || []);
+  features.push(...(imports.features || []));
+  (objects || []).forEach(o => {
+    if (o.visible === false) return;
+    if (o.type === 'field_photo' || o.type === 'field_video') {
+      if (o.lat == null || o.lon == null) return;
+      features.push({
+        type: 'Feature',
+        properties: {
+          type: o.type,
+          name: o.title || o.description || '',
+          photoNum: o.photoNum,
+          videoNum: o.videoNum,
+          timestamp: o.timestamp || o.createdAt,
+        },
+        geometry: { type: 'Point', coordinates: [o.lon, o.lat] },
+      });
+    } else if (o.type === 'field_note' && o.lat != null && o.lon != null) {
+      features.push({
+        type: 'Feature',
+        properties: { type: 'field_note', noteNum: o.noteNum, text: getNoteText(o) },
+        geometry: { type: 'Point', coordinates: [o.lon, o.lat] },
+      });
+    } else if (o.type === 'field_gps_track') {
+      const pts = (o.points || o.vertices || []).filter(p => p.lat != null && p.lon != null);
+      if (pts.length >= 2) {
+        features.push({
+          type: 'Feature',
+          properties: { type: 'field_gps_track', name: o.title || 'GPS' },
+          geometry: { type: 'LineString', coordinates: pts.map(p => [p.lon, p.lat]) },
+        });
+      }
+    }
+  });
+  return { type: 'FeatureCollection', features };
+}
+
+function buildGpxFromObjects(objects, name) {
+  const escXml = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let trkpts = '';
+  (objects || []).filter(o => o.type === 'field_gps_track').forEach(t => {
+    (t.points || t.vertices || []).forEach(p => {
+      if (p.lat == null || p.lon == null) return;
+      const ts = p.ts || p.timestamp || p.time || '';
+      trkpts += '<trkpt lat="' + p.lat + '" lon="' + p.lon + '">' +
+        (ts ? '<time>' + escXml(new Date(ts).toISOString()) + '</time>' : '') +
+        '</trkpt>';
+    });
+  });
+  return '<?xml version="1.0" encoding="UTF-8"?>' +
+    '<gpx version="1.1" creator="PlanAI Field">' +
+    '<trk><name>' + escXml(name || 'GPS') + '</name><trkseg>' + trkpts + '</trkseg></trk></gpx>';
+}
+
+function buildKmlFromObjects(objects, name) {
+  const geo = fieldProjectToGeoJson(objects);
+  const placemarks = (geo.features || []).map(f => {
+    const g = f.geometry;
+    const props = f.properties || {};
+    const title = props.name || props.text || props.type || 'Feature';
+    if (g.type === 'Point') {
+      return '<Placemark><name>' + title + '</name><Point><coordinates>' +
+        g.coordinates[0] + ',' + g.coordinates[1] + ',0</coordinates></Point></Placemark>';
+    }
+    if (g.type === 'LineString') {
+      const coords = g.coordinates.map(c => c[0] + ',' + c[1] + ',0').join(' ');
+      return '<Placemark><name>' + title + '</name><LineString><coordinates>' + coords + '</coordinates></LineString></Placemark>';
+    }
+    if (g.type === 'Polygon' && g.coordinates?.[0]) {
+      const coords = g.coordinates[0].map(c => c[0] + ',' + c[1] + ',0').join(' ');
+      return '<Placemark><name>' + title + '</name><Polygon><outerBoundaryIs><LinearRing><coordinates>' +
+        coords + '</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>';
+    }
+    return '';
+  }).join('');
+  return '<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>' +
+    (name || 'PlanAI Field') + '</name>' + placemarks + '</Document></kml>';
+}
+
+async function exportProjectGeoJson() {
+  if (!FIELD_PROJECT.id) { showHint(t('project.none')); return; }
+  await saveCurrentProject(true);
+  const geo = fieldProjectToGeoJson(S.objects);
+  const blob = new Blob([JSON.stringify(geo, null, 2)], { type: 'application/geo+json' });
+  await offerFieldExport({
+    blob,
+    filename: safeProjectExportFilename('.geojson'),
+    mimeType: 'application/geo+json',
+    kind: 'file',
+  });
+}
+
+async function exportProjectGpx() {
+  if (!FIELD_PROJECT.id) { showHint(t('project.none')); return; }
+  await saveCurrentProject(true);
+  const gpx = buildGpxFromObjects(S.objects, FIELD_PROJECT.name);
+  if (!gpx.includes('<trkpt')) {
+    showHint(PA_LANG === 'tr' ? 'GPS rotası yok' : 'No GPS track');
+    return;
+  }
+  const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+  await offerFieldExport({
+    blob,
+    filename: safeProjectExportFilename('.gpx'),
+    mimeType: 'application/gpx+xml',
+    kind: 'file',
+  });
+}
+
+async function exportProjectKmz() {
+  if (!FIELD_PROJECT.id) { showHint(t('project.none')); return; }
+  if (typeof JSZip === 'undefined') { showHint('KMZ desteği yüklenemedi'); return; }
+  await saveCurrentProject(true);
+  const kml = buildKmlFromObjects(S.objects, FIELD_PROJECT.name);
+  const zip = new JSZip();
+  zip.file('doc.kml', kml);
+  const out = await zip.generateAsync({ type: 'blob' });
+  await offerFieldExport({
+    blob: out,
+    filename: safeProjectExportFilename('.kmz'),
+    mimeType: 'application/vnd.google-earth.kmz',
+    kind: 'file',
+  });
 }
 
 function importProjectZipClick() {
@@ -11328,7 +11602,7 @@ async function importProjectZipFile(file) {
   S.objects.filter(o => o.type === 'field_photo').forEach(normalizeFieldPhotoObject);
   preloadPhotoThumbs();
   await saveCurrentProject(false);
-  showHint('Gezi ZIP içe aktarıldı');
+  showHint('Çalışma ZIP içe aktarıldı');
 }
 
 // ═══ PLANAI FIELD — Raporlama modülü (MVP) ════════════════════
@@ -11745,15 +12019,22 @@ async function buildSatelliteBasemapDataUrl(bounds, w, h) {
 
 function buildReportMapFallbackDataUrl() {
   const feats = [];
+  const trackVerts = [];
   S.objects.forEach(o => {
-    if (o.type === 'field_photo' || o.type === 'field_note') {
-      if (o.lat != null && o.lon != null) feats.push({ lat: o.lat, lon: o.lon, col: o.type === 'field_photo' ? '#e67e22' : '#1a73e8' });
+    if (o.type === 'field_photo' || o.type === 'field_note' || o.type === 'field_video') {
+      if (o.lat != null && o.lon != null) {
+        const col = o.type === 'field_photo' ? '#e67e22' : o.type === 'field_video' ? '#8e44ad' : '#1a73e8';
+        feats.push({ lat: o.lat, lon: o.lon, col });
+      }
     } else if (o.type === 'field_gps_track' && o.vertices?.length >= 2) {
-      o.vertices.forEach(v => feats.push({ lat: v.lat, lon: v.lon, col: '#1565c0', track: true }));
+      o.vertices.forEach(v => {
+        if (v.lat != null && v.lon != null) trackVerts.push({ lat: v.lat, lon: v.lon });
+      });
     } else if (o.lat != null && o.lon != null) {
       feats.push({ lat: o.lat, lon: o.lon, col: '#546e7a' });
     }
   });
+  trackVerts.forEach(v => feats.push({ lat: v.lat, lon: v.lon, col: '#1565c0', track: true }));
   if (!feats.length && S.mapCenter?.lat != null) {
     feats.push({ lat: S.mapCenter.lat, lon: S.mapCenter.lon, col: '#1a73e8' });
   }
@@ -11771,8 +12052,16 @@ function buildReportMapFallbackDataUrl() {
     y: ((maxLat - lat) / (maxLat - minLat || 1)) * 540,
   });
   let body = '<rect width="960" height="540" fill="#e8eef4"/>';
-  body += '<text x="12" y="22" font-size="12" fill="#5a6a7a">PlanAI Field — vektör özet (uydu katmanı dışa aktarılamadı)</text>';
+  body += '<text x="12" y="22" font-size="12" fill="#5a6a7a">PlanAI Field — rota özeti</text>';
+  if (trackVerts.length >= 2) {
+    const pts = trackVerts.map(v => {
+      const q = proj(v.lat, v.lon);
+      return q.x.toFixed(1) + ',' + q.y.toFixed(1);
+    }).join(' ');
+    body += '<polyline points="' + pts + '" fill="none" stroke="#1565c0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>';
+  }
   feats.forEach(f => {
+    if (f.track) return;
     const q = proj(f.lat, f.lon);
     body += '<circle cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="7" fill="' + f.col + '" stroke="#fff" stroke-width="2"/>';
   });
@@ -11780,7 +12069,7 @@ function buildReportMapFallbackDataUrl() {
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
 
-/** Offline-safe basemap for exported replay when satellite tiles unavailable. */
+/** Offline-safe basemap for exported inspection playback when satellite tiles unavailable. */
 function buildReportBoundsFallbackDataUrl(bounds, events, lang) {
   const tr = lang === 'tr';
   const feats = [];
@@ -12227,6 +12516,8 @@ window.shareSavedProjectReport = shareSavedProjectReport;
 window.closeFieldReportViewer = closeFieldReportViewer;
 window.shareFieldReportViewer = shareFieldReportViewer;
 window.toggleFieldProjectReportsPanel = toggleFieldProjectReportsPanel;
+window.toggleFieldPastProjectsMenu = toggleFieldPastProjectsMenu;
+window.closeFieldPastTripsMenu = closeFieldPastTripsMenu;
 window.deleteProjectReport = deleteProjectReport;
 
 async function collectReportPhotos() {
@@ -12248,6 +12539,10 @@ async function collectReportPhotos() {
       caption: ph.description || ph.caption || ph.title || '',
       imageDataUrl: dataUrl,
       hasVoice: !!ph.hasVoice,
+      isPanorama: !!ph.isPanorama,
+      panoHeading: ph.panoHeading ?? ph.heading ?? null,
+      width: ph.width || null,
+      height: ph.height || null,
       voiceDuration: ph.voiceDuration || 0,
       audioDataUrl: '',
     };
@@ -12260,6 +12555,40 @@ async function collectReportPhotos() {
       }
     }
     out.push(row);
+  }
+  return out;
+}
+
+async function collectReportVideos() {
+  const list = S.objects.filter(o => o.type === 'field_video' && o.visible !== false);
+  const out = [];
+  for (const vid of list) {
+    normalizeFieldVideoObject(vid);
+    let thumbBlob = (await getPhotoBlobRecord(vid.videoId, 'thumb'))?.data;
+    if (thumbBlob) thumbBlob = await resizeImageBlob(thumbBlob, 480);
+    const thumbDataUrl = thumbBlob ? await blobToDataUrl(thumbBlob) : '';
+    let videoDataUrl = '';
+    try {
+      const vrow = await getPhotoBlobRecord(vid.videoId, 'video');
+      if (vrow?.data && vrow.data.size < 12 * 1024 * 1024) {
+        videoDataUrl = await blobToDataUrl(vrow.data);
+      }
+    } catch (e) {
+      console.warn('[Report video]', vid.videoId, e);
+    }
+    out.push({
+      id: vid.videoId || vid.id,
+      videoNum: vid.videoNum,
+      lat: vid.lat,
+      lon: vid.lon,
+      timestamp: vid.timestamp || vid.createdAt,
+      duration: vid.duration || 0,
+      title: vid.title || vid.description || '',
+      description: vid.description || vid.title || '',
+      isVideoNote: vid.isVideoNote !== false,
+      thumbDataUrl,
+      videoDataUrl,
+    });
   }
   return out;
 }
@@ -12376,6 +12705,41 @@ function buildInteractiveInspectionContextHtml(ctx, tr) {
 }
 
 async function generateProjectReport(onProgress) {
+  if (typeof ReportDataBuilder !== 'undefined') {
+    const data = await ReportDataBuilder.buildFromCurrentProject(onProgress);
+    const prog = (p, s) => { if (onProgress) onProgress(p, s); };
+    prog(75, t('report.doc.progress.page'));
+    const html = buildReportHTML(data);
+    prog(88, t('report.doc.progress.pdf'));
+    let pdfBlob = null;
+    try {
+      pdfBlob = await exportProjectPDF(html);
+    } catch (e) {
+      console.warn('[Report PDF]', e);
+    }
+    prog(100, t('report.doc.progress.done'));
+    return {
+      html, pdfBlob,
+      mapPng: data.mapPng,
+      mapDataUrl: data.mapDataUrl,
+      interactiveBasemapUrl: data.interactiveBasemapUrl,
+      geoBounds: data.geoBounds,
+      brandLogoUrl: data.brandLogoUrl,
+      snap: data.snap,
+      project: data.project,
+      meta: data.meta,
+      photos: data.allPhotos || data.photos,
+      videos: data.videos,
+      videoNotes: data.videoNotes,
+      panoramas: data.panoramas,
+      voiceNotes: data.voiceNotes,
+      notes: data.notes,
+      measurements: data.measurements,
+      layers: data.layers,
+      areas: data.areas,
+      gpsTrack: data.gpsTrack,
+    };
+  }
   const prog = (p, s) => { if (onProgress) onProgress(p, s); };
   prog(5, t('report.doc.progress.collect'));
   await saveCurrentProject(true);
@@ -12385,7 +12749,7 @@ async function generateProjectReport(onProgress) {
   snap.measurements = measurements;
 
   prog(25, t('report.doc.progress.map'));
-  const mapPng = await captureMapSnapshot(2);
+  const mapPng = await captureRouteMapSnapshot(2);
   let mapDataUrl = mapPng ? await blobToDataUrl(mapPng) : '';
   if (!mapDataUrl) {
     mapDataUrl = buildReportMapFallbackDataUrl();
@@ -12396,6 +12760,9 @@ async function generateProjectReport(onProgress) {
 
   prog(45, t('report.doc.progress.photos'));
   const photos = await collectReportPhotos();
+
+  prog(52, PA_LANG === 'tr' ? 'Video notlar…' : 'Video notes…');
+  const videos = await collectReportVideos();
 
   prog(60, t('report.doc.progress.notes'));
   const notes = await collectReportNotes();
@@ -12412,14 +12779,18 @@ async function generateProjectReport(onProgress) {
   const objectCounts = {
     total: S.objects.length,
     photos: photos.length,
+    videos: videos.length,
     notes: notes.length,
-    sketch: S.objects.filter(o => !o._import && o.type !== 'field_photo' && o.type !== 'field_note').length,
+    sketch: S.objects.filter(o => !o._import && o.type !== 'field_photo' && o.type !== 'field_note' && o.type !== 'field_video').length,
     imports: S.objects.filter(o => o._import).length,
   };
+
+  const inspectionAt = deriveProjectInspectionDate(snap, photos, notes, videos);
 
   const reportMeta = {
     templateId: REPORT_TEMPLATE_ID,
     generatedAt,
+    inspectionAt,
     appVersion: PLANAI_FIELD_APP_VERSION,
     lang: PA_LANG,
     crs: 'WGS84 (EPSG:4326)',
@@ -12440,6 +12811,7 @@ async function generateProjectReport(onProgress) {
     meta: reportMeta,
     mapDataUrl,
     photos,
+    videos,
     notes,
     measurements,
     brandLogoUrl,
@@ -12456,16 +12828,30 @@ async function generateProjectReport(onProgress) {
   prog(100, t('report.doc.progress.done'));
   return {
     html, pdfBlob, mapPng, mapDataUrl, interactiveBasemapUrl, geoBounds, brandLogoUrl,
-    snap, project: snap, meta: reportMeta, photos, notes, measurements,
+    snap, project: snap, meta: reportMeta, photos, videos, notes, measurements,
   };
 }
 
 function buildReportHTML(data) {
-  const { project, meta, mapDataUrl, photos, notes, measurements } = data;
+  const {
+    project, meta, mapDataUrl, photos, videos, videoNotes, panoramas, voiceNotes, notes, measurements,
+    layers, areas, gpsTrack,
+  } = data;
+  const allVideos = videos || [];
+  const allVideoNotes = videoNotes || (allVideos.filter(v => v.isVideoNote !== false));
+  const regularVideos = (videos || []).filter(v => v.isVideoNote === false);
+  const panoList = panoramas || (photos || []).filter(p => p.isPanorama);
+  const photoList = (photos || []).filter(p => !p.isPanorama);
+  const voiceList = voiceNotes || (photos || []).filter(p => p.hasVoice);
+  const layerList = layers || [];
+  const areaList = areas || (measurements?.items || []).filter(it => it.kind === 'polygon');
   const lang = resolveReportLang(data);
   const L = (key, vars) => tLang(lang, key, vars);
+  const rptPage = (title, body, show) => (show && body) ? `<section class="rpt-page"><h2>${title}</h2>${body}</section>` : '';
   const name = escapeHtml(project.name || L('report.doc.projectDefault'));
   const user = escapeHtml(meta.userName || '—');
+  const inspectionIso = meta.inspectionAt || project.createdAt || meta.generatedAt;
+  const inspection = formatReportDateTime(inspectionIso, lang);
   const gen = formatReportDateTime(meta.generatedAt, lang);
   const created = formatReportDateTime(project.createdAt, lang);
   const center = formatCoord(meta.mapCenter?.lat, meta.mapCenter?.lon);
@@ -12481,7 +12867,7 @@ function buildReportHTML(data) {
     return `<tr><td>${escapeHtml(it.label)}</td><td>${L('report.doc.measure.kindArea')}</td><td>—</td><td>${formatAreaReport(it.areaM2)}</td><td>${formatLengthReport(it.perimeterM)}</td></tr>`;
   }).join('');
 
-  const photoBlocks = photos.map(ph => `
+  const photoBlocks = photoList.map(ph => `
     <article class="rpt-card">
       <div class="rpt-photo-grid">
         ${ph.imageDataUrl ? `<img src="${ph.imageDataUrl}" alt="Foto ${ph.photoNum}"/>` : `<div class="rpt-noimg">${L('report.doc.photos.noImage')}</div>`}
@@ -12495,7 +12881,79 @@ function buildReportHTML(data) {
       </div>
     </article>`).join('');
 
-  const noteBlocks = notes.map(n => `
+  const videoBlocks = regularVideos.map(v => `
+    <article class="rpt-card">
+      <div class="rpt-photo-grid">
+        ${v.thumbDataUrl ? `<img src="${v.thumbDataUrl}" alt="Video ${v.videoNum}"/>` : `<div class="rpt-noimg">🎬</div>`}
+        <dl>
+          <dt>${L('report.doc.videos.videoNo')}</dt><dd>V${v.videoNum || '—'}</dd>
+          <dt>${L('report.doc.photos.coordinate')}</dt><dd>${formatCoord(v.lat, v.lon)}</dd>
+          <dt>${L('report.doc.photos.dateTime')}</dt><dd>${formatReportDateTime(v.timestamp, lang)}</dd>
+          <dt>${L('report.doc.videos.duration')}</dt><dd>${v.duration ? Math.round(v.duration) + ' sn' : '—'}</dd>
+          <dt>${L('report.doc.photos.caption')}</dt><dd>${escapeHtml(v.title || v.description || '—')}</dd>
+        </dl>
+      </div>
+      <p class="rpt-meta">${L('report.doc.videos.interactiveHint')}</p>
+    </article>`).join('');
+
+  const videoNoteBlocks = allVideoNotes.map(v => `
+    <article class="rpt-card">
+      <div class="rpt-photo-grid">
+        ${v.thumbDataUrl ? `<img src="${v.thumbDataUrl}" alt="VN${v.videoNum}"/>` : `<div class="rpt-noimg">🎥</div>`}
+        <dl>
+          <dt>${L('report.doc.videos.videoNo')}</dt><dd>VN${v.videoNum || '—'}</dd>
+          <dt>${L('report.doc.photos.coordinate')}</dt><dd>${formatCoord(v.lat, v.lon)}</dd>
+          <dt>${L('report.doc.photos.dateTime')}</dt><dd>${formatReportDateTime(v.timestamp, lang)}</dd>
+          <dt>${L('report.doc.videos.duration')}</dt><dd>${v.duration ? Math.round(v.duration) + ' sn' : '—'}</dd>
+          <dt>${L('report.doc.photos.caption')}</dt><dd>${escapeHtml(v.description || v.title || '—')}</dd>
+        </dl>
+      </div>
+    </article>`).join('');
+
+  const panoBlocks = panoList.map(p => `
+    <article class="rpt-card">
+      <div class="rpt-photo-grid">
+        ${p.imageDataUrl ? `<img src="${p.imageDataUrl}" alt="Pano ${p.photoNum}"/>` : `<div class="rpt-noimg">🌐</div>`}
+        <dl>
+          <dt>${L('report.doc.photos.photoNo')}</dt><dd>P${p.photoNum || '—'}</dd>
+          <dt>${L('report.doc.photos.coordinate')}</dt><dd>${formatCoord(p.lat, p.lon)}</dd>
+          <dt>${L('report.doc.photos.dateTime')}</dt><dd>${formatReportDateTime(p.timestamp, lang)}</dd>
+          <dt>${L('report.doc.panoramas.heading')}</dt><dd>${p.heading != null ? Math.round(p.heading) + '°' : '—'}</dd>
+          <dt>${L('report.doc.panoramas.resolution')}</dt><dd>${p.width && p.height ? p.width + '×' + p.height : '—'}</dd>
+          <dt>${L('report.doc.photos.caption')}</dt><dd>${escapeHtml(p.caption || '—')}</dd>
+        </dl>
+      </div>
+    </article>`).join('');
+
+  const voiceBlocks = voiceList.map(v => `
+    <article class="rpt-card">
+      <div class="rpt-photo-grid">
+        ${v.imageDataUrl ? `<img src="${v.imageDataUrl}" alt="Voice ${v.photoNum}"/>` : `<div class="rpt-noimg">🎤</div>`}
+        <dl>
+          <dt>${L('report.doc.photos.photoNo')}</dt><dd>F${v.photoNum || '—'}</dd>
+          <dt>${L('report.doc.photos.coordinate')}</dt><dd>${formatCoord(v.lat, v.lon)}</dd>
+          <dt>${L('report.doc.photos.dateTime')}</dt><dd>${formatReportDateTime(v.timestamp, lang)}</dd>
+          <dt>${L('report.doc.videos.duration')}</dt><dd>${v.voiceDuration ? Math.round(v.voiceDuration) + ' sn' : '—'}</dd>
+          <dt>${L('report.doc.photos.caption')}</dt><dd>${escapeHtml(v.caption || '—')}</dd>
+        </dl>
+      </div>
+    </article>`).join('');
+
+  const layerRows = layerList.map(l =>
+    `<tr><td>${escapeHtml(l.name)}</td><td>${l.count}</td><td>${l.import ? 'Import' : 'Sketch'}</td></tr>`,
+  ).join('');
+
+  const areaRows = areaList.map(it =>
+    `<tr><td>${escapeHtml(it.label)}</td><td>${formatAreaReport(it.areaM2)}</td><td>${formatLengthReport(it.perimeterM)}</td></tr>`,
+  ).join('');
+
+  const gpsPoints = gpsTrack?.path?.length || 0;
+  const gpsSectionBody = gpsPoints >= 2
+    ? `<p class="rpt-tech">${L('report.doc.gpsRoute.title')}: ${gpsPoints} ${lang === 'tr' ? 'nokta' : 'points'}</p>`
+      + (mapDataUrl ? `<img class="rpt-map" src="${mapDataUrl}" alt="${L('report.doc.gpsRoute.title')}"/>` : '')
+    : '';
+
+  const noteBlocks = (notes || []).map(n => `
     <article class="rpt-card">
       <h4>${L('report.doc.notes.label')} #${n.noteNum || '—'}</h4>
       <p class="rpt-meta">${formatCoord(n.lat, n.lon)} · ${formatReportDateTime(n.timestamp, lang)}</p>
@@ -12564,8 +13022,8 @@ ${secureMark}
   <p class="sub">${L('report.doc.subtitle')}</p>
   <table>
     <tr><td>${L('report.doc.cover.project')}</td><td>${name}</td></tr>
-    <tr><td>${L('report.doc.cover.date')}</td><td>${gen.split(' ')[0] || gen}</td></tr>
-    <tr><td>${L('report.doc.cover.time')}</td><td>${gen.split(' ')[1] || '—'}</td></tr>
+    <tr><td>${L('report.doc.cover.date')}</td><td>${inspection.split(' ')[0] || inspection}</td></tr>
+    <tr><td>${L('report.doc.cover.time')}</td><td>${inspection.split(' ')[1] || '—'}</td></tr>
     <tr><td>${L('report.doc.cover.user')}</td><td>${user}</td></tr>
     <tr><td>${L('report.doc.cover.center')}</td><td>${center}</td></tr>
     ${contextCoverRows}
@@ -12578,10 +13036,13 @@ ${contextSection}
 <section class="rpt-page">
   <h2>${L('report.doc.summary.title')}</h2>
   <div class="rpt-summary">
-    <div class="rpt-stat"><b>${meta.objectCounts?.photos ?? 0}</b><span>${L('report.doc.summary.photos')}</span></div>
-    <div class="rpt-stat"><b>${meta.objectCounts?.notes ?? 0}</b><span>${L('report.doc.summary.notes')}</span></div>
+    <div class="rpt-stat"><b>${meta.objectCounts?.photos ?? photoList.length}</b><span>${L('report.doc.summary.photos')}</span></div>
+    <div class="rpt-stat"><b>${meta.objectCounts?.videos ?? regularVideos.length}</b><span>${L('report.doc.videos.title')}</span></div>
+    <div class="rpt-stat"><b>${meta.objectCounts?.videoNotes ?? allVideoNotes.length}</b><span>${L('report.doc.videoNotes.title')}</span></div>
+    <div class="rpt-stat"><b>${meta.objectCounts?.voiceNotes ?? voiceList.length}</b><span>${L('report.doc.voiceNotes.title')}</span></div>
+    <div class="rpt-stat"><b>${meta.objectCounts?.panoramas ?? panoList.length}</b><span>${L('report.doc.panoramas.title')}</span></div>
+    <div class="rpt-stat"><b>${meta.objectCounts?.notes ?? (notes || []).length}</b><span>${L('report.doc.summary.notes')}</span></div>
     <div class="rpt-stat"><b>${measurements.items?.length ?? 0}</b><span>${L('report.doc.summary.measured')}</span></div>
-    <div class="rpt-stat"><b>${meta.objectCounts?.imports ?? 0}</b><span>${L('report.doc.summary.imports')}</span></div>
     <div class="rpt-stat"><b>${formatLengthReport(totals.totalPolylineM)}</b><span>${L('report.doc.summary.totalLine')}</span></div>
     <div class="rpt-stat"><b>${formatAreaReport(totals.totalPolygonAreaM2)}</b><span>${L('report.doc.summary.totalArea')}</span></div>
   </div>
@@ -12592,27 +13053,39 @@ ${contextSection}
 <section class="rpt-page">
   <h2>${L('report.doc.map.title')}</h2>
   ${mapDataUrl ? `<img class="rpt-map" src="${mapDataUrl}" alt="${L('report.doc.map.title')}"/>` : `<p class="rpt-tech">${L('report.doc.map.unavailable')}</p>`}
-  <p class="rpt-meta">${L('report.doc.map.basemap')}: ${escapeHtml(S.basemap || '—')} · CRS: WGS84</p>
+  <p class="rpt-meta">${L('report.doc.map.routeCaption')} · ${L('report.doc.map.basemap')}: ${escapeHtml(S.basemap || '—')} · CRS: WGS84</p>
 </section>
 
-<section class="rpt-page">
-  <h2>${L('report.doc.measure.title')}</h2>
-  <table class="rpt-table">
-    <thead><tr><th>${L('report.doc.measure.element')}</th><th>${L('report.doc.measure.type')}</th><th>${L('report.doc.measure.length')}</th><th>${L('report.doc.measure.area')}</th><th>${L('report.doc.measure.perimeter')}</th></tr></thead>
-    <tbody>${measureRows || `<tr><td colspan="5">${L('report.doc.measure.empty')}</td></tr>`}</tbody>
-  </table>
-</section>
+${rptPage(L('report.doc.gpsRoute.title'), gpsSectionBody, gpsPoints >= 2)}
+
+${rptPage(L('report.doc.measure.title'), `<table class="rpt-table"><thead><tr><th>${L('report.doc.measure.element')}</th><th>${L('report.doc.measure.type')}</th><th>${L('report.doc.measure.length')}</th><th>${L('report.doc.measure.area')}</th><th>${L('report.doc.measure.perimeter')}</th></tr></thead><tbody>${measureRows}</tbody></table>`, measureRows)}
+
+${rptPage(L('report.doc.areas.title'), `<table class="rpt-table"><thead><tr><th>${L('report.doc.measure.element')}</th><th>${L('report.doc.measure.area')}</th><th>${L('report.doc.measure.perimeter')}</th></tr></thead><tbody>${areaRows}</tbody></table>`, areaRows)}
 
 ${slopeSection}
 
+${rptPage(L('report.doc.photos.title'), photoBlocks, photoList.length)}
+
+${rptPage(L('report.doc.videos.title'), videoBlocks, regularVideos.length)}
+
+${rptPage(L('report.doc.videoNotes.title'), videoNoteBlocks, allVideoNotes.length)}
+
+${rptPage(L('report.doc.voiceNotes.title'), voiceBlocks, voiceList.length)}
+
+${rptPage(L('report.doc.panoramas.title'), panoBlocks, panoList.length)}
+
+${rptPage(L('report.doc.notes.title'), noteBlocks, (notes || []).length)}
+
+${rptPage(L('report.doc.layers.title'), `<table class="rpt-table"><thead><tr><th>${L('report.doc.measure.element')}</th><th>#</th><th>Type</th></tr></thead><tbody>${layerRows}</tbody></table>`, layerRows)}
+
 <section class="rpt-page">
-  <h2>${L('report.doc.photos.title')}</h2>
-  ${photoBlocks || `<p class="rpt-tech">${L('report.doc.photos.empty')}</p>`}
+  <h2>${L('report.doc.ai.title')}</h2>
+  <p class="rpt-text">${L('report.doc.ai.placeholder')}</p>
 </section>
 
 <section class="rpt-page">
-  <h2>${L('report.doc.notes.title')}</h2>
-  ${noteBlocks || `<p class="rpt-tech">${L('report.doc.notes.empty')}</p>`}
+  <h2>${L('report.doc.conclusion.title')}</h2>
+  <p class="rpt-text">${L('report.doc.conclusion.body')}</p>
 </section>
 
 <section class="rpt-page">
@@ -12717,7 +13190,7 @@ function openReportPreview(html, pdfBlob, projectName, kind) {
 
 async function createProjectReport() {
   if (!FIELD_PROJECT.id) {
-    showHint('Önce gezi oluşturun veya açın');
+    showHint('Önce saha çalışması oluşturun veya açın');
     openProjectPanel();
     return;
   }
@@ -12793,14 +13266,23 @@ function extractGpsTrackFeat(project, data, tr) {
   return track;
 }
 
-function buildReplayPayloadFromReport(data) {
+function buildInspectionPlaybackPayload(data) {
   const project = data.project || data.snap;
-  const { meta, photos, notes } = data;
+  const { meta, notes } = data;
+  const allPhotos = data.allPhotos || data.photos || [];
+  const photoList = allPhotos.filter(p => !p.isPanorama);
+  const panoramas = data.panoramas || allPhotos.filter(p => p.isPanorama);
+  const voiceNotes = data.voiceNotes || allPhotos.filter(p => p.hasVoice);
+  const allVideos = data.videos || data.videoNotes ? [...(data.videos || []), ...(data.videoNotes || [])] : [];
+  const videoNotes = data.videoNotes || allVideos.filter(v => v.isVideoNote !== false);
+  const videos = (data.videos || []).filter(v => v.isVideoNote === false);
+  const layers = data.layers || [];
+  const measurements = data.measurements || meta?.measurements || {};
   const lang = resolveReportLang(data);
   const tr = lang === 'tr';
   const basemapUrl = data.interactiveBasemapUrl || data.mapDataUrl || '';
-  const bounds = data.geoBounds || computeReportGeoBounds(photos, notes, project, meta?.mapCenter);
-  const track = extractGpsTrackFeat(project, data, tr);
+  const bounds = data.geoBounds || computeReportGeoBounds(allPhotos, notes || [], project, meta?.mapCenter);
+  const track = data.gpsTrack || extractGpsTrackFeat(project, data, tr);
   const timeline = [];
 
   const noteSeverity = (text) => {
@@ -12810,7 +13292,7 @@ function buildReplayPayloadFromReport(data) {
     return 'info';
   };
 
-  notes.forEach(n => {
+  (notes || []).forEach(n => {
     timeline.push({
       id: n.id || ('n_' + n.noteNum),
       kind: 'note',
@@ -12822,21 +13304,75 @@ function buildReplayPayloadFromReport(data) {
       severity: noteSeverity(n.text),
     });
   });
-  photos.forEach(p => {
+  photoList.forEach(p => {
     const ev = {
       id: p.id || ('p_' + p.photoNum),
-      kind: p.hasVoice ? 'audio' : 'photo',
+      kind: 'photo',
       label: 'F' + (p.photoNum || ''),
       text: p.caption || '',
       ts: p.timestamp,
       lat: p.lat,
       lon: p.lon,
       imageDataUrl: p.imageDataUrl || '',
-      audioDataUrl: p.audioDataUrl || '',
-      hasVoice: !!p.hasVoice,
-      voiceDuration: p.voiceDuration || 0,
     };
     timeline.push(ev);
+  });
+  voiceNotes.forEach(p => {
+    if (!p.hasVoice && !p.audioDataUrl) return;
+    timeline.push({
+      id: (p.id || ('vn_' + p.photoNum)) + '_voice',
+      kind: 'audio',
+      label: (tr ? 'Ses ' : 'Voice ') + 'F' + (p.photoNum || ''),
+      text: p.caption || '',
+      ts: p.timestamp,
+      lat: p.lat,
+      lon: p.lon,
+      imageDataUrl: p.imageDataUrl || '',
+      audioDataUrl: p.audioDataUrl || '',
+      hasVoice: true,
+      voiceDuration: p.voiceDuration || 0,
+    });
+  });
+  panoramas.forEach(p => {
+    timeline.push({
+      id: p.id || ('pano_' + p.photoNum),
+      kind: 'panorama',
+      label: (tr ? 'Panorama ' : 'Panorama ') + (p.photoNum || ''),
+      text: p.caption || '',
+      ts: p.timestamp,
+      lat: p.lat,
+      lon: p.lon,
+      imageDataUrl: p.imageDataUrl || '',
+      heading: p.heading ?? p.panoHeading ?? null,
+    });
+  });
+  videoNotes.forEach(v => {
+    timeline.push({
+      id: v.id || ('vn_' + v.videoNum),
+      kind: 'videoNote',
+      label: 'VN' + (v.videoNum || ''),
+      text: v.description || v.title || '',
+      ts: v.timestamp,
+      lat: v.lat,
+      lon: v.lon,
+      thumbDataUrl: v.thumbDataUrl || '',
+      videoDataUrl: v.videoDataUrl || '',
+      duration: v.duration || 0,
+    });
+  });
+  videos.forEach(v => {
+    timeline.push({
+      id: v.id || ('v_' + v.videoNum),
+      kind: 'video',
+      label: 'V' + (v.videoNum || ''),
+      text: v.title || '',
+      ts: v.timestamp,
+      lat: v.lat,
+      lon: v.lon,
+      thumbDataUrl: v.thumbDataUrl || '',
+      videoDataUrl: v.videoDataUrl || '',
+      duration: v.duration || 0,
+    });
   });
   timeline.sort((a, b) => String(a.ts || '').localeCompare(String(b.ts || '')));
 
@@ -12848,8 +13384,8 @@ function buildReplayPayloadFromReport(data) {
     events.push({
       id: 'evt_start',
       kind: 'start',
-      label: tr ? 'Yolculuk Başladı' : 'Journey Started',
-      text: tr ? 'Saha incelemesi başlangıcı' : 'Field inspection journey start',
+      label: tr ? 'İnceleme Başladı' : 'Inspection Started',
+      text: tr ? 'Saha incelemesi başlangıcı' : 'Field inspection start',
       ts: first.ts,
       lat: first.lat,
       lon: first.lon,
@@ -12860,8 +13396,8 @@ function buildReplayPayloadFromReport(data) {
     events.push({
       id: 'evt_end',
       kind: 'end',
-      label: tr ? 'Yolculuk Tamamlandı' : 'Journey Completed',
-      text: tr ? 'Yolculuk sonu' : 'Journey end',
+      label: tr ? 'İnceleme Tamamlandı' : 'Inspection Completed',
+      text: tr ? 'İnceleme sonu' : 'Inspection end',
       ts: last.ts,
       lat: last.lat,
       lon: last.lon,
@@ -12882,30 +13418,40 @@ function buildReplayPayloadFromReport(data) {
   let durationMin = t1 > t0 ? (t1 - t0) / 60000 : Math.max(12, timeline.length * 4);
   if (!Number.isFinite(durationMin) || durationMin < 1) durationMin = Math.max(12, timeline.length * 4);
 
-  const audioCount = photos.filter(p => p.hasVoice).length;
+  const audioCount = voiceNotes.length;
   const insights = [];
-  const warnNotes = notes.filter(n => noteSeverity(n.text) !== 'info');
+  const warnNotes = (notes || []).filter(n => noteSeverity(n.text) !== 'info');
   if (warnNotes.length) {
     insights.push(tr
       ? warnNotes.length + ' kritik saha gözlemi tespit edildi.'
       : warnNotes.length + ' critical field observations identified.');
   }
-  if (photos.length >= 2) {
+  if (photoList.length >= 2) {
     insights.push(tr
-      ? 'Yolculuk boyunca inceleme aktivitesi yoğunlaştı.'
-      : 'Inspection activity concentrated along the journey corridor.');
+      ? 'İnceleme boyunca saha aktivitesi yoğunlaştı.'
+      : 'Inspection activity concentrated along the project corridor.');
+  }
+  if (panoramas.length) {
+    insights.push(tr
+      ? panoramas.length + ' panorama kaydı eklendi.'
+      : panoramas.length + ' panorama capture(s) recorded.');
+  }
+  if (videoNotes.length) {
+    insights.push(tr
+      ? videoNotes.length + ' video not kaydı.'
+      : videoNotes.length + ' video note(s).');
   }
   insights.push(tr
-    ? 'Yolculuk süresi: ' + Math.round(durationMin) + ' dakika.'
-    : 'Journey duration: ' + Math.round(durationMin) + ' minutes.');
+    ? 'İnceleme süresi: ' + Math.round(durationMin) + ' dakika.'
+    : 'Inspection duration: ' + Math.round(durationMin) + ' minutes.');
 
   const inspectionContext = meta?.inspectionContext || collectFieldInspectionContext();
   appendInspectionContextInsights(insights, inspectionContext, tr);
 
   return {
     lang,
-    projectName: project?.name || (tr ? 'Saha Gezisi' : 'Field Journey'),
-    generatedAt: meta?.generatedAt || new Date().toISOString(),
+    projectName: project?.name || (tr ? 'Saha Çalışması' : 'Field Project'),
+    generatedAt: meta?.inspectionAt || meta?.generatedAt || new Date().toISOString(),
     inspectorName: meta?.userName || '',
     basemapUrl,
     brandLogoUrl: data.brandLogoUrl || embeddedBrandLogoDataUrl() || '',
@@ -12915,11 +13461,28 @@ function buildReplayPayloadFromReport(data) {
     project: project ? { id: project.id, name: project.name, objects: project.objects || [] } : null,
     events,
     inspectionContext,
+    sections: {
+      photos: photoList,
+      videos,
+      videoNotes,
+      voiceNotes,
+      panoramas,
+      notes: notes || [],
+      measurements: measurements.items || [],
+      layers,
+      gpsTrack: track,
+    },
     stats: {
       routeKm,
       durationMin,
-      photoCount: photos.length,
-      noteCount: notes.length,
+      photoCount: photoList.length,
+      videoCount: videos.length,
+      videoNoteCount: videoNotes.length,
+      panoramaCount: panoramas.length,
+      voiceNoteCount: voiceNotes.length,
+      noteCount: (notes || []).length,
+      layerCount: layers.length,
+      measurementCount: (measurements.items || []).length,
       audioCount,
       startTime: first?.ts,
       endTime: last?.ts,
@@ -12938,20 +13501,25 @@ async function buildCinematicInteractiveReportHTML(data, opts) {
     return null;
   }
   if (typeof FieldReplayAssets === 'undefined' || !FieldReplayAssets?.js) {
-    console.warn('[CinematicReport] FieldReplayAssets not loaded — cinematic replay unavailable');
+    console.warn('[CinematicReport] FieldInspectionAssets not loaded — cinematic playback unavailable');
     return null;
   }
   try {
     if (!data.brandLogoUrl) data.brandLogoUrl = await loadBrandLogoDataUrl();
     if (!data.brandLogoUrl) data.brandLogoUrl = embeddedBrandLogoDataUrl();
-    if (Array.isArray(data.photos)) {
-      data.photos = await enrichPhotosWithAudio(data.photos);
-      const voiceMissing = data.photos.find(p => p.hasVoice && !p.audioDataUrl);
+    if (Array.isArray(data.allPhotos || data.photos)) {
+      const src = data.allPhotos || data.photos;
+      const enriched = await enrichPhotosWithAudio(src);
+      data.allPhotos = enriched;
+      data.photos = enriched.filter(p => !p.isPanorama);
+      data.voiceNotes = enriched.filter(p => p.hasVoice);
+      data.panoramas = enriched.filter(p => p.isPanorama);
+      const voiceMissing = enriched.find(p => p.hasVoice && !p.audioDataUrl);
       if (voiceMissing && data.meta?.simulation) {
         voiceMissing.audioDataUrl = await synthesizeDemoVoiceDataUrl(voiceMissing.voiceDuration || 12);
       }
     }
-    const payload = buildReplayPayloadFromReport(data);
+    const payload = buildInspectionPlaybackPayload(data);
     if (!payload.brandLogoUrl) payload.brandLogoUrl = data.brandLogoUrl || embeddedBrandLogoDataUrl() || '';
     if (!payload.basemapUrl) {
       payload.basemapUrl = data.interactiveBasemapUrl || data.mapDataUrl || '';
@@ -13005,8 +13573,8 @@ function buildInteractiveFieldReportHTMLLegacy(data) {
   const lang = resolveReportLang(data);
   const tr = lang === 'tr';
   const basemapUrl = data.interactiveBasemapUrl || data.mapDataUrl || '';
-  if (!project) throw new Error(tr ? 'Gezi verisi bulunamadı' : 'Journey data not found');
-  const name = escapeHtml(project.name || (tr ? 'Saha Gezisi' : 'Field Journey'));
+  if (!project) throw new Error(tr ? 'Çalışma verisi bulunamadı' : 'Project data not found');
+  const name = escapeHtml(project.name || (tr ? 'Saha Çalışması' : 'Field Project'));
   const feats = [];
   notes.forEach(n => feats.push({ kind: 'note', id: n.id, label: (tr ? 'Not #' : 'Note #') + (n.noteNum || ''), lat: n.lat, lon: n.lon, text: n.text, ts: n.timestamp }));
   photos.forEach(p => feats.push({
@@ -13053,11 +13621,11 @@ function buildInteractiveFieldReportHTMLLegacy(data) {
     }
   });
   const listItems = feats.map((f, i) => {
-    const replay = f.kind === 'track'
-      ? '<span class="ir-replay" data-replay="' + i + '" title="Rota oynat">▶</span>' : '';
+    const playbackBtn = f.kind === 'track'
+      ? '<span class="ir-playback" data-playback="' + i + '" title="Rota oynat">▶</span>' : '';
     const voice = f.hasVoice ? ' <span class="ir-voice">🎤</span>' : '';
     const when = f.ts ? '<small class="ir-time">' + escapeHtml(formatReportDateTime(f.ts)) + '</small>' : '';
-    return '<button type="button" class="ir-item" data-idx="' + i + '">' + replay + escapeHtml(f.label) + voice + when +
+    return '<button type="button" class="ir-item" data-idx="' + i + '">' + playbackBtn + escapeHtml(f.label) + voice + when +
       (f.text ? '<small>' + escapeHtml(String(f.text).slice(0, 80)) + '</small>' : '') + '</button>';
   }).join('');
   const photoCards = photos.map(ph => {
@@ -13076,7 +13644,7 @@ function buildInteractiveFieldReportHTMLLegacy(data) {
     es ? es.readJsonScriptBootstrap('BOUNDS', 'planai-bounds') : 'const BOUNDS={minLat:' + minLat + ',maxLat:' + maxLat + ',minLon:' + minLon + ',maxLon:' + maxLon + '};',
     'const DET=document.getElementById("ir-detail");',
     'const SVG=document.querySelector("svg");',
-    'let replayRaf=null;',
+    'let playbackRaf=null;',
     'function proj(lat,lon){',
     '  const x=((lon-BOUNDS.minLon)/(BOUNDS.maxLon-BOUNDS.minLon))*1000;',
     '  const y=((BOUNDS.maxLat-lat)/(BOUNDS.maxLat-BOUNDS.minLat))*700;',
@@ -13090,13 +13658,13 @@ function buildInteractiveFieldReportHTMLLegacy(data) {
     '  document.querySelectorAll(\'svg [data-idx="\'+i+\'"]\').forEach(el=>el.classList.add("ir-highlight"));',
     '}',
     'function pathTs(ts){if(!ts)return 0;const n=Date.parse(ts);return Number.isFinite(n)?n:0;}',
-    'function stopReplay(){',
-    '  if(replayRaf)cancelAnimationFrame(replayRaf);',
-    '  replayRaf=null;',
-    '  const dot=document.getElementById("ir-replay-dot");',
+    'function stopPlayback(){',
+    '  if(playbackRaf)cancelAnimationFrame(playbackRaf);',
+    '  playbackRaf=null;',
+    '  const dot=document.getElementById("ir-playback-dot");',
     '  if(dot)dot.style.display="none";',
-    '  document.querySelectorAll(".ir-replay-active").forEach(el=>el.classList.remove("ir-replay-active"));',
-    '  document.querySelectorAll(".ir-replay-near").forEach(el=>el.classList.remove("ir-replay-near"));',
+    '  document.querySelectorAll(".ir-playback-active").forEach(el=>el.classList.remove("ir-playback-active"));',
+    '  document.querySelectorAll(".ir-playback-near").forEach(el=>el.classList.remove("ir-playback-near"));',
     '}',
     'function lerpAlongPath(path,t){',
     '  const pts=path.map(p=>proj(p.lat,p.lon));',
@@ -13114,24 +13682,24 @@ function buildInteractiveFieldReportHTMLLegacy(data) {
     '  }',
     '  return pts[pts.length-1];',
     '}',
-    'function syncReplayObs(pos){',
+    'function syncPlaybackObs(pos){',
     '  FEATS.forEach((f,j)=>{',
     '    if(f.kind==="track"||f.lat==null)return;',
     '    const q=proj(f.lat,f.lon);',
     '    const near=Math.hypot(q.x-pos.x,q.y-pos.y)<40;',
-    '    document.querySelector(\'.ir-item[data-idx="\'+j+\'"]\')?.classList.toggle("ir-replay-near",near);',
+    '    document.querySelector(\'.ir-item[data-idx="\'+j+\'"]\')?.classList.toggle("ir-playback-near",near);',
     '  });',
     '}',
-    'function startReplay(i){',
-    '  stopReplay();',
+    'function startPlayback(i){',
+    '  stopPlayback();',
     '  const f=FEATS[i];',
     '  if(!f||!f.path||f.path.length<2)return;',
     '  focusIdx(i);',
-    '  document.querySelectorAll(\'svg [data-idx="\'+i+\'"]\').forEach(el=>el.classList.add("ir-replay-active"));',
-    '  let dot=document.getElementById("ir-replay-dot");',
+    '  document.querySelectorAll(\'svg [data-idx="\'+i+\'"]\').forEach(el=>el.classList.add("ir-playback-active"));',
+    '  let dot=document.getElementById("ir-playback-dot");',
     '  if(!dot){',
     '    dot=document.createElementNS("http://www.w3.org/2000/svg","circle");',
-    '    dot.id="ir-replay-dot";dot.setAttribute("r","11");dot.setAttribute("fill","#27ae60");',
+    '    dot.id="ir-playback-dot";dot.setAttribute("r","11");dot.setAttribute("fill","#27ae60");',
     '    dot.setAttribute("stroke","#fff");dot.setAttribute("stroke-width","3");',
     '    SVG.appendChild(dot);',
     '  }',
@@ -13143,18 +13711,18 @@ function buildInteractiveFieldReportHTMLLegacy(data) {
     '    const u=Math.min(1,(now-tStart)/dur);',
     '    const p=lerpAlongPath(f.path,u);',
     '    dot.setAttribute("cx",p.x);dot.setAttribute("cy",p.y);',
-    '    syncReplayObs(p);',
+    '    syncPlaybackObs(p);',
     '    DET.textContent=f.label+" — "+Math.round(u*100)+"%";',
-    '    if(u<1)replayRaf=requestAnimationFrame(step);',
-    '    else replayRaf=null;',
+    '    if(u<1)playbackRaf=requestAnimationFrame(step);',
+    '    else playbackRaf=null;',
     '  }',
-    '  replayRaf=requestAnimationFrame(step);',
+    '  playbackRaf=requestAnimationFrame(step);',
     '}',
-    'document.querySelectorAll(".ir-item").forEach(b=>b.onclick=()=>{stopReplay();focusIdx(+b.dataset.idx);});',
-    'document.querySelectorAll("svg [data-idx]").forEach(el=>el.onclick=()=>{stopReplay();focusIdx(+el.dataset.idx);});',
-    'document.querySelectorAll(".ir-replay").forEach(b=>b.onclick=e=>{e.stopPropagation();startReplay(+b.dataset.replay);});',
+    'document.querySelectorAll(".ir-item").forEach(b=>b.onclick=()=>{stopPlayback();focusIdx(+b.dataset.idx);});',
+    'document.querySelectorAll("svg [data-idx]").forEach(el=>el.onclick=()=>{stopPlayback();focusIdx(+el.dataset.idx);});',
+    'document.querySelectorAll(".ir-playback").forEach(b=>b.onclick=e=>{e.stopPropagation();startPlayback(+b.dataset.playback);});',
     'const trackIdx=FEATS.findIndex(f=>f.kind==="track");',
-    'if(trackIdx>=0){setTimeout(()=>startReplay(trackIdx),1400);}',
+    'if(trackIdx>=0){setTimeout(()=>startPlayback(trackIdx),1400);}',
   ].join('\n');
   const scrOpen = '<scr' + 'ipt>';
   const scrClose = '</scr' + 'ipt>';
@@ -13180,25 +13748,25 @@ ${cspTag}
 .ir-card{border:1px solid #dde3ea;border-radius:8px;padding:10px;margin:10px;background:#fff}
 .ir-card img{max-width:100%;border-radius:6px}
 .ir-highlight{stroke:#ffcc00!important;stroke-width:6!important}
-.ir-replay{float:right;color:#1565c0;font-size:15px;padding:2px 6px;cursor:pointer}
-.ir-replay:hover{color:#0d47a1}
-.ir-replay-active{stroke:#27ae60!important;stroke-width:6!important;opacity:1!important}
-.ir-replay-near{background:#fff8e1!important;border-left:3px solid #f9a825}
+.ir-playback{float:right;color:#1565c0;font-size:15px;padding:2px 6px;cursor:pointer}
+.ir-playback:hover{color:#0d47a1}
+.ir-playback-active{stroke:#27ae60!important;stroke-width:6!important;opacity:1!important}
+.ir-playback-near{background:#fff8e1!important;border-left:3px solid #f9a825}
 .ir-voice{color:#6a1b9a;font-size:12px}
 .ir-time{display:block;color:#7a8a9a;font-size:10px;margin-top:2px}
-.ir-journey{padding:10px 14px;background:linear-gradient(135deg,#e8f0fe,#f3e8fd);border-bottom:1px solid #dde3ea;font-size:12px;line-height:1.5}
-.ir-journey b{color:#1a3358}
+.ir-project{padding:10px 14px;background:linear-gradient(135deg,#e8f0fe,#f3e8fd);border-bottom:1px solid #dde3ea;font-size:12px;line-height:1.5}
+.ir-project b{color:#1a3358}
 .ir-context{display:flex;flex-wrap:wrap;gap:8px 18px;padding:10px 16px;background:#0f1a28;border-bottom:2px solid #40c057;color:#e8eef4;font-size:12px;line-height:1.4}
 .ir-context span{display:inline-flex;gap:6px;align-items:baseline}
 .ir-context i{font-style:normal;color:#8a96a6;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 .ir-context b{color:#40c057;font-weight:700}
 .ir-map{transition:opacity .35s ease}
 .ir-map.ir-map-focus{opacity:1}
-#ir-replay-dot{filter:drop-shadow(0 2px 5px rgba(0,0,0,.35))}
+#ir-playback-dot{filter:drop-shadow(0 2px 5px rgba(0,0,0,.35))}
 </style></head><body>
 <header class="ir-head"><h1>${name}</h1><span>${formatReportDateTime(meta.generatedAt)}</span></header>
 ${buildInteractiveInspectionContextHtml(meta.inspectionContext, tr)}
-<div class="ir-journey"><b>${tr ? 'Saha yolculuğu' : 'Field journey'}</b> — ${feats.filter(f=>f.kind==='track').length ? (tr ? 'Rota otomatik oynatılır' : 'Route auto-plays') : ''} · ${photos.length} ${tr ? 'foto' : 'photos'} · ${notes.length} ${tr ? 'not' : 'notes'}</div>
+<div class="ir-project"><b>${tr ? 'Saha çalışması' : 'Field project'}</b> — ${feats.filter(f=>f.kind==='track').length ? (tr ? 'Rota otomatik oynatılır' : 'Route auto-plays') : ''} · ${photos.length} ${tr ? 'foto' : 'photos'} · ${notes.length} ${tr ? 'not' : 'notes'}</div>
 <div class="ir-layout">
 <aside class="ir-side">
 <div class="ir-detail" id="ir-detail">${tr ? 'Öğeye tıklayın — haritada odaklanır' : 'Click an item to focus on map'}</div>
@@ -13216,7 +13784,7 @@ ${scrClose}</body></html>`;
 }
 
 async function createInteractiveFieldReport() {
-  if (!FIELD_PROJECT.id) { showHint(PA_LANG === 'tr' ? 'Önce gezi açın' : 'Open a journey first'); openProjectPanel(); return; }
+  if (!FIELD_PROJECT.id) { showHint(PA_LANG === 'tr' ? 'Önce çalışma açın' : 'Open a project first'); openProjectPanel(); return; }
   if (typeof FieldAccessGate !== 'undefined' && FieldAccessGate.hasPin() && !FieldAccessGate.isUnlocked()) {
     const unlocked = await FieldAccessGate.requireUnlock();
     if (!unlocked) {
@@ -13230,12 +13798,12 @@ async function createInteractiveFieldReport() {
     const report = await generateProjectReport((p, s) => setReportProgress(p, s));
     if (!report.pdfBlob && report.html) {
       setReportProgress(90, t('report.doc.progress.pdf'));
-      try { report.pdfBlob = await exportProjectPDF(report.html); } catch (e) { console.warn('[Journey PDF]', e); }
+      try { report.pdfBlob = await exportProjectPDF(report.html); } catch (e) { console.warn('[Project PDF]', e); }
     }
     setReportProgress(95, PA_LANG === 'tr' ? 'Mekansal tekrar hazırlanıyor…' : 'Preparing spatial playback…');
     const interactiveHtml = await buildInteractiveFieldReportHTML(report);
     await persistProjectReportBundle(report, { interactiveHtml });
-    showHint(report.pdfBlob ? t('report.journeyBundleReady') : t('report.savedToProject'));
+    showHint(report.pdfBlob ? t('report.projectBundleReady') : t('report.savedToProject'));
     await offerFieldExport({
       blob: new Blob([interactiveHtml], { type: 'text/html;charset=utf-8' }),
       filename: safeProjectExportFilename('_interaktif.html'),
@@ -13253,7 +13821,7 @@ async function createInteractiveFieldReport() {
 
 async function createSimulatedFieldReports() {
   if (!FIELD_PROJECT.id) {
-    showHint(PA_LANG === 'tr' ? 'Önce gezi açın veya oluşturun' : 'Open or create a journey first');
+    showHint(PA_LANG === 'tr' ? 'Önce çalışma açın veya oluşturun' : 'Open or create a project first');
     openProjectPanel();
     return;
   }
@@ -13290,7 +13858,7 @@ async function createSimulatedFieldReports() {
       synthesizeDemoVoiceDataUrl,
     });
     const saved = await persistProjectReportBundle(report, { interactiveHtml: report.interactiveHtml });
-    showHint(report.pdfBlob ? t('report.journeyBundleReady') : t('report.demoReady'));
+    showHint(report.pdfBlob ? t('report.projectBundleReady') : t('report.demoReady'));
     if (saved?.rptId) {
       setTimeout(() => { openSavedProjectReport(saved.rptId, 'interactive'); }, 400);
     }
@@ -13924,10 +14492,14 @@ function getObservationCluster(lat, lon, radiusM) {
   const photos = getFieldPhotosSorted().filter(p =>
     p.lat != null && p.lon != null && haversineM(lat, lon, p.lat, p.lon) <= r
   );
+  const videos = S.objects.filter(o =>
+    o.type === 'field_video' && o.visible !== false && o.lat != null && o.lon != null &&
+    haversineM(lat, lon, o.lat, o.lon) <= r
+  ).map(o => { normalizeFieldVideoObject(o); return o; });
   const notes = getFieldNotesSorted().filter(n =>
     n.lat != null && n.lon != null && haversineM(lat, lon, n.lat, n.lon) <= r
   );
-  return { photos, notes };
+  return { photos, videos, notes };
 }
 
 let _observationPopupGen = 0;
@@ -13947,6 +14519,14 @@ function revokeObservationPopupImages() {
     aud.removeAttribute('src');
     aud.pause?.();
   });
+  document.querySelectorAll('#fnp-body .fnp-video-player').forEach(vid => {
+    if (vid._blobUrl) {
+      URL.revokeObjectURL(vid._blobUrl);
+      vid._blobUrl = null;
+    }
+    vid.removeAttribute('src');
+    vid.pause?.();
+  });
 }
 
 function fieldPhotoNoteText(photo) {
@@ -13956,6 +14536,23 @@ function fieldPhotoNoteText(photo) {
   const title = String(photo?.title || '').trim();
   if (cap && cap !== title) return cap;
   return '';
+}
+
+async function loadVideoIntoObservationPopup(video, gen) {
+  const el = document.querySelector('#fnp-body .fnp-video-player[data-video-id="' + video.id + '"]');
+  if (!el) return;
+  const row = await getPhotoBlobRecord(video.videoId, 'video');
+  if (gen != null && gen !== _observationPopupGen) return;
+  const blob = row?.data;
+  if (!blob) {
+    el.insertAdjacentHTML('afterend', '<div class="fnp-photo-desc-empty">' +
+      (PA_LANG === 'tr' ? 'Video yüklenemedi' : 'Video failed to load') + '</div>');
+    return;
+  }
+  if (el._blobUrl) URL.revokeObjectURL(el._blobUrl);
+  el._blobUrl = URL.createObjectURL(blob);
+  el.src = el._blobUrl;
+  el.load();
 }
 
 async function loadPhotoIntoObservationPopup(photo, gen) {
@@ -14037,6 +14634,7 @@ async function showFieldObservationPopup(primary) {
   const gen = ++_observationPopupGen;
   if (primary.type === 'field_note') normalizeFieldNoteObject(primary);
   if (primary.type === 'field_photo') normalizeFieldPhotoObject(primary);
+  if (primary.type === 'field_video') normalizeFieldVideoObject(primary);
 
   closeFieldPhotoViewer();
   revokeObservationPopupImages();
@@ -14044,7 +14642,8 @@ async function showFieldObservationPopup(primary) {
   const cluster = getObservationCluster(primary.lat, primary.lon);
   _observationPopupPrimaryId = primary.id;
   _notePopupId = primary.type === 'field_note' ? primary.id : (cluster.notes[0]?.id || null);
-  _fieldCtxPhotoId = primary.type === 'field_photo' ? primary.id : (cluster.photos[0]?.id || null);
+  _fieldCtxPhotoId = (primary.type === 'field_photo' || primary.type === 'field_video')
+    ? primary.id : (cluster.photos[0]?.id || null);
   S.selectedIds = [primary.id];
   setDeleteButtonVisible(true);
 
@@ -14057,24 +14656,35 @@ async function showFieldObservationPopup(primary) {
   if (numEl) {
     if (primary.type === 'field_photo') {
       numEl.textContent = '📷 #' + (primary.photoNum || '?');
+    } else if (primary.type === 'field_video') {
+      numEl.textContent = '🎬 #' + (primary.videoNum || '?');
     } else {
       numEl.textContent = '#' + (primary.noteNum || '?');
     }
-    if (cluster.photos.length && cluster.notes.length) {
-      numEl.textContent += ' · ' + cluster.photos.length + '📷 ' + cluster.notes.length + '📝';
+    if (cluster.photos.length || cluster.videos.length || cluster.notes.length) {
+      const parts = [];
+      if (cluster.photos.length) parts.push(cluster.photos.length + '📷');
+      if (cluster.videos.length) parts.push(cluster.videos.length + '🎬');
+      if (cluster.notes.length) parts.push(cluster.notes.length + '📝');
+      if (parts.length) numEl.textContent += ' · ' + parts.join(' ');
     }
   }
   if (editBtn) {
     editBtn.textContent = primary.type === 'field_photo'
       ? (PA_LANG === 'tr' ? 'Fotoğraf' : 'Photo')
-      : (PA_LANG === 'tr' ? 'Düzenle' : 'Edit');
+      : primary.type === 'field_video'
+        ? (PA_LANG === 'tr' ? 'Video' : 'Video')
+        : (PA_LANG === 'tr' ? 'Düzenle' : 'Edit');
   }
 
   let html = '';
   const photos = cluster.photos.slice();
+  const videos = cluster.videos.slice();
   const notes = cluster.notes.slice();
   if (primary.type === 'field_photo') {
     photos.sort((a, b) => (a.id === primary.id ? -1 : b.id === primary.id ? 1 : 0));
+  } else if (primary.type === 'field_video') {
+    videos.sort((a, b) => (a.id === primary.id ? -1 : b.id === primary.id ? 1 : 0));
   } else if (primary.type === 'field_note') {
     notes.sort((a, b) => (a.id === primary.id ? -1 : b.id === primary.id ? 1 : 0));
   }
@@ -14110,6 +14720,22 @@ async function showFieldObservationPopup(primary) {
     return block;
   };
 
+  const buildVideosHtml = () => {
+    if (!videos.length) return '';
+    let block = '<div class="fnp-section-title">' + (PA_LANG === 'tr' ? 'Video notlar' : 'Video notes') + '</div>';
+    videos.forEach(video => {
+      normalizeFieldVideoObject(video);
+      const primaryCls = video.id === primary.id ? ' fnp-primary' : '';
+      block += '<div class="fnp-photo-block fnp-video-block' + primaryCls + '">';
+      block += '<div class="fnp-photo-lbl">🎬 ' + escapeHtml(video.title || 'Video') + '</div>';
+      block += '<video class="fnp-video-player" controls playsinline preload="metadata" data-video-id="' + video.id + '"></video>';
+      block += '<div class="fnp-meta">' + formatFieldLocalDateTime(video.timestamp) +
+        (video.duration ? ' · ' + Math.round(video.duration) + ' sn' : '') + '</div>';
+      block += '</div>';
+    });
+    return block;
+  };
+
   const buildNotesHtml = () => {
     if (!notes.length) return '';
     let block = '<div class="fnp-notes-section"><div class="fnp-section-title">' +
@@ -14138,12 +14764,14 @@ async function showFieldObservationPopup(primary) {
   };
 
   if (primary.type === 'field_note') {
-    html += buildNotesHtml() + buildPhotosHtml();
+    html += buildNotesHtml() + buildPhotosHtml() + buildVideosHtml();
+  } else if (primary.type === 'field_video') {
+    html += buildVideosHtml() + buildPhotosHtml() + buildNotesHtml();
   } else {
-    html += buildPhotosHtml() + buildNotesHtml();
+    html += buildPhotosHtml() + buildVideosHtml() + buildNotesHtml();
   }
 
-  if (!photos.length && !notes.length) {
+  if (!photos.length && !videos.length && !notes.length) {
     html = '<div style="color:var(--muted);">' + (PA_LANG === 'tr' ? 'İçerik yok' : 'No content') + '</div>';
   }
 
@@ -14158,10 +14786,13 @@ async function showFieldObservationPopup(primary) {
     if (prim) prim.scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
 
-  await Promise.all(photos.flatMap(p => [
-    loadPhotoIntoObservationPopup(p, gen),
-    loadPhotoVoiceIntoObservationPopup(p),
-  ]));
+  await Promise.all([
+    ...photos.flatMap(p => [
+      loadPhotoIntoObservationPopup(p, gen),
+      loadPhotoVoiceIntoObservationPopup(p),
+    ]),
+    ...videos.map(v => loadVideoIntoObservationPopup(v, gen)),
+  ]);
 }
 
 function editFromObservationPopup() {
@@ -14330,7 +14961,7 @@ function requireProject(fn) {
       return;
     }
     openProjectPanel();
-    showHint('Önce gezi oluşturun veya açın');
+    showHint('Önce saha çalışması oluşturun veya açın');
     return;
   }
   fn();
@@ -14811,7 +15442,7 @@ function boundsForGpsTrack(obj) {
   return { minLat, maxLat, minLon, maxLon, ok: minLat <= maxLat && minLon <= maxLon };
 }
 
-let _gpsTrackReplay = { raf: null, objId: null, verts: null, u: 0, pos: null };
+let _gpsTrackScrub = { raf: null, objId: null, verts: null, u: 0, pos: null };
 
 function lerpAlongTrackVerts(verts, u) {
   if (!verts || verts.length < 2) return verts?.[0] ? { lat: verts[0].lat, lon: verts[0].lon } : null;
@@ -14835,13 +15466,13 @@ function lerpAlongTrackVerts(verts, u) {
   return { lat: verts[verts.length - 1].lat, lon: verts[verts.length - 1].lon };
 }
 
-function stopGpsTrackReplay() {
-  if (_gpsTrackReplay.raf) cancelAnimationFrame(_gpsTrackReplay.raf);
-  _gpsTrackReplay = { raf: null, objId: null, verts: null, u: 0, pos: null };
+function stopGpsTrackScrub() {
+  if (_gpsTrackScrub.raf) cancelAnimationFrame(_gpsTrackScrub.raf);
+  _gpsTrackScrub = { raf: null, objId: null, verts: null, u: 0, pos: null };
   scheduleRender();
 }
 
-function playGpsTrackReplay(objId) {
+function playGpsTrackScrub(objId) {
   const obj = S.objects.find(o => o.id === objId);
   const verts = obj?.vertices;
   if (!obj || obj.type !== 'field_gps_track' || !verts || verts.length < 2) return;
@@ -14849,36 +15480,36 @@ function playGpsTrackReplay(objId) {
     showHint(PA_LANG === 'tr' ? 'Önce rota kaydını durdurun' : 'Stop track recording first');
     return;
   }
-  stopGpsTrackReplay();
+  stopGpsTrackScrub();
   selectGpsTrackFromLayer(objId);
   const t0 = verts[0].ts || 0;
   const t1 = verts[verts.length - 1].ts || 0;
   const dur = Math.max(4000, Math.min(90000, t1 > t0 ? t1 - t0 : verts.length * 700));
   const start = performance.now();
-  _gpsTrackReplay.objId = objId;
-  _gpsTrackReplay.verts = verts;
+  _gpsTrackScrub.objId = objId;
+  _gpsTrackScrub.verts = verts;
   showHint(PA_LANG === 'tr' ? 'Rota oynatılıyor…' : 'Playing track…');
   const tick = (now) => {
     const u = Math.min(1, (now - start) / dur);
-    _gpsTrackReplay.u = u;
-    _gpsTrackReplay.pos = lerpAlongTrackVerts(verts, u);
-    if (_gpsTrackReplay.pos) {
-      panViewportToLatLon(_gpsTrackReplay.pos.lat, _gpsTrackReplay.pos.lon, 0.11);
+    _gpsTrackScrub.u = u;
+    _gpsTrackScrub.pos = lerpAlongTrackVerts(verts, u);
+    if (_gpsTrackScrub.pos) {
+      panViewportToLatLon(_gpsTrackScrub.pos.lat, _gpsTrackScrub.pos.lon, 0.11);
     }
     scheduleRender();
-    if (u < 1) _gpsTrackReplay.raf = requestAnimationFrame(tick);
+    if (u < 1) _gpsTrackScrub.raf = requestAnimationFrame(tick);
     else {
-      _gpsTrackReplay.raf = null;
-      showHint(PA_LANG === 'tr' ? 'Rota oynatma tamamlandı' : 'Track replay finished');
+      _gpsTrackScrub.raf = null;
+      showHint(PA_LANG === 'tr' ? 'Rota oynatma tamamlandı' : 'Track playback finished');
     }
   };
-  _gpsTrackReplay.raf = requestAnimationFrame(tick);
+  _gpsTrackScrub.raf = requestAnimationFrame(tick);
 }
 
 function selectGpsTrackFromLayer(id) {
   const tr = S.objects.find(o => o.id === id);
   if (!tr || tr.type !== 'field_gps_track') return;
-  stopGpsTrackReplay();
+  stopGpsTrackScrub();
   normalizeFieldGpsTrackObject(tr);
   setActiveLayer(FIELD_GPS_LAYER);
   S.selectedIds = [tr.id];
@@ -14950,7 +15581,11 @@ function selectPhotoFromLayer(id) {
   if (!p || (p.type !== 'field_photo' && p.type !== 'field_video')) return;
   if (p.type === 'field_video') {
     setActiveLayer(FIELD_PHOTOS_LAYER);
-    openFieldPhotoDetail(p.id);
+    normalizeFieldVideoObject(p);
+    const b = { minLat: p.lat, maxLat: p.lat, minLon: p.lon, maxLon: p.lon, ok: true };
+    fitMapToLatLonBounds(b);
+    scheduleRender();
+    requestAnimationFrame(() => showFieldObservationPopup(p));
     return;
   }
   normalizeFieldPhotoObject(p);
@@ -15443,7 +16078,7 @@ async function ingestFieldVideo(blob, mime, durationSec) {
   if (!FIELD_PROJECT.id) bootstrapFieldProjectSync();
   if (!FIELD_PROJECT.id) await ensureFieldProjectId();
   if (!FIELD_PROJECT.id) {
-    showHint('Önce gezi oluşturun veya açın');
+    showHint('Önce saha çalışması oluşturun veya açın');
     return;
   }
   let { lat, lon, gpsSource } = videoNotePlacement();
@@ -15478,6 +16113,7 @@ async function ingestFieldVideo(blob, mime, durationSec) {
     visible: true,
     locked: false,
     videoPosterOnly: isPosterOnly,
+    isVideoNote: true,
   };
   normalizeFieldVideoObject(obj);
   S.objects.push(obj);
@@ -15632,6 +16268,20 @@ async function openFieldPhotoEarthViewer(id) {
   if (title) title.textContent = obj.title || 'Fotoğraf';
   const guideBtn = document.getElementById('fpv-guide');
   if (guideBtn) guideBtn.style.display = resolveObjectGuidanceLatLon(obj) ? 'block' : 'none';
+  const noteWrap = document.getElementById('fpv-note-wrap');
+  const noteEl = document.getElementById('fpv-note');
+  const noteLbl = document.getElementById('fpv-note-label');
+  const noteText = fieldPhotoNoteText(obj);
+  if (noteLbl) noteLbl.textContent = t('photo.noteLabel');
+  if (noteWrap && noteEl) {
+    if (noteText) {
+      noteEl.textContent = noteText;
+      noteWrap.hidden = false;
+    } else {
+      noteEl.textContent = '';
+      noteWrap.hidden = true;
+    }
+  }
   if (foot) {
     foot.textContent = (obj.timestamp ? new Date(obj.timestamp).toLocaleString('tr-TR') : '') +
       (obj.lat != null ? '\n' + obj.lat.toFixed(5) + '°, ' + obj.lon.toFixed(5) + '°' : '') +
@@ -15762,6 +16412,10 @@ function closeFieldPhotoViewer() {
   ov.classList.remove('open');
   const img = document.getElementById('fpv-img');
   if (img) img.removeAttribute('src');
+  const noteWrap = document.getElementById('fpv-note-wrap');
+  const noteEl = document.getElementById('fpv-note');
+  if (noteWrap) noteWrap.hidden = true;
+  if (noteEl) noteEl.textContent = '';
 }
 
 function centerMapOnSelectedPhoto() {
@@ -16440,7 +17094,7 @@ function applyFieldModeBoot() {
       FieldAccessGate.deferPin();
     }
   }
-  const hubEl = document.getElementById('field-journey-hub-overlay');
+  const hubEl = document.getElementById('field-start-hub-overlay');
   if (hubEl && hubEl.parentElement !== document.body) document.body.appendChild(hubEl);
   const secEl = document.getElementById('field-security-settings-overlay');
   if (secEl && secEl.parentElement !== document.body) document.body.appendChild(secEl);
@@ -16995,8 +17649,13 @@ function startFieldOnboarding(force) {
       if (localStorage.getItem(FIELD_ONBOARD_LS)) return;
     } catch (_) {}
   }
+  if (typeof hideFieldStartHub === 'function') hideFieldStartHub();
+  if (typeof closeFieldSettingsHub === 'function') closeFieldSettingsHub();
+  if (typeof closeProjectPanel === 'function') closeProjectPanel();
+  if (typeof FieldProjectDetails !== 'undefined') FieldProjectDetails.close(false);
   const root = document.getElementById('field-onboard-root');
   if (!root) return;
+  if (root.parentElement !== document.body) document.body.appendChild(root);
   _fieldOnboardOpen = true;
   document.body.classList.add('field-onboarding-active');
   root.classList.add('active');
@@ -17008,6 +17667,9 @@ function maybeStartFieldOnboarding() {
   if (!FIELD_MODE) return;
   setTimeout(() => startFieldOnboarding(false), 600);
 }
+
+window.startFieldOnboarding = startFieldOnboarding;
+window.maybeStartFieldOnboarding = maybeStartFieldOnboarding;
 
 function toggleFieldLayersPanel() {
   const panel = document.getElementById('right-panel');
@@ -17259,10 +17921,151 @@ function updateFieldPanelForTool(t) {
   }
 }
 
-async function updateFieldCtxProject() {
+function closeFieldPastTripsMenu() {
+  const menu = document.getElementById('field-ctx-project-dropdown');
+  const btn = document.getElementById('field-proj-past-toggle');
+  if (menu) menu.hidden = true;
+  if (btn) btn.classList.remove('open');
+}
+
+function toggleFieldPastProjectsMenu(ev) {
+  ev?.stopPropagation?.();
+  const menu = document.getElementById('field-ctx-project-dropdown');
+  const btn = document.getElementById('field-proj-past-toggle');
+  if (!menu || !btn) return;
+  const open = menu.hidden;
+  if (open) {
+    menu.hidden = false;
+    btn.classList.add('open');
+    const closeOnOutside = (e) => {
+      if (menu.contains(e.target) || btn.contains(e.target)) return;
+      document.removeEventListener('click', closeOnOutside, true);
+      closeFieldPastTripsMenu();
+    };
+    setTimeout(() => document.addEventListener('click', closeOnOutside, true), 0);
+  } else {
+    closeFieldPastTripsMenu();
+  }
+}
+
+function renderFieldProjectPanel(projects) {
+  const currentEl = document.getElementById('field-ctx-project-current');
+  const menuEl = document.getElementById('field-ctx-project-dropdown');
+  const pastBtn = document.getElementById('field-proj-past-toggle');
   const label = document.getElementById('field-ctx-project-label');
-  const listEl = document.getElementById('field-ctx-project-list');
-  if (!listEl) return;
+  if (!currentEl || !menuEl) return;
+  const list = projects || [];
+  const current = list.find(p => p.id === FIELD_PROJECT.id) || {
+    id: FIELD_PROJECT.id,
+    name: FIELD_PROJECT.name,
+    updatedAt: FIELD_PROJECT.createdAt,
+  };
+  if (label) label.textContent = t('panel.projects');
+  currentEl.textContent = projectDisplayName(current.name || FIELD_PROJECT.name || '—');
+  const past = list.filter(p => p.id !== FIELD_PROJECT.id);
+  if (pastBtn) {
+    pastBtn.hidden = past.length === 0;
+    pastBtn.textContent = t('panel.pastProjects');
+  }
+  menuEl.innerHTML = '';
+  if (!past.length) {
+    menuEl.hidden = true;
+    return;
+  }
+  past.forEach(p => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'field-proj-pick';
+    row.setAttribute('role', 'menuitem');
+    row.innerHTML = '<span class="field-proj-name">' + escapeHtml(projectDisplayName(p.name)) + '</span>';
+    row.onclick = (e) => {
+      e.stopPropagation();
+      closeFieldPastTripsMenu();
+      openProjectById(p.id).then(() => renderFieldProjectReportsList());
+    };
+    attachProjectDeleteButton(row, p.id);
+    menuEl.appendChild(row);
+  });
+}
+
+function deriveProjectInspectionDate(project, photos, notes, videos) {
+  const stamps = [];
+  const pushTs = (ts) => {
+    if (!ts) return;
+    const t = Date.parse(ts);
+    if (Number.isFinite(t)) stamps.push(t);
+  };
+  (photos || []).forEach(p => pushTs(p.timestamp || p.createdAt));
+  (notes || []).forEach(n => pushTs(n.timestamp || n.createdAt));
+  (videos || []).forEach(v => pushTs(v.timestamp || v.createdAt));
+  (project?.objects || []).forEach(o => {
+    pushTs(o.timestamp || o.createdAt);
+    if (o.type === 'field_gps_track' && o.vertices) {
+      o.vertices.forEach(v => pushTs(v.ts || v.timestamp));
+    }
+  });
+  pushTs(project?.createdAt);
+  const name = String(project?.name || '');
+  const dm = name.match(/(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})/);
+  if (dm) {
+    const y = parseInt(dm[3], 10);
+    const mo = parseInt(dm[2], 10) - 1;
+    const d = parseInt(dm[1], 10);
+    const dayStart = new Date(y, mo, d).getTime();
+    const sameDay = stamps.filter(t => {
+      const x = new Date(t);
+      return x.getFullYear() === y && x.getMonth() === mo && x.getDate() === d;
+    });
+    if (sameDay.length) return new Date(Math.min(...sameDay)).toISOString();
+    if (stamps.length) return new Date(dayStart + 12 * 3600000).toISOString();
+  }
+  if (stamps.length) return new Date(Math.min(...stamps)).toISOString();
+  return project?.createdAt || new Date().toISOString();
+}
+
+function computeFieldProjectBounds() {
+  const b = freshGeoBounds();
+  S.objects.forEach(o => {
+    if (o.type === 'field_gps_track' && o.vertices?.length) {
+      o.vertices.forEach(v => expandBounds(b, v.lat, v.lon));
+    } else if ((o.type === 'field_photo' || o.type === 'field_note' || o.type === 'field_video') &&
+      o.lat != null && o.lon != null) {
+      expandBounds(b, o.lat, o.lon);
+    }
+  });
+  return b;
+}
+
+async function captureRouteMapSnapshot(scaleFactor) {
+  const saved = {
+    mapCenter: { ...S.mapCenter },
+    scale: S.scale,
+    tx: S.tx,
+    ty: S.ty,
+    basemap: S.basemap,
+  };
+  const b = computeFieldProjectBounds();
+  if (b.ok) fitMapToLatLonBounds(b);
+  scheduleRender();
+  render();
+  await new Promise(r => setTimeout(r, 300));
+  let blob = await captureMapSnapshotOnce(scaleFactor);
+  if (!blob) blob = await captureMapSnapshot(scaleFactor);
+  S.mapCenter = saved.mapCenter;
+  S.scale = saved.scale;
+  S.tx = saved.tx;
+  S.ty = saved.ty;
+  if (S.basemap !== saved.basemap) {
+    S.basemap = saved.basemap;
+    clearBasemapTileCache();
+  }
+  scheduleRender();
+  return blob;
+}
+
+async function updateFieldCtxProject() {
+  const currentEl = document.getElementById('field-ctx-project-current');
+  if (!currentEl) return;
   try {
     let projects = await fetchProjectListSorted();
     if (FIELD_PROJECT.id && !projects.some(p => p.id === FIELD_PROJECT.id)) {
@@ -17272,20 +18075,11 @@ async function updateFieldCtxProject() {
         updatedAt: FIELD_PROJECT.createdAt || new Date().toISOString(),
       }, ...projects];
     }
-    if (label) label.textContent = projects.length > 1 ? t('panel.projects') : t('panel.project');
-    if (!projects.length) {
-      listEl.innerHTML = '';
-      const solo = document.createElement('div');
-      solo.style.cssText = 'font-size:12px;font-weight:600;padding:4px 2px;';
-      solo.textContent = projectDisplayName(FIELD_PROJECT.name);
-      listEl.appendChild(solo);
-      renderFieldProjectReportsList();
-      return;
-    }
-    renderProjectListRows(listEl, projects, { mode: 'panel' });
+    renderFieldProjectPanel(projects);
     renderFieldProjectReportsList();
   } catch (_) {
-    listEl.textContent = projectDisplayName(FIELD_PROJECT.name) || '—';
+    currentEl.textContent = projectDisplayName(FIELD_PROJECT.name) || '—';
+    const label = document.getElementById('field-ctx-project-label');
     if (label) label.textContent = t('panel.project');
   }
 }
@@ -17605,8 +18399,8 @@ function fieldTapSelect(wp, e) {
     return;
   }
   if (S.tool !== 'select') return;
-  if (_gpsTrackReplay.pos) {
-    const w = latLonToWorld(_gpsTrackReplay.pos.lat, _gpsTrackReplay.pos.lon);
+  if (_gpsTrackScrub.pos) {
+    const w = latLonToWorld(_gpsTrackScrub.pos.lat, _gpsTrackScrub.pos.lon);
     if (Math.hypot(wp.x - w.x, wp.y - w.y) < 24 / S.scale) {
       if (e?.clientX != null) showFieldMapContextMenu(e.clientX, e.clientY, wp);
       else showFieldMapContextMenu(window.innerWidth / 2, window.innerHeight / 2, wp);
@@ -17640,7 +18434,7 @@ const S = {
 
   // Pen settings
   color:          '#e53935',
-  strokeWidth:    2.5,
+  strokeWidth:    FIELD_MODE ? FIELD_DEFAULT_STROKE_WIDTH : 2.5,
   opacity:        1,
   lineStyle:      'solid',
   lineDecoration: 'none',
@@ -19338,7 +20132,7 @@ function renderObjFull(obj, sel) {
   }
   if (obj.type === 'field_gps_track') {
     const verts = obj.vertices || [];
-    const replaying = _gpsTrackReplay.objId === obj.id && _gpsTrackReplay.pos;
+    const trackScrubbing = _gpsTrackScrub.objId === obj.id && _gpsTrackScrub.pos;
     const isLiveObj = _gpsTrack.objId === obj.id && (_gpsTrack.state === 'recording' || _gpsTrack.state === 'paused');
     const liveRecording = isLiveObj && _gpsTrack.state === 'recording';
     const disp = liveRecording ? getGpsLiveRouteTip() : null;
@@ -19349,8 +20143,8 @@ function renderObjFull(obj, sel) {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.globalAlpha = obj.opacity ?? 0.92;
-    ctx.strokeStyle = replaying ? '#27ae60' : (isLiveObj ? '#0d47a1' : (obj.color || '#1565c0'));
-    ctx.lineWidth = replaying ? (obj.strokeWidth || 3) + 1 : (isLiveObj ? (obj.strokeWidth || 3) + 0.5 : (obj.strokeWidth || 3));
+    ctx.strokeStyle = trackScrubbing ? '#27ae60' : (isLiveObj ? '#0d47a1' : (obj.color || '#1565c0'));
+    ctx.lineWidth = trackScrubbing ? (obj.strokeWidth || 3) + 1 : (isLiveObj ? (obj.strokeWidth || 3) + 0.5 : (obj.strokeWidth || 3));
     if (!isLiveObj) ctx.setLineDash([8 / S.scale, 6 / S.scale]);
     const w0 = latLonToWorld(drawVerts[0].lat, drawVerts[0].lon);
     ctx.beginPath();
@@ -20871,11 +21665,11 @@ function render(coordOpts) {
     ctx.restore();
   }
   renderGpsGuidance();
-  if (_gpsTrackReplay.pos) {
+  if (_gpsTrackScrub.pos) {
     ctx.save();
     ctx.translate(S.tx, S.ty);
     ctx.scale(S.scale, S.scale);
-    const w = latLonToWorld(_gpsTrackReplay.pos.lat, _gpsTrackReplay.pos.lon);
+    const w = latLonToWorld(_gpsTrackScrub.pos.lat, _gpsTrackScrub.pos.lon);
     const r = Math.max(8 / S.scale, 10);
     ctx.fillStyle = 'rgba(39,174,96,0.28)';
     ctx.beginPath();
@@ -23291,9 +24085,9 @@ function buildLayerPanel() {
           const preview = gpsTrackPanelLabel(tr);
           item.innerHTML = '<span class="ln-num">#' + (tr.trackNum || '?') + '</span><span class="ln-text">' +
             escapeHtml(preview.slice(0, 80)) + '</span>' +
-            '<button type="button" class="ln-replay-btn" title="' + (PA_LANG === 'tr' ? 'Rota oynat' : 'Play track') + '">▶</button>';
-          item.querySelector('.ln-replay-btn').onclick = ev => { ev.stopPropagation(); playGpsTrackReplay(tr.id); };
-          item.onclick = ev => { if (ev.target.closest('.ln-del-wrap') || ev.target.closest('.ln-replay-btn')) return; selectGpsTrackFromLayer(tr.id); };
+            '<button type="button" class="ln-playback-btn" title="' + (PA_LANG === 'tr' ? 'Rota oynat' : 'Play track') + '">▶</button>';
+          item.querySelector('.ln-playback-btn').onclick = ev => { ev.stopPropagation(); playGpsTrackScrub(tr.id); };
+          item.onclick = ev => { if (ev.target.closest('.ln-del-wrap') || ev.target.closest('.ln-playback-btn')) return; selectGpsTrackFromLayer(tr.id); };
           appendLayerListDeleteButton(item, ev => deleteFieldGpsTrackFromLayer(tr.id, ev));
           list.appendChild(item);
         });
@@ -24407,6 +25201,8 @@ else {
 }
 if (FIELD_MODE) initGpsFieldHud();
 if (typeof FieldPermissions !== 'undefined') FieldPermissions.init();
+if (typeof FieldProjectDetails !== 'undefined') FieldProjectDetails.init();
+if (typeof FieldSettingsHub !== 'undefined') FieldSettingsHub.init();
 if (typeof PlanAISecurity !== 'undefined') PlanAISecurity.init().catch(() => {});
 else if (typeof DeviceSecurity !== 'undefined') DeviceSecurity.init().catch(() => {});
 if (GPS_TEST_BUILD && !(typeof PlanAISecurity !== 'undefined' ? PlanAISecurity.isSecureModeActive()

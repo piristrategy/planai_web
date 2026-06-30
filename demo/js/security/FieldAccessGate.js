@@ -522,7 +522,7 @@ const FieldAccessGate = (function () {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'hidden') return;
       const gateOpen = document.getElementById('field-access-gate-overlay')?.style.display === 'flex';
-      const hubOpen = document.getElementById('field-journey-hub-overlay')?.style.display === 'flex';
+      const hubOpen = document.getElementById('field-start-hub-overlay')?.style.display === 'flex';
       if (gateOpen || hubOpen) return;
       lock();
     });

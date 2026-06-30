@@ -27,7 +27,7 @@
   function $(id) { return document.getElementById(id); }
 
   function isHubOpen() {
-    const o = $('field-journey-hub-overlay');
+    const o = $('field-start-hub-overlay');
     return o && o.style.display === 'flex';
   }
 
@@ -437,7 +437,7 @@
     btn.addEventListener('click', dismissCoach);
     coach.addEventListener('click', dismissCoach);
 
-    const overlay = $('field-journey-hub-overlay');
+    const overlay = $('field-start-hub-overlay');
     if (overlay) {
       new MutationObserver(() => {
         if (isHubOpen()) hideCoach();
@@ -699,7 +699,7 @@
   }
 
   function hubWatcher() {
-    const overlay = $('field-journey-hub-overlay');
+    const overlay = $('field-start-hub-overlay');
     if (!overlay) return;
     const obs = new MutationObserver(() => {
       if (isHubOpen()) {
@@ -726,8 +726,16 @@
     };
   }
 
-  async function finishInspection() {
+  function finishInspection() {
     if (!isInspectionMapActive()) return;
+    if (typeof StopInspectionController !== 'undefined') {
+      StopInspectionController.requestStop();
+      return;
+    }
+    void legacyFinishInspection();
+  }
+
+  async function legacyFinishInspection() {
     const busy = $('trial-stop-inspection');
     if (busy) busy.disabled = true;
     try {
@@ -737,8 +745,8 @@
       stopRecSession();
       lastGeoCoords = '';
       if (typeof window.reloadFieldHubProjects === 'function') await window.reloadFieldHubProjects();
-      if (typeof window.refreshFieldJourneyHubUi === 'function') await window.refreshFieldJourneyHubUi();
-      if (typeof window.showFieldJourneyHub === 'function') window.showFieldJourneyHub();
+      if (typeof FieldProjectHub !== 'undefined') FieldProjectHub.open();
+      else if (typeof window.openProjectPanel === 'function') window.openProjectPanel();
     } catch (e) {
       console.error('[TrialShell] finish', e);
     } finally {
@@ -750,6 +758,8 @@
     const btn = $('trial-stop-inspection');
     if (btn) btn.addEventListener('click', () => finishInspection());
     window.fieldTrialFinishInspection = finishInspection;
+    window.fieldTrialStopRecSession = stopRecSession;
+    window.isInspectionMapActive = isInspectionMapActive;
   }
 
   function init() {
@@ -760,7 +770,7 @@
     } catch (_) {}
     wrapHubAction('fieldHubActionNew');
     wrapHubAction('fieldHubActionContinue');
-    wrapHubAction('fieldHubOpenJourney');
+    wrapHubAction('fieldHubOpenProject');
     hubWatcher();
     bindGpsHudAnchor();
     bindBrandFooterAnchor();

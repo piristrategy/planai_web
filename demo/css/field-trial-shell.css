@@ -74,7 +74,7 @@ body.field-trial-ui.field-mode #top-bar #project-save-indicator {
   display: none !important;
 }
 
-body.field-trial-ui.field-journey-hub-active #trial-inspection-chrome {
+body.field-trial-ui.field-start-hub-active #trial-inspection-chrome {
   display: none !important;
 }
 
@@ -320,7 +320,7 @@ body.field-trial-ui.field-mode #top-bar #field-lang-switch.trial-lang-switch {
   max-width: min(80px, calc(100vw - 16px));
 }
 
-body.field-trial-ui.field-journey-hub-active #trial-top-tools.trial-right-tools {
+body.field-trial-ui.field-start-hub-active #trial-top-tools.trial-right-tools {
   display: none !important;
 }
 
@@ -806,7 +806,7 @@ body.field-trial-ui .trial-locate-coach::after {
   from { opacity: 0; transform: translateY(calc(-50% - 6px)); }
   to { opacity: 1; transform: translateY(-50%); }
 }
-body.field-trial-ui.field-journey-hub-active .trial-locate-coach {
+body.field-trial-ui.field-start-hub-active .trial-locate-coach {
   display: none !important;
 }
 
@@ -1344,7 +1344,7 @@ body.field-trial-ui.field-mode .planai-brand-footer {
   /* left / bottom → FieldTrialShell.js (alt dock üstü) */
 }
 
-body.field-trial-ui.field-journey-hub-active .planai-brand-footer {
+body.field-trial-ui.field-start-hub-active .planai-brand-footer {
   display: none !important;
 }
 
@@ -1567,7 +1567,7 @@ body.field-trial-ui #field-photo-voice-sheet .fpvs-capture-time {
 }
 
 /* ── Açılış hub — harita üzerinde cam panel ── */
-body.field-trial-ui #field-journey-hub-overlay {
+body.field-trial-ui #field-start-hub-overlay {
   background: rgba(4, 7, 11, 0.52) !important;
   -webkit-backdrop-filter: blur(10px) saturate(120%);
   backdrop-filter: blur(10px) saturate(120%);
@@ -1576,10 +1576,10 @@ body.field-trial-ui #field-journey-hub-overlay {
   padding: max(12px, var(--safe-top)) max(12px, var(--safe-right)) max(12px, var(--safe-bottom)) max(12px, var(--safe-left)) !important;
 }
 
-body.field-trial-ui #field-journey-hub-panel {
+body.field-trial-ui #field-start-hub-panel {
   width: min(440px, 100%) !important;
   max-width: 440px !important;
-  height: auto !important;
+  height: min(92dvh, 760px) !important;
   max-height: min(92dvh, 760px) !important;
   border-radius: 18px !important;
   background: var(--trial-glass-bg) !important;
@@ -1588,6 +1588,72 @@ body.field-trial-ui #field-journey-hub-panel {
   border: 1px solid var(--trial-glass-border) !important;
   box-shadow: var(--trial-glass-shadow) !important;
   overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+body.field-trial-ui .fjh-mission-body {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* ── Ayarlar paneli — koyu cam, yüksek kontrast ── */
+body.field-trial-ui #field-settings-overlay {
+  background: rgba(4, 7, 11, 0.58) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  backdrop-filter: blur(8px) saturate(120%);
+}
+
+body.field-trial-ui .fset-panel-wrap {
+  background: rgba(12, 16, 22, 0.97) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #f0f4f8 !important;
+}
+
+body.field-trial-ui .fset-head h2,
+body.field-trial-ui .fset-nav-row,
+body.field-trial-ui .fset-about,
+body.field-trial-ui .fset-perm-name,
+body.field-trial-ui .fset-btn {
+  color: #f0f4f8 !important;
+}
+
+body.field-trial-ui .fset-storage-label,
+body.field-trial-ui .fset-about-ver {
+  color: #9aa8b8 !important;
+}
+
+body.field-trial-ui .fset-storage-info,
+body.field-trial-ui .fset-intro,
+body.field-trial-ui .fset-sec-summary div {
+  color: #c5d3e0 !important;
+}
+
+body.field-trial-ui .fset-nav-row {
+  border-bottom-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+body.field-trial-ui .fset-nav-row > span:last-child {
+  color: #9aa8b8 !important;
+}
+
+body.field-trial-ui #btn-hub-settings,
+body.field-trial-ui .fjh-settings-btn {
+  color: #e8edf3 !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  background: rgba(255, 255, 255, 0.10) !important;
+}
+
+body.field-trial-ui .stop-insp-btn {
+  color: #e8edf3 !important;
+  border-color: rgba(255, 255, 255, 0.24) !important;
+  background: rgba(255, 255, 255, 0.10) !important;
+}
+
+body.field-trial-ui .stop-insp-btn.primary {
+  color: #fff !important;
 }
 
 body.field-trial-ui .fjh-header {
@@ -1595,13 +1661,13 @@ body.field-trial-ui .fjh-header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
 }
 
-body.field-trial-ui .field-journey-hub-brand,
-body.field-trial-ui .fjh-journey-name,
+body.field-trial-ui .field-start-hub-brand,
+body.field-trial-ui .fjh-project-name,
 body.field-trial-ui .fjh-summary-val {
   color: #f0f4f8 !important;
 }
 
-body.field-trial-ui .field-journey-hub-brand {
+body.field-trial-ui .field-start-hub-brand {
   font-size: 20px !important;
   font-weight: 800 !important;
   letter-spacing: 0.01em;
@@ -1611,7 +1677,7 @@ body.field-trial-ui .fjh-toolbar-brand {
   gap: 12px !important;
 }
 
-body.field-trial-ui .field-journey-hub-logo {
+body.field-trial-ui .field-start-hub-logo {
   display: block !important;
   width: 52px !important;
   height: 52px !important;
@@ -1632,26 +1698,26 @@ body.field-trial-ui .fjh-new-title {
 }
 
 body.field-trial-ui .fjh-tagline,
-body.field-trial-ui .fjh-journey-meta,
+body.field-trial-ui .fjh-project-meta,
 body.field-trial-ui .fjh-metrics-line,
 body.field-trial-ui .fjh-summary-lbl,
 body.field-trial-ui .fjh-op-label-muted {
   color: #9aa6b4 !important;
 }
 
-body.field-trial-ui #field-journey-hub-lang {
+body.field-trial-ui #field-start-hub-lang {
   background: rgba(255, 255, 255, 0.04) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 11px !important;
   overflow: hidden;
 }
 
-body.field-trial-ui #field-journey-hub-lang button {
+body.field-trial-ui #field-start-hub-lang button {
   color: #9aa6b4 !important;
   background: transparent !important;
 }
 
-body.field-trial-ui #field-journey-hub-lang button.active {
+body.field-trial-ui #field-start-hub-lang button.active {
   background: rgba(34, 197, 94, 0.20) !important;
   color: #5fe39a !important;
 }
@@ -1866,7 +1932,7 @@ body.field-trial-ui.field-mode #field-right-slope #btn-save-slope {
   border-color: rgba(34, 197, 94, 0.55) !important;
 }
 
-/* ── Geziler paneli ── */
+/* ── Saha Çalışmaları paneli ── */
 body.field-trial-ui #project-overlay {
   background: rgba(4, 7, 11, 0.58) !important;
   -webkit-backdrop-filter: blur(8px) saturate(120%);
@@ -1879,6 +1945,14 @@ body.field-trial-ui #project-panel {
   border-radius: 18px !important;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55) !important;
   color: #f0f4f8 !important;
+  max-height: min(92dvh, 720px) !important;
+}
+
+body.field-trial-ui #project-panel-body {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
 }
 
 body.field-trial-ui #project-panel-head {
@@ -2486,7 +2560,7 @@ body.field-trial-ui #field-photo-sheet .trial-capture-extra {
   color: #c7d2fe !important;
 }
 
-body.field-trial-ui #field-camera-pano-hint {
+body.field-trial-ui #field-pano-motion-hint {
   background: rgba(12, 16, 22, 0.88) !important;
   border: 1px solid rgba(129, 140, 248, 0.35) !important;
   color: #e0e7ff !important;

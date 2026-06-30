@@ -116,7 +116,7 @@ const FieldShellBridge = (function () {
 
   function syncDockActive() {
     const map = {
-      journeys: 'btn-dock-projects',
+      projects: 'btn-dock-projects',
       import: 'btn-dock-import',
       gps: 'btn-field-gps',
       photo: 'btn-dock-photo',
@@ -133,7 +133,7 @@ const FieldShellBridge = (function () {
 
   function syncHubToHome() {
     const pairs = [
-      ['fjh-chip-journeys', '#shell-stat-journeys', '.home-card .stats .stat-cell:nth-child(1) .n'],
+      ['fjh-chip-projects', '#shell-stat-projects', '.home-card .stats .stat-cell:nth-child(1) .n'],
       ['fjh-chip-photos', '#shell-stat-photos', '.home-card .stats .stat-cell:nth-child(2) .n'],
       ['fjh-chip-notes', '#shell-stat-notes', '.home-card .stats .stat-cell:nth-child(3) .n'],
       ['fjh-chip-distance', '#shell-stat-distance', '.home-card .stats .stat-cell:nth-child(4) .n'],
@@ -199,7 +199,7 @@ const FieldShellBridge = (function () {
   }
 
   function hijackHub() {
-    const hub = document.getElementById('field-journey-hub-overlay');
+    const hub = document.getElementById('field-start-hub-overlay');
     if (!hub || hub.dataset.shellHubHijacked) return;
     hub.dataset.shellHubHijacked = '1';
     const ui = window.PlanAIFieldUI;
@@ -207,7 +207,7 @@ const FieldShellBridge = (function () {
       if (hub.style.display === 'flex') {
         hub.style.display = 'none';
         hub.setAttribute('aria-hidden', 'true');
-        document.body.classList.remove('field-journey-hub-active');
+        document.body.classList.remove('field-start-hub-active');
         if (ui?.openHub) ui.openHub();
         else { const home = document.getElementById('home'); if (home) home.hidden = false; }
         syncHubToHome();
@@ -229,16 +229,16 @@ const FieldShellBridge = (function () {
       syncHubToHome();
     });
     obs.observe(root, { subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
-    const hub = document.getElementById('field-journey-hub-overlay');
+    const hub = document.getElementById('field-start-hub-overlay');
     if (hub) obs.observe(hub, { subtree: true, childList: true, characterData: true, attributes: true });
   }
 
   function hideEngineHub() {
-    const hub = document.getElementById('field-journey-hub-overlay');
+    const hub = document.getElementById('field-start-hub-overlay');
     if (!hub) return;
     hub.style.display = 'none';
     hub.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('field-journey-hub-active');
+    document.body.classList.remove('field-start-hub-active');
   }
 
   function patchPlanAiFieldUi() {
@@ -259,7 +259,7 @@ const FieldShellBridge = (function () {
     document.addEventListener('planai:input-mode', (e) => {
       callEngine('setFieldInteractionMode', e.detail);
     });
-    document.addEventListener('planai:all-journeys', () => callEngine('fieldHubActionPrevious'));
+    document.addEventListener('planai:all-projects', () => callEngine('fieldHubActionPrevious'));
   }
 
   function init() {

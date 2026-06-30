@@ -1,5 +1,5 @@
 /**
- * PlanAI Field — mobile-safe interactive replay (file:// / content:// compatible).
+ * PlanAI Field — mobile-safe interactive inspection playback (file:// / content:// compatible).
  * Classic scripts only; no ES modules, no external resources, no MapLibre workers.
  */
 (function (global) {
@@ -31,6 +31,7 @@
     '.psr-media{padding:10px 14px;border-top:1px solid #2a3f55}',
     '.psr-media img{max-width:100%;border-radius:8px;display:block}',
     '.psr-media audio{width:100%;margin-top:8px;min-height:40px}',
+    '.psr-media video{width:100%;margin-top:8px;border-radius:8px;background:#000}',
     '.psr-badge{font-size:10px;background:#2e7d32;color:#fff;padding:2px 8px;border-radius:99px;margin-left:6px}',
     '.psr-fallback-note{font-size:11px;color:#9ab0c8;padding:8px 14px;background:#1a2d42}',
     '#psr-replay-dot{filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}',
@@ -81,19 +82,20 @@
     'var evs=R.events||[];',
     'for(var ei=0;ei<evs.length;ei++){var e=evs[ei];if(!e)continue;',
     'if(e.kind==="track"&&e.path&&e.path.length>=2){FEATS.push(e);continue;}',
-    'if(e.kind==="note"||e.kind==="photo"||e.kind==="audio"){FEATS.push(e);}}',
+    'if(e.kind==="note"||e.kind==="photo"||e.kind==="audio"||e.kind==="video"){FEATS.push(e);}}',
     'if(!FEATS.some(function(f){return f.kind==="track";})&&R.track&&R.track.path&&R.track.path.length>=2){FEATS.unshift(R.track);}',
     'function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}',
     'function fmtTs(ts){if(!ts)return"";try{var d=new Date(ts);if(isNaN(d))return String(ts);return d.toLocaleString(R.lang==="tr"?"tr-TR":"en-GB",{dateStyle:"short",timeStyle:"short"});}catch(x){return String(ts);}}',
     'var app=document.getElementById("psr-app");',
     'var head="<header class=\\"psr-head\\"><h1>"+esc(R.projectName||"PlanAI Field")+"</h1>";',
     'if(R.brandLogoUrl&&/^data:image\\//i.test(R.brandLogoUrl)){head+="<img class=\\"psr-logo\\" src=\\""+R.brandLogoUrl.replace(/"/g,"")+"\\" alt=\\"\\"/>";}',
-    'head+="<div class=\\"psr-meta\\">"+esc(R.inspectorName||"")+(R.generatedAt?" · "+fmtTs(R.generatedAt):"")+"<span class=\\"psr-badge\\">Safe Replay</span></div></header>";',
+    'head+="<div class=\\"psr-meta\\">"+esc(R.inspectorName||"")+(R.generatedAt?" · "+fmtTs(R.generatedAt):"")+"<span class=\\"psr-badge\\">Inspection Playback</span></div></header>";',
     'var st=R.stats||{};',
     'var stats="<div class=\\"psr-stats\\">";',
     'if(st.routeKm!=null)stats+="<span class=\\"psr-stat\\">"+(R.lang==="tr"?"Rota":"Route")+": "+Number(st.routeKm).toFixed(2)+" km</span>";',
     'if(st.durationMin!=null)stats+="<span class=\\"psr-stat\\">"+(R.lang==="tr"?"Süre":"Duration")+": "+Math.round(st.durationMin)+" min</span>";',
     'if(st.photoCount!=null)stats+="<span class=\\"psr-stat\\">"+(R.lang==="tr"?"Foto":"Photos")+": "+st.photoCount+"</span>";',
+    'if(st.videoCount!=null&&st.videoCount>0)stats+="<span class=\\"psr-stat\\">"+(R.lang==="tr"?"Video":"Videos")+": "+st.videoCount+"</span>";',
     'if(st.noteCount!=null)stats+="<span class=\\"psr-stat\\">"+(R.lang==="tr"?"Not":"Notes")+": "+st.noteCount+"</span>";',
     'if(st.audioCount!=null&&st.audioCount>0)stats+="<span class=\\"psr-stat\\">"+(R.lang==="tr"?"Ses":"Voice")+": "+st.audioCount+"</span>";',
     'stats+="</div>";',
@@ -102,8 +104,9 @@
     'if(f.kind==="track"&&f.path){var pts=f.path.map(function(p){var q=proj(p.lat,p.lon||p.lng);return q.x+","+q.y;}).join(" ");',
     'svgMarks+="<polyline data-idx=\\""+i+"\\" points=\\""+pts+"\\" fill=\\"none\\" stroke=\\"#fff\\" stroke-width=\\"5\\" opacity=\\".95\\" stroke-linecap=\\"round\\"/>";',
     'svgMarks+="<polyline data-idx=\\""+i+"\\" points=\\""+pts+"\\" fill=\\"none\\" stroke=\\"#1565c0\\" stroke-width=\\"3\\" opacity=\\".9\\" stroke-linecap=\\"round\\"/>";',
-    '}else if(f.lat!=null){var q=proj(f.lat,f.lon||f.lng);var col=f.kind==="photo"||f.kind==="audio"?"#e67e22":"#1a73e8";',
-    'if(f.hasVoice||f.kind==="audio")svgMarks+="<text x=\\""+q.x+"\\" y=\\""+(q.y-16)+"\\" text-anchor=\\"middle\\" font-size=\\"14\\">🎤</text>";',
+    '}else if(f.lat!=null){var q=proj(f.lat,f.lon||f.lng);var col=f.kind==="video"?"#8e44ad":(f.kind==="photo"||f.kind==="audio"?"#e67e22":"#1a73e8");',
+    'if(f.kind==="video")svgMarks+="<text x=\\""+q.x+"\\" y=\\""+(q.y-16)+"\\" text-anchor=\\"middle\\" font-size=\\"14\\">🎬</text>";',
+    'else if(f.hasVoice||f.kind==="audio")svgMarks+="<text x=\\""+q.x+"\\" y=\\""+(q.y-16)+"\\" text-anchor=\\"middle\\" font-size=\\"14\\">🎤</text>";',
     'svgMarks+="<circle data-idx=\\""+i+"\\" cx=\\""+q.x+"\\" cy=\\""+q.y+"\\" r=\\"12\\" fill=\\""+col+"\\" stroke=\\"#fff\\" stroke-width=\\"3\\"/>";}}',
     'var list="";',
     'for(var j=0;j<FEATS.length;j++){var g=FEATS[j];',
@@ -126,6 +129,8 @@
     'document.querySelectorAll(\'svg [data-idx="\'+i+\'"]\').forEach(function(el){el.classList.add("psr-highlight");});',
     'MEDIA.innerHTML="";',
     'if(f.imageDataUrl&&/^data:image\\//i.test(f.imageDataUrl)){MEDIA.innerHTML="<img src=\\""+f.imageDataUrl.replace(/"/g,"")+"\\" alt=\\"\\"/>";}',
+    'else if(f.thumbDataUrl&&/^data:image\\//i.test(f.thumbDataUrl)){MEDIA.innerHTML="<img src=\\""+f.thumbDataUrl.replace(/"/g,"")+"\\" alt=\\"\\"/>";}',
+    'if(f.videoDataUrl&&/^data:video\\//i.test(f.videoDataUrl)){var vid=document.createElement("video");vid.controls=true;vid.playsInline=true;vid.src=f.videoDataUrl;vid.preload="metadata";vid.style.width="100%";vid.style.borderRadius="8px";MEDIA.appendChild(vid);}',
     'if(f.audioDataUrl&&/^data:audio\\//i.test(f.audioDataUrl)){var aud=document.createElement("audio");aud.controls=true;aud.src=f.audioDataUrl;aud.preload="metadata";MEDIA.appendChild(aud);}',
     'else if(f.hasVoice&&!f.audioDataUrl){MEDIA.innerHTML+="<p class=\\"psr-fallback-note\\">"+(R.lang==="tr"?"Ses kaydı bu dışa aktarımda yok.":"Voice not embedded in this export.")+"</p>";}',
     '}',
@@ -372,3 +377,6 @@
     GATE_SCRIPT,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
+if (typeof FieldSafeReplay !== 'undefined') {
+  globalThis.FieldSafeInspectionPlayback = FieldSafeReplay;
+}
