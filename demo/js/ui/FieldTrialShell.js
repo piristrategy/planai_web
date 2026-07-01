@@ -48,8 +48,8 @@
     return v ? parseInt(v, 10) : 0;
   }
 
-  function startRecSession() {
-    if (!getRecStartedAt()) sessionStorage.setItem(REC_SS_KEY, String(Date.now()));
+  function startRecSession(forceNew) {
+    if (forceNew || !getRecStartedAt()) sessionStorage.setItem(REC_SS_KEY, String(Date.now()));
     const badge = document.querySelector('#trial-inspection-chrome .trial-badge.rec');
     if (badge) badge.classList.remove('paused');
     tickRec();
@@ -63,6 +63,47 @@
     if (el) el.textContent = '00:00:00';
     const badge = document.querySelector('#trial-inspection-chrome .trial-badge.rec');
     if (badge) badge.classList.add('paused');
+  }
+
+  function clearTrialShellSessionCaches() {
+    lastGeoAt = 0;
+    lastGeoCoords = '';
+    lastElevKey = '';
+    lastElevAt = 0;
+    lastElevValue = null;
+    elevPending = false;
+    lastWxKey = '';
+    lastWxAt = 0;
+    lastWxLabel = '';
+    wxPending = false;
+    geoPending = null;
+  }
+
+  function resetTrialLocationUi() {
+    const en = document.documentElement.lang === 'en';
+    const l1 = $('trial-loc-line1');
+    const l2 = $('trial-loc-line2');
+    if (l1) l1.textContent = '—';
+    if (l2) l2.textContent = en ? 'Waiting for GPS…' : 'GPS bekleniyor…';
+    applyAltitudeText('—');
+    applyWeatherText(null, en ? 'Weather' : 'Hava');
+  }
+
+  /** Yeni saha çalışması: REC süresi ve üst bar önbelleklerini sıfırla */
+  function resetRecSession() {
+    clearTrialShellSessionCaches();
+    resetTrialLocationUi();
+    sessionStorage.removeItem(REC_SS_KEY);
+    const el = $('trial-rec-time');
+    if (el) el.textContent = '00:00:00';
+    const badge = document.querySelector('#trial-inspection-chrome .trial-badge.rec');
+    if (badge) badge.classList.remove('paused');
+    if (isInspectionMapActive()) {
+      startRecSession(true);
+    } else {
+      if (recTimer) { clearInterval(recTimer); recTimer = null; }
+      if (badge) badge.classList.add('paused');
+    }
   }
 
   function tickRec() {
@@ -759,6 +800,7 @@
     if (btn) btn.addEventListener('click', () => finishInspection());
     window.fieldTrialFinishInspection = finishInspection;
     window.fieldTrialStopRecSession = stopRecSession;
+    window.fieldTrialResetRecSession = resetRecSession;
     window.isInspectionMapActive = isInspectionMapActive;
   }
 
@@ -771,6 +813,7 @@
     wrapHubAction('fieldHubActionNew');
     wrapHubAction('fieldHubActionContinue');
     wrapHubAction('fieldHubOpenProject');
+    wrapHubAction('submitNewProject');
     hubWatcher();
     bindGpsHudAnchor();
     bindBrandFooterAnchor();

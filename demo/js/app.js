@@ -104,8 +104,10 @@ const FIELD_DISABLED = {
 function fieldOff(key) { return FIELD_MODE && !!FIELD_DISABLED[key]; }
 
 let _fieldGpsOn = false;
-let _fieldGpsFix = null; // { lat, lon, accuracy, heading, ts }
+let _fieldGpsFix = null; // { lat, lon, accuracy, heading, ts, source? }
 let _gpsWatchId = null;
+let _gpsWatchIdNetwork = null;
+let _gpsFixSource = 'none'; // none | network | gps
 let _gpsFollow = false;
 let _mapBrowseMode = false;
 let _pendingInitialLiveCenter = false;
@@ -125,6 +127,7 @@ const GPS_TRACK_DUP_EPS = 1e-6;
 const GPS_STALE_FIX_MS = 12000;
 const GPS_JITTER_STANDSTILL_M = 1.6;
 const GPS_AGPS_WEAK_THRESHOLD_M = 35;
+const GPS_NETWORK_DISPLAY_MAX_M = 250;
 const GPS_LIVE_REJECT_ACCURACY_M = 120;
 const GPS_FIX_FUSE_MAX = 6;
 const GPS_AGPS_POLL_WEAK_MS = 3500;
@@ -160,6 +163,7 @@ let _gpsFixBuffer = [];
 let _gpsAgpsPollTimer = null;
 let _gpsDisplayAccuracySmooth = null;
 let _gpsAgpsHintShown = false;
+let _gpsNetworkHintShown = false;
 let _gpsHudSpeedSmooth = null;
 let _gpsHudHeadingSmooth = null;
 let _gpsHudLongPressTimer = null;
@@ -826,6 +830,7 @@ const PA_I18N = {
     'gps.hint.deniedHelp': 'Konum izni gerekli. Tarayıcı kilit → Site ayarları → Konum → İzin ver.',
     'gps.hint.waiting': 'GPS sinyali bekleniyor — açık alanda deneyin',
     'gps.hint.agpsWeak': 'Zayıf GPS — AGPS konum iyileştiriliyor, açık alanda bekleyin',
+    'gps.hint.networkCoarse': 'Ağ konumu (GSM/Wi‑Fi) — GPS kesinleşiyor',
     'gps.hint.on': 'GPS açıldı — konum aranıyor', 'gps.hint.off': 'GPS durduruldu',
     'gps.hint.followOn': 'GPS ve harita takibi açıldı', 'gps.hint.noFix': 'Konum henüz alınamadı — bekleyin',
     'gps.hint.openFirst': 'Önce GPS\'i açın', 'gps.hint.centered': 'Merkeze gidildi',
@@ -1560,6 +1565,7 @@ const PA_I18N = {
     'gps.hint.deniedHelp': 'Location permission required. Browser lock → Site settings → Location → Allow.',
     'gps.hint.waiting': 'Waiting for GPS — try outdoors',
     'gps.hint.agpsWeak': 'Weak GPS — refining position (AGPS); try open sky',
+    'gps.hint.networkCoarse': 'Network location (cell/Wi‑Fi) — refining with GPS',
     'gps.hint.on': 'GPS on — locating', 'gps.hint.off': 'GPS stopped',
     'gps.hint.followOn': 'GPS and map follow enabled', 'gps.hint.noFix': 'No fix yet — wait',
     'gps.hint.openFirst': 'Turn on GPS first', 'gps.hint.centered': 'Centered on GPS',
@@ -3024,8 +3030,7 @@ function fitMapToGuidanceRoute() {
   if (!b.ok) return;
   if (_gpsFollow) {
     _gpsFollow = false;
-    document.getElementById('btn-gps-follow')?.classList.remove('active');
-    document.getElementById('btn-map-locate')?.classList.toggle('active', _fieldGpsOn && !!_fieldGpsFix);
+    syncMapLocateButtonUi();
   }
   fitMapToLatLonBounds(b);
   scheduleRender();
@@ -3286,8 +3291,87 @@ function gpsClearFixFusion() {
   _gpsFixBuffer = [];
   _gpsDisplayAccuracySmooth = null;
   _gpsAgpsHintShown = false;
+  _gpsNetworkHintShown = false;
   clearTimeout(_gpsAgpsPollTimer);
   _gpsAgpsPollTimer = null;
+}
+
+function gpsHasGpsLock() {
+  return _gpsFixSource === 'gps' && !!_fieldGpsFix
+    && (_fieldGpsFix.accuracy || 999) <= GPS_AGPS_WEAK_THRESHOLD_M;
+}
+
+function gpsClearNetworkWatch() {
+  if (_gpsWatchIdNetwork == null || !navigator.geolocation) return;
+  navigator.geolocation.clearWatch(_gpsWatchIdNetwork);
+  _gpsWatchIdNetwork = null;
+  gpsDbgLog('GPS', 'network watch cleared');
+}
+
+function gpsStartNetworkWatch() {
+  if (!_fieldGpsOn || !navigator.geolocation || gpsHasGpsLock()) return;
+  gpsClearNetworkWatch();
+  const optsLo = { enableHighAccuracy: false, maximumAge: 10000, timeout: 12000 };
+  _gpsWatchIdNetwork = navigator.geolocation.watchPosition(onGpsNetworkWatch, () => {}, optsLo);
+  gpsDbgLog('GPS', 'network watch start', optsLo);
+}
+
+function gpsRequestNetworkFix() {
+  if (!_fieldGpsOn || !navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(onGpsNetworkWatch, () => {}, {
+    enableHighAccuracy: false,
+    maximumAge: 15000,
+    timeout: 10000,
+  });
+}
+
+function onGpsNetworkWatch(pos) { onGpsPosition(pos, { highAccuracy: false }); }
+function onGpsGpsWatch(pos) { onGpsPosition(pos, { highAccuracy: true }); }
+
+function gpsRawFixFromPosition(pos, source) {
+  return {
+    lat: pos.coords.latitude,
+    lon: pos.coords.longitude,
+    accuracy: pos.coords.accuracy,
+    altitude: pos.coords.altitude,
+    heading: pos.coords.heading,
+    speed: pos.coords.speed,
+    ts: Date.now(),
+    source,
+  };
+}
+
+function applyNetworkCoarseFix(rawFix) {
+  const acc = rawFix.accuracy || 999;
+  _fieldGpsFix = { ...rawFix, source: 'network' };
+  _gpsFixSource = 'network';
+  setGpsStatus(gpsClassifyFixAccuracy(acc));
+  if (!_gpsNetworkHintShown) {
+    _gpsNetworkHintShown = true;
+    showHint(t('gps.hint.networkCoarse'), 4500);
+  }
+  if (!_fieldGpsDisplay) {
+    _fieldGpsDisplay = {
+      lat: rawFix.lat,
+      lon: rawFix.lon,
+      accuracy: gpsSmoothDisplayAccuracy(acc),
+      heading: rawFix.heading,
+      speed: rawFix.speed,
+      ts: rawFix.ts,
+      moveState: GPS_MOVE.LOW,
+    };
+    _gpsStationaryAnchor = { lat: rawFix.lat, lon: rawFix.lon };
+  } else {
+    _fieldGpsDisplay.lat = rawFix.lat;
+    _fieldGpsDisplay.lon = rawFix.lon;
+    _fieldGpsDisplay.accuracy = gpsSmoothDisplayAccuracy(acc);
+    _fieldGpsDisplay.ts = rawFix.ts;
+    _fieldGpsDisplay.moveState = GPS_MOVE.LOW;
+  }
+  ensureGpsMotionLoop();
+  updateGpsHud();
+  if (_pendingInitialLiveCenter && _gpsFollow) requestInitialLiveMapCenter();
+  scheduleRender();
 }
 
 function gpsPushFixBuffer(fix) {
@@ -3362,7 +3446,7 @@ function gpsPollAgpsFix() {
   if (!_fieldGpsOn || !navigator.geolocation) return;
   const acc = _fieldGpsFix?.accuracy || 999;
   const urgent = acc > GPS_AGPS_WEAK_THRESHOLD_M || _gpsStatus === 'weak' || _gpsStatus === 'searching';
-  navigator.geolocation.getCurrentPosition(onGpsPosition, () => {}, {
+  navigator.geolocation.getCurrentPosition(onGpsGpsWatch, () => {}, {
     enableHighAccuracy: true,
     maximumAge: urgent ? 0 : 2500,
     timeout: urgent ? 28000 : 16000,
@@ -3604,23 +3688,27 @@ function fieldLiveLocationLocked() {
 function pauseLiveMapFollow() {
   _mapBrowseMode = true;
   _gpsFollow = false;
-  document.getElementById('btn-gps-follow')?.classList.remove('active');
-  document.getElementById('btn-map-locate')?.classList.remove('active');
+  syncMapLocateButtonUi();
 }
 
 function resumeLiveMapFollow() {
   _mapBrowseMode = false;
   if (!_fieldGpsOn) {
     startFieldGpsSession();
+    _gpsFollow = true;
+    _pendingInitialLiveCenter = true;
+    syncMapLocateButtonUi();
     return;
   }
   _gpsFollow = true;
-  document.getElementById('btn-gps-follow')?.classList.add('active');
-  document.getElementById('btn-map-locate')?.classList.add('active');
+  syncMapLocateButtonUi();
   const g = getGpsDisplayFix();
   if (g) {
     _gpsLastPanTs = 0;
     zoomMapToFieldLiveLocation(g.lat, g.lon);
+    _pendingInitialLiveCenter = false;
+  } else {
+    _pendingInitialLiveCenter = true;
   }
   updateGpsHud();
 }
@@ -3629,8 +3717,19 @@ function ensureFieldLiveLocationFollow() {
   if (!fieldLiveLocationLocked()) return;
   if (_mapBrowseMode || _gpsGuidanceActive) return;
   _gpsFollow = true;
-  document.getElementById('btn-gps-follow')?.classList.add('active');
-  document.getElementById('btn-map-locate')?.classList.add('active');
+  syncMapLocateButtonUi();
+}
+
+function syncMapLocateButtonUi() {
+  const btn = document.getElementById('btn-map-locate');
+  const live = !!_gpsFollow;
+  const gpsReady = live && _fieldGpsOn;
+  if (btn) {
+    btn.classList.toggle('active', gpsReady);
+    btn.classList.toggle('live-follow', live);
+    btn.setAttribute('aria-pressed', live ? 'true' : 'false');
+  }
+  document.getElementById('btn-gps-follow')?.classList.toggle('active', gpsReady);
 }
 
 function requestInitialLiveMapCenter() {
@@ -3670,8 +3769,7 @@ function disableGpsFollowFromPan() {
   }
   if (!_gpsFollow) return;
   _gpsFollow = false;
-  document.getElementById('btn-gps-follow')?.classList.remove('active');
-  document.getElementById('btn-map-locate')?.classList.toggle('active', _fieldGpsOn && !!_fieldGpsFix);
+  syncMapLocateButtonUi();
 }
 
 function resetGpsMovementEngine() {
@@ -3683,6 +3781,7 @@ function resetGpsMovementEngine() {
   _gpsStateCandidateSince = 0;
   _gpsExitCandidateSince = 0;
   _gpsSpeedSamples = [];
+  _gpsFixSource = 'none';
   gpsClearFixFusion();
   gpsResetDerivedPath();
 }
@@ -4324,7 +4423,9 @@ function updateGpsTestPanel() {
   }
   if (watch) {
     watch.textContent = 'status: ' + _gpsStatus +
-      ' · watch: ' + (_gpsWatchId != null ? 'on' : 'off') +
+      ' · gps: ' + (_gpsWatchId != null ? 'on' : 'off') +
+      ' · net: ' + (_gpsWatchIdNetwork != null ? 'on' : 'off') +
+      ' · src: ' + _gpsFixSource +
       ' · ticks: ' + _gpsPositionTick +
       ' · track: ' + _gpsTrack.state + ' (' + _gpsTrack.points.length + ')';
   }
@@ -4340,7 +4441,8 @@ function restartGpsWatchOnly() {
   if (!_fieldGpsOn || !navigator.geolocation) return;
   if (_gpsWatchId != null) navigator.geolocation.clearWatch(_gpsWatchId);
   const optsHi = { enableHighAccuracy: true, maximumAge: 2000, timeout: 30000 };
-  _gpsWatchId = navigator.geolocation.watchPosition(onGpsPosition, onGpsWatchError, optsHi);
+  _gpsWatchId = navigator.geolocation.watchPosition(onGpsGpsWatch, onGpsWatchError, optsHi);
+  if (!gpsHasGpsLock()) gpsStartNetworkWatch();
   scheduleGpsFallbackFix();
   gpsDbgLog('GPS', 'watchPosition restarted');
 }
@@ -10154,7 +10256,6 @@ async function createNewProject(name) {
     FIELD_PROJECT.id = 'prj_' + Date.now();
     FIELD_PROJECT.name = projName;
     FIELD_PROJECT.createdAt = new Date().toISOString();
-    FIELD_PROJECT.metadata = {};
     FIELD_PROJECT.archived = false;
     S.objects = [];
     S.history = [[]];
@@ -10166,8 +10267,22 @@ async function createNewProject(name) {
     _fieldProjectReports = [];
     clearFieldInspectionWorkspaceState();
     resetGpsTrackForFreshInspection();
+    if (typeof window.fieldTrialResetRecSession === 'function') window.fieldTrialResetRecSession();
     clearLocalSlopeAnalysis();
     closePlanOverlayPanel();
+    _fieldGpsFix = null;
+    _fieldGpsDisplay = null;
+    _gpsStationaryAnchor = null;
+    resetGpsHudSmoothing();
+    _projMetaGeocodeCache = { key: '', at: 0, text: '' };
+    const nowIso = new Date().toISOString();
+    FIELD_PROJECT.metadata = {
+      startTime: nowIso,
+      endTime: nowIso,
+      inspectionAt: nowIso,
+      location: inspectionMetaWaitingLabel(),
+    };
+    _inspectionMetaGpsPending = true;
     initLayers();
     buildLayerPanel();
     sanitizeFieldProjectLayers();
@@ -10191,8 +10306,8 @@ async function createNewProject(name) {
     renderFieldProjectReportsList();
     if (FIELD_MODE) {
       await activateFieldLocationSession(false, { liveFollow: true, expandHud: true });
+      if (_fieldGpsOn) restartGpsWatchOnly();
     }
-    syncProjectInspectionMetadata({ forceLocation: true }).catch(() => {});
   } catch (e) {
     console.error('[New Project]', e);
     showHint('Çalışma oluşturulamadı: ' + (e.message || e));
@@ -14066,12 +14181,15 @@ function scheduleGpsFallbackFix() {
   clearTimeout(_gpsRetryTimer);
   _gpsRetryTimer = setTimeout(() => {
     if (!_fieldGpsOn || !navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(onGpsPosition, onGpsError, {
+    if (!gpsHasGpsLock()) gpsRequestNetworkFix();
+    navigator.geolocation.getCurrentPosition(onGpsGpsWatch, onGpsError, {
       enableHighAccuracy: true, maximumAge: 8000, timeout: 22000,
     });
-    navigator.geolocation.getCurrentPosition(onGpsPosition, () => {}, {
-      enableHighAccuracy: false, maximumAge: 15000, timeout: 12000,
-    });
+    if (!gpsHasGpsLock()) {
+      navigator.geolocation.getCurrentPosition(onGpsNetworkWatch, () => {}, {
+        enableHighAccuracy: false, maximumAge: 15000, timeout: 12000,
+      });
+    }
   }, 1200);
 }
 
@@ -14138,38 +14256,46 @@ function updateGpsHud() {
     primaryBtn.classList.add('stop');
   }
   document.getElementById('btn-gps-follow')?.classList.toggle('active', _gpsFollow);
-  document.getElementById('btn-map-locate')?.classList.toggle('active', !!_gpsFollow);
+  syncMapLocateButtonUi();
   updateGpsTrackHud();
   updateGpsTestPanel();
 }
 
-function onGpsPosition(pos) {
+function onGpsPosition(pos, opts) {
+  opts = opts || { highAccuracy: true };
+  const isNetwork = opts.highAccuracy === false;
   clearTimeout(_gpsFirstFixTimer);
   _gpsDenyStreak = 0;
   _gpsLastWatchTick = Date.now();
   _gpsPositionTick++;
   const hwAge = pos.timestamp ? Date.now() - pos.timestamp : 0;
   if (hwAge > GPS_STALE_FIX_MS) {
-    gpsDbgLog('POSITION', 'stale fix skipped', Math.round(hwAge) + 'ms');
-    gpsScheduleAgpsRefresh(true);
+    gpsDbgLog('POSITION', 'stale fix skipped', Math.round(hwAge) + 'ms', isNetwork ? 'net' : 'gps');
+    if (!isNetwork) gpsScheduleAgpsRefresh(true);
     return;
   }
-  const rawFix = {
-    lat: pos.coords.latitude,
-    lon: pos.coords.longitude,
-    accuracy: pos.coords.accuracy,
-    altitude: pos.coords.altitude,
-    heading: pos.coords.heading,
-    speed: pos.coords.speed,
-    ts: Date.now(),
-  };
+  const rawFix = gpsRawFixFromPosition(pos, isNetwork ? 'network' : 'gps');
+
+  if (isNetwork) {
+    if (gpsHasGpsLock()) return;
+    const acc = rawFix.accuracy || 999;
+    if (acc > GPS_NETWORK_DISPLAY_MAX_M) return;
+    if (_fieldGpsFix && _gpsFixSource === 'gps' && acc >= (_fieldGpsFix.accuracy || 999)) return;
+    gpsDbgLog('POSITION', 'network', rawFix.lat.toFixed(6), rawFix.lon.toFixed(6),
+      '±' + Math.round(acc) + 'm', 'tick', _gpsPositionTick);
+    applyNetworkCoarseFix(rawFix);
+    return;
+  }
+
   if (!gpsAcceptLiveFix(rawFix)) {
     gpsScheduleAgpsRefresh(true);
     if (!_fieldGpsFix) setGpsStatus('searching');
     return;
   }
   _fieldGpsFix = gpsFuseLiveFix(rawFix);
-  gpsDbgLog('POSITION', _fieldGpsFix.lat.toFixed(6), _fieldGpsFix.lon.toFixed(6),
+  _fieldGpsFix.source = 'gps';
+  _gpsFixSource = 'gps';
+  gpsDbgLog('POSITION', 'gps', _fieldGpsFix.lat.toFixed(6), _fieldGpsFix.lon.toFixed(6),
     '±' + Math.round(_fieldGpsFix.accuracy || 0) + 'm', 'tick', _gpsPositionTick);
   const acc = _fieldGpsFix.accuracy || 999;
   setGpsStatus(gpsClassifyFixAccuracy(acc));
@@ -14187,7 +14313,9 @@ function onGpsPosition(pos) {
   ensureGpsMotionLoop();
   updateGpsHud();
   if (_pendingInitialLiveCenter && _gpsFollow) requestInitialLiveMapCenter();
+  if (_inspectionMetaGpsPending) scheduleInspectionMetaFromGps();
   gpsTrackOnPosition(pos);
+  if (acc <= GPS_AGPS_WEAK_THRESHOLD_M) gpsClearNetworkWatch();
   gpsScheduleAgpsRefresh(acc > GPS_AGPS_WEAK_THRESHOLD_M);
 }
 
@@ -14210,21 +14338,24 @@ function startGpsWatch() {
   document.getElementById('btn-field-gps')?.classList.add('active');
   _gpsDenyStreak = 0;
   _gpsPositionTick = 0;
+  _gpsFixSource = 'none';
   gpsClearFixFusion();
   const optsHi = { enableHighAccuracy: true, maximumAge: 1000, timeout: 30000 };
-  const optsLo = { enableHighAccuracy: false, maximumAge: 8000, timeout: 20000 };
   const optsAgps = { enableHighAccuracy: true, maximumAge: 0, timeout: 35000 };
-  gpsDbgLog('GPS', 'watchPosition start', optsHi);
-  _gpsWatchId = navigator.geolocation.watchPosition(onGpsPosition, onGpsWatchError, optsHi);
+  gpsDbgLog('GPS', 'dual watch start (network first + gps)', optsHi);
+  gpsRequestNetworkFix();
+  gpsStartNetworkWatch();
+  _gpsWatchId = navigator.geolocation.watchPosition(onGpsGpsWatch, onGpsWatchError, optsHi);
   startGpsWatchdog();
   refreshGpsTestPermission();
-  navigator.geolocation.getCurrentPosition(onGpsPosition, e => onGpsError(e, false), optsAgps);
+  navigator.geolocation.getCurrentPosition(onGpsGpsWatch, e => onGpsError(e, false), optsAgps);
   scheduleGpsFallbackFix();
   gpsScheduleAgpsRefresh(true);
   _gpsFirstFixTimer = setTimeout(() => {
     if (_fieldGpsOn && !_fieldGpsFix) {
       setGpsStatus('searching');
-      navigator.geolocation.getCurrentPosition(onGpsPosition, e => onGpsError(e, false), optsLo);
+      gpsRequestNetworkFix();
+      navigator.geolocation.getCurrentPosition(onGpsGpsWatch, e => onGpsError(e, false), optsHi);
       showHint(t('gps.hint.waiting'), 5000);
     }
   }, 14000);
@@ -14240,6 +14371,7 @@ function stopGpsWatch(clearUi) {
   stopGpsMotionLoop();
   unbindGpsCompassListener();
   resetGpsMovementEngine();
+  gpsClearNetworkWatch();
   if (_gpsWatchId != null) {
     navigator.geolocation.clearWatch(_gpsWatchId);
     _gpsWatchId = null;
@@ -14384,18 +14516,36 @@ function centerMapToGps() {
 
 function mapControlLocate() {
   touchGpsHudActivity();
-  if (!_fieldGpsOn) {
-    startFieldGpsSession();
-    showHint(t('gps.hint.liveOn'));
-    return;
-  }
-  const g = getGpsDisplayFix();
-  if (!g) {
-    showHint(t('gps.hint.pending'));
-    return;
-  }
-  resumeLiveMapFollow();
-  showHint(t('gps.hint.centered'));
+  markInspectionMetaAwaitingGps();
+  scheduleInspectionMetaFromGps({ refreshInspectionStart: true });
+
+  void (async () => {
+    if (!FIELD_PROJECT.id) {
+      showHint(t('gps.hint.openFirst'));
+      return;
+    }
+    _mapBrowseMode = false;
+    _gpsFollow = true;
+    _pendingInitialLiveCenter = true;
+    syncMapLocateButtonUi();
+    if (!_fieldGpsOn) {
+      await activateFieldLocationSession(false, { liveFollow: true });
+      syncMapLocateButtonUi();
+      updateGpsHud();
+      return;
+    }
+    resumeGpsAfterInterruption();
+    resumeLiveMapFollow();
+    const g = getGpsDisplayFix();
+    if (g) {
+      void refreshInspectionMetadataFromGps({ force: true, refreshInspectionStart: true });
+      showHint(t('gps.hint.liveOn'));
+    } else {
+      showHint(t('gps.hint.pending'));
+    }
+    syncMapLocateButtonUi();
+    updateGpsHud();
+  })();
 }
 
 function mapZoomStep(factor) {
@@ -18120,6 +18270,65 @@ function deriveProjectInspectionDate(project, photos, notes, videos) {
 }
 
 let _projMetaGeocodeCache = { key: '', at: 0, text: '' };
+let _inspectionMetaGpsPending = false;
+let _inspectionMetaGpsSyncTimer = null;
+
+function inspectionMetaWaitingLabel() {
+  return PA_LANG === 'tr' ? 'GPS bekleniyor…' : 'Waiting for GPS…';
+}
+
+function markInspectionMetaAwaitingGps() {
+  _inspectionMetaGpsPending = true;
+  if (!FIELD_PROJECT.id) return;
+  const md = FIELD_PROJECT.metadata || (FIELD_PROJECT.metadata = {});
+  md.location = inspectionMetaWaitingLabel();
+  delete md.centerLat;
+  delete md.centerLon;
+}
+
+function gpsFixUsableForInspectionMeta(fix) {
+  if (!fix || fix.lat == null || fix.lon == null) return false;
+  if (fix.source === 'network' || _gpsFixSource === 'network') return false;
+  if (_gpsStatus === 'denied' || _gpsStatus === 'unavailable' || _gpsStatus === 'off') return false;
+  const acc = fix.accuracy || 999;
+  if (_inspectionMetaGpsPending) {
+    if (_gpsStatus === 'searching' && acc > 100) return false;
+    if (FIELD_PROJECT.createdAt) {
+      const created = Date.parse(FIELD_PROJECT.createdAt);
+      const fixTs = fix.ts || 0;
+      if (Number.isFinite(created) && fixTs && fixTs + 2000 < created) return false;
+    }
+  }
+  return _gpsStatus === 'connected' || _gpsStatus === 'weak'
+    || (_gpsStatus === 'searching' && acc <= 100);
+}
+
+function scheduleInspectionMetaFromGps(opts) {
+  opts = opts || {};
+  if (!FIELD_PROJECT.id) return;
+  clearTimeout(_inspectionMetaGpsSyncTimer);
+  const delay = opts.immediate ? 0 : 450;
+  _inspectionMetaGpsSyncTimer = setTimeout(() => {
+    void refreshInspectionMetadataFromGps(opts);
+  }, delay);
+}
+
+async function refreshInspectionMetadataFromGps(opts) {
+  opts = opts || {};
+  if (!FIELD_PROJECT.id) return;
+  if (!_inspectionMetaGpsPending && !opts.force) return;
+  if (!gpsFixUsableForInspectionMeta(_fieldGpsFix)) return;
+  const refreshStart = !!_inspectionMetaGpsPending || !!opts.refreshInspectionStart;
+  await syncProjectInspectionMetadata({
+    forceLocation: true,
+    gpsOnly: true,
+    refreshInspectionStart: refreshStart,
+  });
+  _inspectionMetaGpsPending = false;
+  _projectDirty = true;
+  scheduleProjectSaveDebounced();
+}
+window.refreshInspectionMetadataFromGps = refreshInspectionMetadataFromGps;
 
 function deriveObjectActivityTimes() {
   const stamps = [];
@@ -18175,22 +18384,49 @@ async function resolveInspectionLocationLabel(lat, lon) {
 
 async function syncProjectInspectionMetadata(opts = {}) {
   if (!FIELD_PROJECT.id) return;
+  if (_inspectionMetaGpsPending && gpsFixUsableForInspectionMeta(_fieldGpsFix)) {
+    opts = {
+      ...opts,
+      forceLocation: true,
+      gpsOnly: true,
+      refreshInspectionStart: opts.refreshInspectionStart !== false,
+    };
+  } else if (_inspectionMetaGpsPending && !opts.forceLocation) {
+    opts = { ...opts, gpsOnly: true };
+  }
   const md = FIELD_PROJECT.metadata || (FIELD_PROJECT.metadata = {});
   const now = new Date();
   const stamps = deriveObjectActivityTimes();
-  if (!md.startTime) {
+  if (opts.refreshInspectionStart) {
+    const nowIso = now.toISOString();
+    md.startTime = nowIso;
+    md.inspectionAt = nowIso;
+    md.endTime = nowIso;
+  } else if (!md.startTime) {
     md.startTime = stamps.length ? new Date(Math.min(...stamps)).toISOString() : now.toISOString();
   } else if (stamps.length) {
     const existing = Date.parse(md.startTime);
     const earliest = Math.min(...stamps);
     if (Number.isFinite(existing) && earliest < existing) md.startTime = new Date(earliest).toISOString();
   }
-  if (stamps.length) md.endTime = new Date(Math.max(...stamps)).toISOString();
-  else md.endTime = now.toISOString();
+  if (!opts.refreshInspectionStart) {
+    if (stamps.length) md.endTime = new Date(Math.max(...stamps)).toISOString();
+    else md.endTime = now.toISOString();
+  }
   md.inspectionAt = md.startTime;
   const fix = _fieldGpsFix;
-  const lat = fix?.lat ?? S.mapCenter?.lat;
-  const lon = fix?.lon ?? S.mapCenter?.lon;
+  let lat = null;
+  let lon = null;
+  if (fix && (opts.gpsOnly || opts.forceLocation)) {
+    if (gpsFixUsableForInspectionMeta(fix) || !opts.gpsOnly) {
+      lat = fix.lat;
+      lon = fix.lon;
+    }
+  }
+  if ((lat == null || lon == null) && !opts.gpsOnly) {
+    lat = fix?.lat ?? S.mapCenter?.lat;
+    lon = fix?.lon ?? S.mapCenter?.lon;
+  }
   if (lat != null && lon != null) {
     md.centerLat = lat;
     md.centerLon = lon;
@@ -18198,6 +18434,13 @@ async function syncProjectInspectionMetadata(opts = {}) {
       const loc = await resolveInspectionLocationLabel(lat, lon);
       if (loc) md.location = loc;
     }
+    if (opts.forceLocation && md.location && !/GPS bekleniyor|Waiting for GPS/i.test(md.location)) {
+      _inspectionMetaGpsPending = false;
+    }
+  } else if (_inspectionMetaGpsPending || /GPS bekleniyor|Waiting for GPS/i.test(md.location || '')) {
+    md.location = inspectionMetaWaitingLabel();
+    delete md.centerLat;
+    delete md.centerLon;
   }
 }
 

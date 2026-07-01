@@ -1761,6 +1761,17 @@ body.field-mode .map-zoom-stack{border:2px solid var(--field-border-strong);box-
 body.field-mode .map-zoom-stack button{width:34px;height:30px;min-height:30px;max-height:32px;font-size:15px;}
 .map-zoom-stack button+button{border-top:1px solid #e0e0e0;}
 #btn-map-locate svg{display:block;width:18px;height:18px;}
+#btn-map-locate.trial-locate-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;}
+#btn-map-locate .trial-locate-led{display:none;position:absolute;left:50%;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e,0 0 14px rgba(34,197,94,.55);z-index:2;pointer-events:none;}
+#btn-map-locate.live-follow{
+  background:linear-gradient(145deg,#166534 0%,#14532d 100%)!important;
+  border-color:#4ade80!important;
+  color:#86efac!important;
+  box-shadow:0 2px 10px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.14);
+}
+#btn-map-locate.live-follow .trial-locate-led{display:block;animation:trial-locate-led-blink 1.6s step-start infinite;}
+#btn-map-locate.live-follow .trial-locate-core{fill:transparent!important;}
+@keyframes trial-locate-led-blink{50%{opacity:.32;box-shadow:0 0 4px #22c55e,0 0 8px rgba(34,197,94,.35);}}
 #field-note-popup .fnp-photo-block.fnp-primary,
 #field-note-popup .fnp-note-item.fnp-primary{
   border-left:3px solid #1a73e8;padding-left:8px;margin-left:-2px;

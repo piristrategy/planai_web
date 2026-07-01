@@ -474,7 +474,8 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
     <div id="trial-locate-coach" class="trial-locate-coach" data-i18n-html="trial.locateCoach" aria-live="polite" hidden>Canlı konumunuzu görmek için <strong>sağdaki bu butona</strong> dokunun.</div>
     <div id="map-float-controls">
       <button type="button" id="btn-map-locate" class="trial-locate-btn" onclick="mapControlLocate()" data-i18n-title="trial.locateBtn" data-i18n-aria="trial.locateBtn" title="Canlı konum" aria-label="Canlı konum">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.75"/><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/><path d="M12 4v2.2M12 17.8V20M4 12h2.2M17.8 12H20" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+        <span class="trial-locate-led" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.75"/><circle class="trial-locate-core" cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/><path d="M12 4v2.2M12 17.8V20M4 12h2.2M17.8 12H20" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
       </button>
       <div class="map-zoom-stack">
         <button type="button" onclick="mapZoomStep(1.25)" aria-label="Yakınlaştır">+</button>
