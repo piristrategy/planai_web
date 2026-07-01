@@ -452,14 +452,18 @@
     const btn = $('btn-map-locate');
     if (!coach || !btn) return;
 
-    function dismissCoach() {
+    function hideCoachUi() {
       coach.classList.remove('show');
       coach.hidden = true;
       btn.classList.remove('trial-locate-hint');
     }
 
-    function showCoach() {
+    function showCoachUi() {
       if (!isInspectionMapActive()) return;
+      if (typeof window.shouldShowFieldLocateCoach === 'function' && !window.shouldShowFieldLocateCoach()) {
+        hideCoachUi();
+        return;
+      }
       coach.hidden = false;
       coach.classList.add('show');
       btn.classList.add('trial-locate-hint');
@@ -469,29 +473,41 @@
       });
     }
 
-    function hideCoach() {
-      coach.classList.remove('show');
-      coach.hidden = true;
-      btn.classList.remove('trial-locate-hint');
+    function syncLocateCoach() {
+      if (!isInspectionMapActive()) {
+        hideCoachUi();
+        return;
+      }
+      if (typeof window.shouldShowFieldLocateCoach === 'function' && !window.shouldShowFieldLocateCoach()) {
+        hideCoachUi();
+      } else {
+        showCoachUi();
+      }
     }
 
-    btn.addEventListener('click', dismissCoach);
-    coach.addEventListener('click', dismissCoach);
+    window.syncFieldLocateCoachUi = syncLocateCoach;
+
+    btn.addEventListener('click', () => setTimeout(syncLocateCoach, 80));
+    coach.addEventListener('click', syncLocateCoach);
 
     const overlay = $('field-start-hub-overlay');
     if (overlay) {
       new MutationObserver(() => {
-        if (isHubOpen()) hideCoach();
-        else setTimeout(showCoach, 450);
+        if (isHubOpen()) hideCoachUi();
+        else setTimeout(syncLocateCoach, 450);
       }).observe(overlay, { attributes: true, attributeFilter: ['style', 'aria-hidden'] });
     }
 
-    window.addEventListener('resize', () => requestAnimationFrame(positionLocateCoach));
-    window.addEventListener('orientationchange', () => setTimeout(positionLocateCoach, 160));
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && isInspectionMapActive()) setTimeout(showCoach, 400);
+    window.addEventListener('resize', () => {
+      if (coach.classList.contains('show')) requestAnimationFrame(positionLocateCoach);
     });
-    setTimeout(showCoach, 900);
+    window.addEventListener('orientationchange', () => {
+      if (coach.classList.contains('show')) setTimeout(positionLocateCoach, 160);
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) setTimeout(syncLocateCoach, 400);
+    });
+    setTimeout(syncLocateCoach, 900);
   }
 
   function positionTrialRightColumn() {

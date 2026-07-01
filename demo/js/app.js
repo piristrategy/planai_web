@@ -3296,33 +3296,90 @@ function gpsClearFixFusion() {
   _gpsAgpsPollTimer = null;
 }
 
+function fieldGeoAvailable() {
+  return (typeof FieldGeolocation !== 'undefined' && FieldGeolocation.available())
+    || !!(navigator.geolocation);
+}
+
+function geoClearWatch(watchId) {
+  if (watchId == null) return;
+  if (typeof FieldGeolocation !== 'undefined') FieldGeolocation.clearWatch(watchId);
+  else if (navigator.geolocation) navigator.geolocation.clearWatch(watchId);
+}
+
+function geoWatchNetwork(success, error, opts) {
+  opts = opts || {};
+  if (typeof FieldGeolocation !== 'undefined' && FieldGeolocation.available()) {
+    return FieldGeolocation.watchNetworkPosition(success, error, opts);
+  }
+  return navigator.geolocation.watchPosition(success, error, {
+    enableHighAccuracy: false,
+    maximumAge: opts.maximumAge != null ? opts.maximumAge : 10000,
+    timeout: opts.timeout != null ? opts.timeout : 12000,
+  });
+}
+
+function geoWatchGps(success, error, opts) {
+  opts = opts || {};
+  if (typeof FieldGeolocation !== 'undefined' && FieldGeolocation.available()) {
+    return FieldGeolocation.watchGpsPosition(success, error, opts);
+  }
+  return navigator.geolocation.watchPosition(success, error, {
+    enableHighAccuracy: true,
+    maximumAge: opts.maximumAge != null ? opts.maximumAge : 2000,
+    timeout: opts.timeout != null ? opts.timeout : 30000,
+  });
+}
+
+function geoGetNetwork(success, error, opts) {
+  opts = opts || {};
+  if (typeof FieldGeolocation !== 'undefined' && FieldGeolocation.available()) {
+    FieldGeolocation.getNetworkPosition(success, error, opts);
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(success, error, {
+    enableHighAccuracy: false,
+    maximumAge: opts.maximumAge != null ? opts.maximumAge : 15000,
+    timeout: opts.timeout != null ? opts.timeout : 10000,
+  });
+}
+
+function geoGetGps(success, error, opts) {
+  opts = opts || {};
+  if (typeof FieldGeolocation !== 'undefined' && FieldGeolocation.available()) {
+    FieldGeolocation.getGpsPosition(success, error, opts);
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(success, error, {
+    enableHighAccuracy: true,
+    maximumAge: opts.maximumAge != null ? opts.maximumAge : 0,
+    timeout: opts.timeout != null ? opts.timeout : 35000,
+  });
+}
+
 function gpsHasGpsLock() {
   return _gpsFixSource === 'gps' && !!_fieldGpsFix
     && (_fieldGpsFix.accuracy || 999) <= GPS_AGPS_WEAK_THRESHOLD_M;
 }
 
 function gpsClearNetworkWatch() {
-  if (_gpsWatchIdNetwork == null || !navigator.geolocation) return;
-  navigator.geolocation.clearWatch(_gpsWatchIdNetwork);
+  if (_gpsWatchIdNetwork == null || !fieldGeoAvailable()) return;
+  geoClearWatch(_gpsWatchIdNetwork);
   _gpsWatchIdNetwork = null;
   gpsDbgLog('GPS', 'network watch cleared');
 }
 
 function gpsStartNetworkWatch() {
-  if (!_fieldGpsOn || !navigator.geolocation || gpsHasGpsLock()) return;
+  if (!_fieldGpsOn || !fieldGeoAvailable() || gpsHasGpsLock()) return;
   gpsClearNetworkWatch();
-  const optsLo = { enableHighAccuracy: false, maximumAge: 10000, timeout: 12000 };
-  _gpsWatchIdNetwork = navigator.geolocation.watchPosition(onGpsNetworkWatch, () => {}, optsLo);
+  const optsLo = { maximumAge: 10000, timeout: 12000 };
+  _gpsWatchIdNetwork = geoWatchNetwork(onGpsNetworkWatch, () => {}, optsLo);
   gpsDbgLog('GPS', 'network watch start', optsLo);
 }
 
 function gpsRequestNetworkFix() {
-  if (!_fieldGpsOn || !navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(onGpsNetworkWatch, () => {}, {
-    enableHighAccuracy: false,
-    maximumAge: 15000,
-    timeout: 10000,
-  });
+  if (!_fieldGpsOn || !fieldGeoAvailable()) return;
+  geoGetNetwork(onGpsNetworkWatch, () => {}, { maximumAge: 15000, timeout: 10000 });
 }
 
 function onGpsNetworkWatch(pos) { onGpsPosition(pos, { highAccuracy: false }); }
@@ -3443,11 +3500,10 @@ function gpsScheduleAgpsRefresh(urgent) {
 }
 
 function gpsPollAgpsFix() {
-  if (!_fieldGpsOn || !navigator.geolocation) return;
+  if (!_fieldGpsOn || !fieldGeoAvailable()) return;
   const acc = _fieldGpsFix?.accuracy || 999;
   const urgent = acc > GPS_AGPS_WEAK_THRESHOLD_M || _gpsStatus === 'weak' || _gpsStatus === 'searching';
-  navigator.geolocation.getCurrentPosition(onGpsGpsWatch, () => {}, {
-    enableHighAccuracy: true,
+  geoGetGps(onGpsGpsWatch, () => {}, {
     maximumAge: urgent ? 0 : 2500,
     timeout: urgent ? 28000 : 16000,
   });
@@ -3722,15 +3778,30 @@ function ensureFieldLiveLocationFollow() {
 
 function syncMapLocateButtonUi() {
   const btn = document.getElementById('btn-map-locate');
-  const live = !!_gpsFollow;
-  const gpsReady = live && _fieldGpsOn;
+  const live = isFieldLiveLocateActive();
   if (btn) {
-    btn.classList.toggle('active', gpsReady);
+    btn.classList.toggle('active', live);
     btn.classList.toggle('live-follow', live);
     btn.setAttribute('aria-pressed', live ? 'true' : 'false');
   }
-  document.getElementById('btn-gps-follow')?.classList.toggle('active', gpsReady);
+  document.getElementById('btn-gps-follow')?.classList.toggle('active', live);
+  if (typeof window.syncFieldLocateCoachUi === 'function') window.syncFieldLocateCoachUi();
 }
+
+function isFieldLiveLocateActive() {
+  return !!(_gpsFollow && _fieldGpsOn
+    && _gpsStatus !== 'denied'
+    && _gpsStatus !== 'unavailable'
+    && _gpsStatus !== 'off');
+}
+
+function shouldShowFieldLocateCoach() {
+  if (isFieldLiveLocateActive()) return false;
+  if (_gpsFollow && !_fieldGpsOn) return false;
+  return true;
+}
+window.isFieldLiveLocateActive = isFieldLiveLocateActive;
+window.shouldShowFieldLocateCoach = shouldShowFieldLocateCoach;
 
 function requestInitialLiveMapCenter() {
   if (!_gpsFollow) {
@@ -4438,10 +4509,10 @@ function stopGpsWatchdog() {
 }
 
 function restartGpsWatchOnly() {
-  if (!_fieldGpsOn || !navigator.geolocation) return;
-  if (_gpsWatchId != null) navigator.geolocation.clearWatch(_gpsWatchId);
-  const optsHi = { enableHighAccuracy: true, maximumAge: 2000, timeout: 30000 };
-  _gpsWatchId = navigator.geolocation.watchPosition(onGpsGpsWatch, onGpsWatchError, optsHi);
+  if (!_fieldGpsOn || !fieldGeoAvailable()) return;
+  if (_gpsWatchId != null) geoClearWatch(_gpsWatchId);
+  const optsHi = { maximumAge: 2000, timeout: 30000 };
+  _gpsWatchId = geoWatchGps(onGpsGpsWatch, onGpsWatchError, optsHi);
   if (!gpsHasGpsLock()) gpsStartNetworkWatch();
   scheduleGpsFallbackFix();
   gpsDbgLog('GPS', 'watchPosition restarted');
@@ -14121,6 +14192,10 @@ function confirmGpsDenied(msg) {
 }
 
 function setGpsStatus(status) {
+  if ((status === 'denied' || status === 'unavailable') && _gpsFollow) {
+    _gpsFollow = false;
+    _mapBrowseMode = true;
+  }
   _gpsStatus = status;
   updateGpsHud();
 }
@@ -14180,15 +14255,11 @@ function onGpsWatchError(err) {
 function scheduleGpsFallbackFix() {
   clearTimeout(_gpsRetryTimer);
   _gpsRetryTimer = setTimeout(() => {
-    if (!_fieldGpsOn || !navigator.geolocation) return;
+    if (!_fieldGpsOn || !fieldGeoAvailable()) return;
     if (!gpsHasGpsLock()) gpsRequestNetworkFix();
-    navigator.geolocation.getCurrentPosition(onGpsGpsWatch, onGpsError, {
-      enableHighAccuracy: true, maximumAge: 8000, timeout: 22000,
-    });
+    geoGetGps(onGpsGpsWatch, onGpsError, { maximumAge: 8000, timeout: 22000 });
     if (!gpsHasGpsLock()) {
-      navigator.geolocation.getCurrentPosition(onGpsNetworkWatch, () => {}, {
-        enableHighAccuracy: false, maximumAge: 15000, timeout: 12000,
-      });
+      geoGetNetwork(onGpsNetworkWatch, () => {}, { maximumAge: 15000, timeout: 12000 });
     }
   }, 1200);
 }
@@ -14321,7 +14392,7 @@ function onGpsPosition(pos, opts) {
 
 function startGpsWatch() {
   clearGpsTimers();
-  if (!navigator.geolocation) {
+  if (!fieldGeoAvailable()) {
     setGpsStatus('unavailable');
     showHint(t('gps.err.noApi'));
     return false;
@@ -14340,22 +14411,23 @@ function startGpsWatch() {
   _gpsPositionTick = 0;
   _gpsFixSource = 'none';
   gpsClearFixFusion();
-  const optsHi = { enableHighAccuracy: true, maximumAge: 1000, timeout: 30000 };
-  const optsAgps = { enableHighAccuracy: true, maximumAge: 0, timeout: 35000 };
-  gpsDbgLog('GPS', 'dual watch start (network first + gps)', optsHi);
+  const optsHi = { maximumAge: 1000, timeout: 30000 };
+  const optsAgps = { maximumAge: 0, timeout: 35000 };
+  gpsDbgLog('GPS', 'dual watch start (network first + gps)', optsHi,
+    typeof FieldGeolocation !== 'undefined' ? FieldGeolocation.platform() : 'web');
   gpsRequestNetworkFix();
   gpsStartNetworkWatch();
-  _gpsWatchId = navigator.geolocation.watchPosition(onGpsGpsWatch, onGpsWatchError, optsHi);
+  _gpsWatchId = geoWatchGps(onGpsGpsWatch, onGpsWatchError, optsHi);
   startGpsWatchdog();
   refreshGpsTestPermission();
-  navigator.geolocation.getCurrentPosition(onGpsGpsWatch, e => onGpsError(e, false), optsAgps);
+  geoGetGps(onGpsGpsWatch, e => onGpsError(e, false), optsAgps);
   scheduleGpsFallbackFix();
   gpsScheduleAgpsRefresh(true);
   _gpsFirstFixTimer = setTimeout(() => {
     if (_fieldGpsOn && !_fieldGpsFix) {
       setGpsStatus('searching');
       gpsRequestNetworkFix();
-      navigator.geolocation.getCurrentPosition(onGpsGpsWatch, e => onGpsError(e, false), optsHi);
+      geoGetGps(onGpsGpsWatch, e => onGpsError(e, false), optsHi);
       showHint(t('gps.hint.waiting'), 5000);
     }
   }, 14000);
@@ -14373,7 +14445,7 @@ function stopGpsWatch(clearUi) {
   resetGpsMovementEngine();
   gpsClearNetworkWatch();
   if (_gpsWatchId != null) {
-    navigator.geolocation.clearWatch(_gpsWatchId);
+    geoClearWatch(_gpsWatchId);
     _gpsWatchId = null;
     gpsDbgLog('GPS', 'watchPosition cleared');
   }
@@ -14424,6 +14496,9 @@ async function activateFieldLocationSession(silent, opts) {
       hintDenied: silent ? undefined : t('gps.err.denied'),
     });
     if (!ok && FieldPermissions.isNative()) return false;
+  }
+  if (typeof FieldGeolocation !== 'undefined' && FieldGeolocation.isNative()) {
+    await FieldGeolocation.requestPermissions();
   }
   const started = ensureFieldGpsSessionActive(!!silent);
   if (opts.liveFollow) {
@@ -14581,7 +14656,7 @@ function resumeGpsAfterInterruption() {
   const stale = Date.now() - (_gpsLastWatchTick || 0);
   if (_gpsWatchId == null || stale > 8000) {
     if (_gpsWatchId != null) {
-      navigator.geolocation.clearWatch(_gpsWatchId);
+      geoClearWatch(_gpsWatchId);
       _gpsWatchId = null;
     }
     restartGpsWatchOnly();
