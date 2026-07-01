@@ -42,9 +42,22 @@ body.field-trial-ui.field-mode #top-bar {
   border-radius: 18px;
   min-height: 58px;
   padding: 6px 10px;
-  gap: 6px;
+  gap: 0;
   box-shadow: var(--trial-glass-shadow);
   color: #f4f7fb;
+  overflow: hidden;
+  min-width: 0;
+  max-width: calc(100vw - var(--trial-chrome-left) - var(--trial-edge-r));
+  display: block;
+}
+body.field-trial-ui.field-mode #top-bar .top-bar-track {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -52,10 +65,8 @@ body.field-trial-ui.field-mode #top-bar {
   scroll-snap-type: x proximity;
   scrollbar-width: none;
   touch-action: pan-x;
-  flex-wrap: nowrap;
-  align-items: center;
 }
-body.field-trial-ui.field-mode #top-bar::-webkit-scrollbar { display: none; }
+body.field-trial-ui.field-mode #top-bar .top-bar-track::-webkit-scrollbar { display: none; }
 
 body.field-trial-ui #btn-project-menu,
 body.field-trial-ui #gps-status-pill,
@@ -129,9 +140,9 @@ body.field-trial-ui.field-mode #top-bar #btn-trial-sun.active {
 
 /* Üst bar içi — öğeler yeşil çerçeve içinde kalsın */
 body.field-trial-ui.field-mode #top-bar #trial-inspection-chrome {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   min-width: 0;
-  overflow: visible;
+  overflow: hidden;
 }
 body.field-trial-ui.field-mode #top-bar .trial-badge {
   padding: 4px 8px;
@@ -171,9 +182,10 @@ body.field-trial-ui.field-mode #top-bar #field-lang-switch.trial-lang-switch but
   padding: 4px 8px;
 }
 body.field-trial-ui.field-mode #top-bar #loc-search {
-  flex: 0 0 auto;
-  min-width: min(148px, 36vw);
-  max-width: 200px;
+  margin-left: 0 !important;
+  flex: 0 1 clamp(72px, 16vw, 180px);
+  min-width: 0;
+  max-width: min(180px, 32vw);
   padding: 2px 4px 2px 8px;
   max-height: 38px;
   overflow: hidden;
@@ -306,6 +318,7 @@ body.field-trial-ui.field-mode #top-bar #trial-top-tools {
 
 body.field-trial-ui.field-mode #top-bar #field-lang-switch.trial-lang-switch {
   margin-left: auto;
+  flex: 0 0 auto;
 }
 
 #trial-top-tools.trial-right-tools {
@@ -1459,10 +1472,21 @@ body.field-trial-ui.trial-top-compact-5 #top-bar .trial-tb-sep,
 body.field-trial-ui.trial-top-compact-5 #top-bar .trial-stat-wx {
   display: none !important;
 }
+body.field-trial-ui.trial-top-compact-6 #top-bar #loc-search {
+  max-width: min(128px, 28vw) !important;
+  flex: 0 1 56px !important;
+}
+body.field-trial-ui.trial-top-compact-6 #top-bar #loc-search button {
+  padding: 4px 6px !important;
+  min-width: 0;
+}
 
 /* iPhone / dar ekran — üst bar yatay kaydırma (arama için sola çek) */
 @media (max-width: 480px) {
   body.field-trial-ui.field-mode #top-bar {
+    overflow: hidden !important;
+  }
+  body.field-trial-ui.field-mode #top-bar .top-bar-track {
     overflow-x: auto !important;
     overflow-y: hidden !important;
     -webkit-overflow-scrolling: touch;
@@ -1471,7 +1495,7 @@ body.field-trial-ui.trial-top-compact-5 #top-bar .trial-stat-wx {
     scrollbar-width: none;
     touch-action: pan-x;
   }
-  body.field-trial-ui.field-mode #top-bar::-webkit-scrollbar {
+  body.field-trial-ui.field-mode #top-bar .top-bar-track::-webkit-scrollbar {
     display: none;
   }
   body.field-trial-ui.field-mode #top-bar #trial-inspection-chrome {
@@ -1485,7 +1509,7 @@ body.field-trial-ui.trial-top-compact-5 #top-bar .trial-stat-wx {
   }
   body.field-trial-ui.field-mode #top-bar #loc-search {
     flex: 0 0 auto;
-    min-width: min(168px, 42vw);
+    min-width: min(148px, 40vw);
     max-width: none;
     margin-left: 6px;
   }
@@ -1524,10 +1548,24 @@ body.field-trial-ui.trial-top-compact-5 #top-bar .trial-stat-wx {
   }
 }
 
+@media (min-width: 481px) and (max-width: 900px) {
+  body.field-trial-ui.field-mode #top-bar .top-bar-track {
+    overflow-x: auto;
+    touch-action: pan-x;
+  }
+  body.field-trial-ui.field-mode #top-bar #loc-search {
+    max-width: min(160px, 30vw);
+    flex: 0 1 clamp(68px, 14vw, 160px);
+  }
+}
+
 @media (min-width: 768px) and (max-width: 1180px) {
   body.field-trial-ui.field-mode #top-bar {
-    gap: 4px;
+    gap: 0;
     padding: 6px 8px;
+  }
+  body.field-trial-ui.field-mode #top-bar .top-bar-track {
+    gap: 4px;
   }
   body.field-trial-ui.field-mode #top-bar #trial-inspection-chrome {
     gap: 5px;
@@ -1536,7 +1574,8 @@ body.field-trial-ui.trial-top-compact-5 #top-bar .trial-stat-wx {
     font-size: 12px;
   }
   body.field-trial-ui.field-mode #top-bar #loc-search {
-    max-width: 140px;
+    max-width: min(140px, 28vw);
+    flex: 0 1 clamp(64px, 12vw, 140px);
   }
 }
 
@@ -2139,6 +2178,17 @@ body.field-trial-ui #field-export-sheet .fex-title {
 
 body.field-trial-ui #field-export-sheet .fex-fname {
   color: #9aa8b8 !important;
+}
+
+body.field-trial-ui #field-export-sheet .fex-media-preview {
+  margin: 8px 0 12px;
+  border-radius: 12px;
+  border-color: rgba(64, 192, 87, 0.28);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+body.field-trial-ui #field-export-sheet .fex-media-preview video {
+  max-height: min(40vh, 260px);
 }
 
 body.field-trial-ui #field-export-sheet .fex-share-grid {

@@ -16,7 +16,9 @@ const PdfReportGenerator = (function () {
     let pdfBlob = null;
     if (onProgress) onProgress(88, tFn('report.doc.progress.pdf'));
     try {
-      if (typeof exportProjectPDF === 'function') pdfBlob = await exportProjectPDF(html);
+      if (typeof exportProjectPDF === 'function') {
+        pdfBlob = await exportProjectPDF(html, { mapDataUrl: data.mapDataUrl });
+      }
     } catch (e) {
       console.warn('[PdfReportGenerator]', e);
     }

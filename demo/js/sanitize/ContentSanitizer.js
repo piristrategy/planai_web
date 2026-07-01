@@ -5,7 +5,7 @@
  */
 const ContentSanitizer = (function () {
   const MAX_FIELD_NOTE = 8000;
-  const MAX_PDF_HTML = 512 * 1024;
+  const MAX_PDF_HTML = 6 * 1024 * 1024;
   const SCRIPTISH = /<script|on\w+\s*=|javascript:|data:text\/html|<iframe|<object|<embed|<svg[\s\S]*?onload/i;
 
   function stripHtml(s) {

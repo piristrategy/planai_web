@@ -300,6 +300,7 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
       </button>
     </div>
     <div id="top-bar">
+      <div class="top-bar-track">
       <div id="trial-inspection-chrome" aria-live="polite">
         <div class="trial-badge rec paused"><span class="dot"></span><span class="lbl"><span class="l1">REC</span><span class="l2" id="trial-rec-time">00:00:00</span></span></div>
         <button type="button" id="trial-stop-inspection" class="trial-badge stop trial-stop-badge" data-i18n-title="trial.stopInspection" data-i18n-aria="trial.stopInspection" title="İncelemeyi durdur" aria-label="İncelemeyi durdur">
@@ -360,6 +361,7 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
         <input type="text" id="loc-input" data-i18n-placeholder="search.placeholder" placeholder="Search location…"
           onkeydown="if(event.key==='Enter')searchLocation()">
         <button type="button" data-i18n="search.btn" onclick="searchLocation()">Ara</button>
+      </div>
       </div>
     </div>
     <div id="loc-results" role="listbox" aria-label="Konum arama sonuçları"></div>
@@ -629,6 +631,7 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
           <section class="pdet-block">
             <h3 data-i18n="phub.reports">Raporlar</h3>
             <button type="button" id="pdet-btn-interactive" class="proj-btn report" data-i18n="project.reportInteractive">İnteraktif Rapor</button>
+            <button type="button" id="pdet-btn-video" class="proj-btn report" data-i18n="project.reportVideo">Video Rapor</button>
             <button type="button" id="pdet-btn-pdf" class="proj-btn report" data-i18n="project.reportPdf">PDF Rapor</button>
             <button type="button" id="pdet-btn-zip" class="proj-btn" data-i18n="project.exportZip">ZIP Dışa Aktar</button>
             <button type="button" id="pdet-btn-geojson" class="proj-btn" data-i18n="phub.exportGeojson">GeoJSON Dışa Aktar</button>
@@ -1387,6 +1390,9 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
     <span class="fex-title" id="fex-title" data-i18n="export.sheetTitle">Dosyayı gönder</span>
     <span class="fex-fname" id="fex-filename"></span>
   </div>
+  <div class="fex-media-preview" id="fex-media-preview" hidden>
+    <video id="fex-preview-video" controls playsinline webkit-playsinline preload="metadata"></video>
+  </div>
   <div class="fex-share-grid">
     <button type="button" class="fex-chip fex-wa" onclick="fieldExportActionTarget('whatsapp')"><span class="fex-chip-ico">💬</span><span data-i18n="export.whatsapp">WhatsApp</span></button>
     <button type="button" class="fex-chip fex-mail" onclick="fieldExportActionTarget('mail')"><span class="fex-chip-ico">✉️</span><span data-i18n="export.mail">E-posta</span></button>
@@ -1642,6 +1648,7 @@ window.pdfjsLib = pdfjs;
 <script src="js/report/ReportDataBuilder.js?v=2.0.1"></script>
 <script src="js/report/PdfReportGenerator.js?v=2.0.1"></script>
 <script src="js/report/InteractiveReportGenerator.js?v=2.0.1"></script>
+<script src="js/report/VideoReportGenerator.js?v=2.0.0"></script>
 <script src="js/app.js?v=2.0.2"></script>
 <script src="js/mobile/PanoOpenCvLoader.js?v=2.0.0"></script>
 <script src="js/mobile/PanoStitcher.js?v=2.0.0"></script>

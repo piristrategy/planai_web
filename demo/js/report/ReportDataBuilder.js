@@ -60,7 +60,7 @@ const ReportDataBuilder = (function () {
     const tFn = typeof window.t === 'function' ? window.t : k => k;
     prog(5, tFn('report.doc.progress.collect'));
     if (typeof window.syncProjectInspectionMetadata === 'function') {
-      await window.syncProjectInspectionMetadata();
+      await window.syncProjectInspectionMetadata({ preserveGeo: true });
     }
     if (typeof window.saveCurrentProject === 'function') await window.saveCurrentProject(true);
     const snap = typeof serializeProjectSnapshot === 'function' ? serializeProjectSnapshot() : null;
@@ -69,17 +69,6 @@ const ReportDataBuilder = (function () {
       ? computeMeasurementsFromObjects(S.objects)
       : { items: [], totals: {} };
     if (snap) snap.measurements = measurements;
-
-    prog(25, tFn('report.doc.progress.map'));
-    let mapPng = null;
-    let mapDataUrl = '';
-    if (typeof captureRouteMapSnapshot === 'function') {
-      mapPng = await captureRouteMapSnapshot(2);
-      mapDataUrl = mapPng && typeof blobToDataUrl === 'function' ? await blobToDataUrl(mapPng) : '';
-    }
-    if (!mapDataUrl && typeof buildReportMapFallbackDataUrl === 'function') {
-      mapDataUrl = buildReportMapFallbackDataUrl();
-    }
 
     prog(45, tFn('report.doc.progress.photos'));
     const allPhotos = typeof collectReportPhotos === 'function' ? await collectReportPhotos() : [];
@@ -92,6 +81,28 @@ const ReportDataBuilder = (function () {
     prog(60, tFn('report.doc.progress.notes'));
     const notes = typeof collectReportNotes === 'function' ? await collectReportNotes() : [];
 
+    let inspectionAnchor = null;
+    if (typeof window.ensureReportInspectionGeoReady === 'function') {
+      inspectionAnchor = await window.ensureReportInspectionGeoReady(snap, allPhotos, notes);
+    } else if (typeof window.resolveReportInspectionAnchor === 'function') {
+      inspectionAnchor = window.resolveReportInspectionAnchor(snap, snap, allPhotos, notes);
+    } else {
+      inspectionAnchor = { lat: S.mapCenter?.lat, lon: S.mapCenter?.lon };
+    }
+
+    if (typeof syncGpsTrackObject === 'function') syncGpsTrackObject();
+
+    prog(25, tFn('report.doc.progress.map'));
+    const geoBoundsFinal = typeof computeReportGeoBounds === 'function'
+      ? computeReportGeoBounds(allPhotos, notes, snap, inspectionAnchor)
+      : null;
+    let mapDataUrl = '';
+    if (typeof resolveReportMapDataUrl === 'function') {
+      mapDataUrl = await resolveReportMapDataUrl(null, geoBoundsFinal, snap, allPhotos, notes);
+    } else if (typeof buildReportMapFallbackDataUrl === 'function') {
+      mapDataUrl = buildReportMapFallbackDataUrl({ snap, project: snap, photos: allPhotos, notes });
+    }
+
     const panoramas = [];
     const voiceNotes = await collectVoiceNotes(allPhotos);
     const layers = collectLayers(snap?.objects || S.objects);
@@ -101,13 +112,10 @@ const ReportDataBuilder = (function () {
       : null;
 
     prog(68, typeof PA_LANG !== 'undefined' && PA_LANG === 'tr' ? 'Uydu altlığı hazırlanıyor…' : 'Satellite basemap…');
-    const geoBounds = typeof computeReportGeoBounds === 'function'
-      ? computeReportGeoBounds(allPhotos, notes, snap, S.mapCenter)
-      : null;
     let interactiveBasemapUrl = '';
     try {
-      if (typeof buildSatelliteBasemapDataUrl === 'function' && geoBounds) {
-        interactiveBasemapUrl = await buildSatelliteBasemapDataUrl(geoBounds);
+      if (typeof buildSatelliteBasemapDataUrl === 'function' && geoBoundsFinal) {
+        interactiveBasemapUrl = await buildSatelliteBasemapDataUrl(geoBoundsFinal);
       }
     } catch (e) {
       console.warn('[ReportDataBuilder] satellite', e);
@@ -139,7 +147,10 @@ const ReportDataBuilder = (function () {
       appVersion: typeof PLANAI_FIELD_APP_VERSION !== 'undefined' ? PLANAI_FIELD_APP_VERSION : '2.0.0',
       lang: typeof PA_LANG !== 'undefined' ? PA_LANG : 'tr',
       crs: 'WGS84 (EPSG:4326)',
-      mapCenter: { ...S.mapCenter },
+      mapCenter: {
+        lat: inspectionAnchor?.lat ?? S.mapCenter?.lat,
+        lon: inspectionAnchor?.lon ?? S.mapCenter?.lon,
+      },
       gpsAccuracy: typeof _fieldGpsFix !== 'undefined' ? (_fieldGpsFix?.accuracy ?? null) : null,
       userName: typeof getReportUserName === 'function' ? getReportUserName() : '',
       objectCounts,
@@ -154,10 +165,10 @@ const ReportDataBuilder = (function () {
       snap,
       project: snap,
       meta: reportMeta,
-      mapPng,
+      mapPng: null,
       mapDataUrl,
       interactiveBasemapUrl,
-      geoBounds,
+      geoBounds: geoBoundsFinal,
       brandLogoUrl,
       photos,
       allPhotos,

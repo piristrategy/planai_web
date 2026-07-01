@@ -458,12 +458,22 @@
       btn.classList.remove('trial-locate-hint');
     }
 
+    function applyCoachCopy() {
+      const browsing = typeof window.isFieldGpsSessionBrowsing === 'function' && window.isFieldGpsSessionBrowsing();
+      const key = browsing ? 'trial.locateCoachPanned' : 'trial.locateCoach';
+      if (typeof window.t === 'function') {
+        const html = window.t(key);
+        if (html) coach.innerHTML = html;
+      }
+    }
+
     function showCoachUi() {
       if (!isInspectionMapActive()) return;
       if (typeof window.shouldShowFieldLocateCoach === 'function' && !window.shouldShowFieldLocateCoach()) {
         hideCoachUi();
         return;
       }
+      applyCoachCopy();
       coach.hidden = false;
       coach.classList.add('show');
       btn.classList.add('trial-locate-hint');

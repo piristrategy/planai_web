@@ -227,6 +227,7 @@ const FieldProjectDetails = (function () {
     document.getElementById('pdet-btn-save')?.addEventListener('click', () => runOnCurrent(() => saveCurrentProject(false)));
     document.getElementById('pdet-btn-pdf')?.addEventListener('click', () => runOnCurrent(createProjectReport));
     document.getElementById('pdet-btn-interactive')?.addEventListener('click', () => runOnCurrent(createInteractiveFieldReport));
+    document.getElementById('pdet-btn-video')?.addEventListener('click', () => runOnCurrent(createVideoFieldReport));
     document.getElementById('pdet-btn-demo')?.addEventListener('click', () => runOnCurrent(createSimulatedFieldReports));
     document.getElementById('pdet-btn-zip')?.addEventListener('click', () => runOnCurrent(exportProjectZip));
     document.getElementById('pdet-btn-geojson')?.addEventListener('click', () => runOnCurrent(exportProjectGeoJson));

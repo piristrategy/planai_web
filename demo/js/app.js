@@ -387,6 +387,11 @@ const PA_I18N = {
     'report.share': 'Paylaş',
     'report.pdf': 'PDF Rapor',
     'report.interactiveShort': 'İnceleme',
+    'report.video': 'Sinematik Video Rapor',
+    'report.videoShort': 'Video',
+    'report.videoReady': 'Sinematik video rapor hazır',
+    'report.videoProgress': 'Sinematik video raporu oluşturuluyor…',
+    'report.videoUnsupported': 'Bu cihazda video raporu desteklenmiyor',
     'report.html': 'Mekansal Tekrar',
     'report.viewerTitle': 'Önizleme',
     'report.playbackViewerTitle': 'Mekansal İnceleme Tekrarı',
@@ -494,6 +499,7 @@ const PA_I18N = {
     'entry.noProjects': 'Henüz kayıtlı çalışma yok.',
     'entry.projectsHead': 'Önceki Çalışmalar',
     'project.reportPdf': 'PDF Rapor', 'project.reportInteractive': 'Sinematik Rapor Oluştur',
+    'project.reportVideo': 'Sinematik Video Rapor Oluştur',
     'project.reportDemo': 'Demo İnceleme Simülasyonu',
     'project.exportZip': 'ZIP Dışa Aktar', 'project.importZip': 'İçe Aktar', 'project.recent': 'Son çalışmalar',
     'project.none': 'Henüz saha çalışması yok',
@@ -589,6 +595,7 @@ const PA_I18N = {
     'trial.videoDur': 'Süre',
     'type.field_video': 'Video not',
     'trial.locateCoach': 'Canlı konumunuzu görmek için <strong>sağdaki bu butona</strong> dokunun.',
+    'trial.locateCoachPanned': 'Haritayı kaydırdınız — konuma dönmek için <strong>sağdaki butona</strong> dokunun. GPS rotası kayda devam ediyor.',
     'trial.locateBtn': 'Canlı konum',
     'hub.openFailed': 'İnceleme açılamadı. PIN varsa kilidi açın veya yeni inceleme başlatın.',
     'hub.noSavedInspection': 'Kayıtlı inceleme bulunamadı.',
@@ -959,6 +966,7 @@ const PA_I18N = {
     'entry.noProjects': 'No saved projects yet.',
     'entry.projectsHead': 'Previous Projects',
     'project.reportPdf': 'PDF Report', 'project.reportInteractive': 'Create Cinematic Report',
+    'project.reportVideo': 'Create Cinematic Video Report',
     'project.reportDemo': 'Demo Inspection Simulation',
     'project.exportZip': 'Export ZIP', 'project.importZip': 'Import', 'project.recent': 'Recent projects',
     'project.none': 'No field projects yet',
@@ -1054,6 +1062,7 @@ const PA_I18N = {
     'trial.videoDur': 'Duration',
     'type.field_video': 'Video note',
     'trial.locateCoach': 'Click <strong>this button on the right</strong> for live location',
+    'trial.locateCoachPanned': 'You panned the map — tap <strong>the button on the right</strong> to return to your location. GPS route recording continues.',
     'trial.locateBtn': 'Live location',
     'hub.openFailed': 'Could not open inspection. Unlock PIN if required, or start a new inspection.',
     'hub.noSavedInspection': 'No saved inspection found.',
@@ -1152,6 +1161,11 @@ const PA_I18N = {
     'report.share': 'Share',
     'report.pdf': 'PDF Report',
     'report.interactiveShort': 'Inspection',
+    'report.video': 'Cinematic Video Report',
+    'report.videoShort': 'Video',
+    'report.videoReady': 'Cinematic video report ready',
+    'report.videoProgress': 'Building cinematic video report…',
+    'report.videoUnsupported': 'Video report is not supported on this device',
     'report.html': 'Spatial Playback',
     'report.viewerTitle': 'Preview',
     'report.playbackViewerTitle': 'Spatial Inspection Playback',
@@ -1259,6 +1273,7 @@ const PA_I18N = {
     'entry.noProjects': 'No saved projects yet.',
     'entry.projectsHead': 'Previous Projects',
     'project.reportPdf': 'PDF Report', 'project.reportInteractive': 'Create Cinematic Report',
+    'project.reportVideo': 'Create Cinematic Video Report',
     'project.reportDemo': 'Demo Inspection Simulation',
     'project.exportZip': 'Export ZIP', 'project.importZip': 'Import ZIP', 'project.recent': 'Recent projects',
     'project.none': 'No field projects yet',
@@ -1323,6 +1338,7 @@ const PA_I18N = {
     'trial.videoDur': 'Duration',
     'type.field_video': 'Video note',
     'trial.locateCoach': 'Click <strong>this button on the right</strong> for live location',
+    'trial.locateCoachPanned': 'You panned the map — tap <strong>the button on the right</strong> to return to your location. GPS route recording continues.',
     'trial.locateBtn': 'Live location',
     'hub.openFailed': 'Could not open inspection. Unlock PIN if required, or start a new inspection.',
     'hub.noSavedInspection': 'No saved inspection found.',
@@ -3028,10 +3044,7 @@ function boundsForGuidanceRoute() {
 function fitMapToGuidanceRoute() {
   const b = boundsForGuidanceRoute();
   if (!b.ok) return;
-  if (_gpsFollow) {
-    _gpsFollow = false;
-    syncMapLocateButtonUi();
-  }
+  if (_gpsFollow) pauseLiveMapFollow();
   fitMapToLatLonBounds(b);
   scheduleRender();
   showHint(t('guide.route'), 1800);
@@ -3725,12 +3738,8 @@ function fieldDrawingSessionActive() {
 }
 
 function fieldSuspendGpsFollowForDrawing() {
-  if (_gpsFollow) {
-    _gpsFollow = false;
-    document.getElementById('btn-gps-follow')?.classList.remove('active');
-    document.getElementById('btn-map-locate')?.classList.remove('active');
-  }
-  _mapBrowseMode = true;
+  if (!_gpsFollow) return;
+  pauseLiveMapFollow();
 }
 
 function fieldResumeGpsFollowAfterDrawing() {
@@ -3744,6 +3753,7 @@ function fieldLiveLocationLocked() {
 function pauseLiveMapFollow() {
   _mapBrowseMode = true;
   _gpsFollow = false;
+  if (_fieldGpsOn) ensureGpsMotionLoop();
   syncMapLocateButtonUi();
 }
 
@@ -3795,12 +3805,31 @@ function isFieldLiveLocateActive() {
     && _gpsStatus !== 'off');
 }
 
+function isFieldGpsSessionActive() {
+  return !!(_fieldGpsOn
+    && _gpsStatus !== 'denied'
+    && _gpsStatus !== 'unavailable'
+    && _gpsStatus !== 'off');
+}
+
+function isFieldGpsSessionBrowsing() {
+  return isFieldGpsSessionActive() && !!_mapBrowseMode && !_gpsFollow;
+}
+
+function isFieldTrialUiActive() {
+  return FIELD_MODE && document.body.classList.contains('field-trial-ui');
+}
+
 function shouldShowFieldLocateCoach() {
+  if (!isFieldTrialUiActive()) return false;
   if (isFieldLiveLocateActive()) return false;
-  if (_gpsFollow && !_fieldGpsOn) return false;
+  if (isFieldGpsSessionBrowsing()) return true;
+  if (_fieldGpsOn) return false;
   return true;
 }
 window.isFieldLiveLocateActive = isFieldLiveLocateActive;
+window.isFieldGpsSessionActive = isFieldGpsSessionActive;
+window.isFieldGpsSessionBrowsing = isFieldGpsSessionBrowsing;
 window.shouldShowFieldLocateCoach = shouldShowFieldLocateCoach;
 
 function requestInitialLiveMapCenter() {
@@ -3833,14 +3862,8 @@ function expandGpsFieldHudForSession() {
 }
 
 function disableGpsFollowFromPan() {
-  if (!_gpsFollow && _mapBrowseMode) return;
-  if (fieldLiveLocationLocked()) {
-    pauseLiveMapFollow();
-    return;
-  }
   if (!_gpsFollow) return;
-  _gpsFollow = false;
-  syncMapLocateButtonUi();
+  pauseLiveMapFollow();
 }
 
 function resetGpsMovementEngine() {
@@ -9485,7 +9508,7 @@ async function saveCurrentProject(silent) {
   _projectSaving = true;
   setAutosaveIndicator('saving');
   try {
-    await syncProjectInspectionMetadata();
+    await syncProjectInspectionMetadata({ preserveGeo: true });
     await persistAllPlanRasterBlobs();
     const db = await openProjectDb();
     const snap = serializeProjectSnapshot();
@@ -11026,13 +11049,39 @@ function safeProjectExportFilename(ext) {
 }
 
 function hideFieldExportSheet() {
+  const video = document.getElementById('fex-preview-video');
+  if (video) { try { video.pause(); } catch (_) {} }
   document.getElementById('field-export-sheet')?.classList.remove('open');
   document.getElementById('field-export-backdrop')?.classList.remove('open');
   document.body.classList.remove('field-export-open');
 }
 
+function clearFieldExportMediaPreview() {
+  const wrap = document.getElementById('fex-media-preview');
+  const video = document.getElementById('fex-preview-video');
+  if (video) {
+    try { video.pause(); } catch (_) {}
+    video.removeAttribute('src');
+    try { video.load(); } catch (_) {}
+  }
+  if (wrap) wrap.hidden = true;
+}
+
+function setupFieldExportMediaPreview(p) {
+  clearFieldExportMediaPreview();
+  const wrap = document.getElementById('fex-media-preview');
+  const video = document.getElementById('fex-preview-video');
+  if (!wrap || !video || !p) return;
+  const isVideo = p.kind === 'video'
+    || (p.mimeType && String(p.mimeType).indexOf('video') >= 0);
+  if (!isVideo || !p.objectUrl) return;
+  video.src = p.objectUrl;
+  wrap.hidden = false;
+}
+
 function closeFieldExportSheet() {
   hideFieldExportSheet();
+  clearFieldExportMediaPreview();
   stopFieldExportPreviewWatch();
   if (_fieldExportPending?.objectUrl) {
     try { URL.revokeObjectURL(_fieldExportPending.objectUrl); } catch (_) {}
@@ -11076,10 +11125,14 @@ function showFieldExportSheet() {
   const prevBtn = document.getElementById('fex-btn-preview');
   if (titleEl) {
     titleEl.textContent = p.kind === 'interactive' ? t('report.interactiveReady')
+      : p.kind === 'video' ? t('report.videoReady')
       : p.kind === 'pdf' ? t('report.pdfReady') : t('export.sheetTitle');
   }
   if (fnameEl) fnameEl.textContent = p.filename || '';
-  if (prevBtn) prevBtn.style.display = (p.previewHtml || p.pdfBlob || (p.blob && p.kind === 'pdf')) ? 'block' : 'none';
+  const canPreview = !!(p.previewHtml || p.pdfBlob || (p.blob && p.kind === 'pdf')
+    || (p.kind === 'video' && p.objectUrl));
+  if (prevBtn) prevBtn.style.display = canPreview ? 'block' : 'none';
+  setupFieldExportMediaPreview(p);
   document.getElementById('field-export-backdrop')?.classList.add('open');
   document.getElementById('field-export-sheet')?.classList.add('open');
   document.body.classList.add('field-export-open');
@@ -11621,6 +11674,13 @@ function fieldExportActionPreview() {
     });
     return;
   }
+  if (p.kind === 'video' && (p.blob || p.objectUrl)) {
+    openFieldReportViewerBlob(p.blob, p.filename || FIELD_PROJECT.name, p, 'video').catch((e) => {
+      console.warn('[Export preview video]', e);
+      done();
+    });
+    return;
+  }
   if (p.previewHtml && p.kind === 'interactive') {
     const blob = new Blob([p.previewHtml], { type: 'text/html;charset=utf-8' });
     openFieldReportViewerBlob(blob, p.filename || FIELD_PROJECT.name, p, 'interactive').catch((e) => {
@@ -12144,11 +12204,9 @@ async function captureMapSnapshotOnce(scaleFactor) {
 }
 
 async function captureMapSnapshot(scaleFactor) {
-  if (location.protocol === 'file:') {
-    return null;
-  }
   let blob = await captureMapSnapshotOnce(scaleFactor);
   if (blob) return blob;
+  if (location.protocol === 'file:') return null;
   const prevBm = S.basemap;
   if (prevBm && prevBm !== 'none') {
     S.basemap = 'none';
@@ -12230,7 +12288,64 @@ function tileXYToLatLonEdge(x, y, z) {
   return { lat: latRad * 180 / Math.PI, lon };
 }
 
-function computeReportGeoBounds(photos, notes, project, mapCenter) {
+function collectInspectionGeoSamples(project, snap, photos, notes) {
+  const samples = [];
+  const push = (lat, lon) => {
+    const la = lat != null ? Number(lat) : null;
+    const lo = lon != null ? Number(lon) : null;
+    if (la != null && lo != null && isFinite(la) && isFinite(lo)) samples.push({ lat: la, lon: lo });
+  };
+  const objs = snap?.objects || project?.objects || (typeof S !== 'undefined' ? S.objects : []) || [];
+  objs.forEach(o => {
+    if (o.type === 'field_gps_track' && o.vertices?.length) {
+      o.vertices.forEach(v => push(v.lat, v.lon ?? v.lng));
+    } else {
+      push(o.lat, o.lon);
+    }
+  });
+  if (typeof _gpsTrack !== 'undefined' && _gpsTrack.points?.length) {
+    _gpsTrack.points.forEach(p => push(p.lat, p.lon ?? p.lng));
+  }
+  (photos || []).forEach(p => push(p.lat, p.lon));
+  (notes || []).forEach(n => push(n.lat, n.lon));
+  return samples;
+}
+
+function resolveReportInspectionAnchor(project, snap, photos, notes) {
+  const md = (typeof FIELD_PROJECT !== 'undefined' && FIELD_PROJECT.metadata)
+    || project?.metadata || snap?.metadata || {};
+  const samples = collectInspectionGeoSamples(project, snap, photos, notes);
+  if (samples.length) {
+    let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
+    samples.forEach(s => {
+      minLat = Math.min(minLat, s.lat); maxLat = Math.max(maxLat, s.lat);
+      minLon = Math.min(minLon, s.lon); maxLon = Math.max(maxLon, s.lon);
+    });
+    return {
+      lat: (minLat + maxLat) / 2,
+      lon: (minLon + maxLon) / 2,
+      bounds: { minLat, maxLat, minLon, maxLon },
+      source: 'activity',
+    };
+  }
+  if (md.centerLat != null && md.centerLon != null) {
+    return { lat: md.centerLat, lon: md.centerLon, source: 'metadata' };
+  }
+  if (typeof S !== 'undefined' && S.mapCenter?.lat != null && S.mapCenter?.lon != null) {
+    return { lat: S.mapCenter.lat, lon: S.mapCenter.lon, source: 'mapView' };
+  }
+  return { lat: 39.08, lon: 26.88, source: 'default' };
+}
+
+function padReportGeoBounds(bounds, padRatio) {
+  padRatio = padRatio ?? 0.15;
+  const minLat = bounds.minLat, maxLat = bounds.maxLat, minLon = bounds.minLon, maxLon = bounds.maxLon;
+  const dLat = (maxLat - minLat) * padRatio || 0.005;
+  const dLon = (maxLon - minLon) * padRatio || 0.005;
+  return { minLat: minLat - dLat, maxLat: maxLat + dLat, minLon: minLon - dLon, maxLon: maxLon + dLon };
+}
+
+function computeReportGeoBounds(photos, notes, project, fallbackCenter) {
   let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
   const bump = (lat, lon) => {
     if (lat == null || lon == null) return;
@@ -12240,18 +12355,22 @@ function computeReportGeoBounds(photos, notes, project, mapCenter) {
   (photos || []).forEach(p => bump(p.lat, p.lon));
   (notes || []).forEach(n => bump(n.lat, n.lon));
   (project?.objects || []).forEach(o => {
-    if (o.type === 'field_gps_track' && o.vertices?.length) o.vertices.forEach(v => bump(v.lat, v.lon));
+    if (o.type === 'field_gps_track' && o.vertices?.length) o.vertices.forEach(v => bump(v.lat, v.lon ?? v.lng));
     else bump(o.lat, o.lon);
   });
+  if (typeof _gpsTrack !== 'undefined' && _gpsTrack.points?.length) {
+    _gpsTrack.points.forEach(p => bump(p.lat, p.lon ?? p.lng));
+  }
   if (minLat > maxLat) {
-    const c = mapCenter || S.mapCenter || { lat: 39.08, lon: 26.88 };
+    const anchor = resolveReportInspectionAnchor(project, project, photos, notes);
+    if (anchor.bounds) return padReportGeoBounds(anchor.bounds);
+    const c = fallbackCenter && fallbackCenter.lat != null
+      ? fallbackCenter
+      : { lat: anchor.lat, lon: anchor.lon };
     minLat = c.lat - 0.008; maxLat = c.lat + 0.008;
     minLon = c.lon - 0.008; maxLon = c.lon + 0.008;
   }
-  const pad = 0.15;
-  const dLat = (maxLat - minLat) * pad || 0.005;
-  const dLon = (maxLon - minLon) * pad || 0.005;
-  return { minLat: minLat - dLat, maxLat: maxLat + dLat, minLon: minLon - dLon, maxLon: maxLon + dLon };
+  return padReportGeoBounds({ minLat, maxLat, minLon, maxLon });
 }
 
 async function loadSatelliteTileImageForReport(z, tx, ty) {
@@ -12315,33 +12434,264 @@ async function buildSatelliteBasemapDataUrl(bounds, w, h) {
   }
 }
 
-function buildReportMapFallbackDataUrl() {
+function collectReportMapFeatures(project, snap, photos, notes) {
   const feats = [];
   const trackVerts = [];
-  S.objects.forEach(o => {
+  const pushTrack = (verts) => {
+    (verts || []).forEach(v => {
+      const lat = v?.lat;
+      const lon = v?.lon ?? v?.lng;
+      if (lat != null && lon != null && isFinite(lat) && isFinite(lon)) {
+        trackVerts.push({ lat, lon });
+      }
+    });
+  };
+  const objs = snap?.objects || project?.objects || S.objects;
+  objs.forEach(o => {
     if (o.type === 'field_photo' || o.type === 'field_note' || o.type === 'field_video') {
       if (o.lat != null && o.lon != null) {
         const col = o.type === 'field_photo' ? '#e67e22' : o.type === 'field_video' ? '#8e44ad' : '#1a73e8';
         feats.push({ lat: o.lat, lon: o.lon, col });
       }
     } else if (o.type === 'field_gps_track' && o.vertices?.length >= 2) {
-      o.vertices.forEach(v => {
-        if (v.lat != null && v.lon != null) trackVerts.push({ lat: v.lat, lon: v.lon });
-      });
+      pushTrack(o.vertices);
     } else if (o.lat != null && o.lon != null) {
       feats.push({ lat: o.lat, lon: o.lon, col: '#546e7a' });
     }
   });
-  trackVerts.forEach(v => feats.push({ lat: v.lat, lon: v.lon, col: '#1565c0', track: true }));
-  if (!feats.length && S.mapCenter?.lat != null) {
-    feats.push({ lat: S.mapCenter.lat, lon: S.mapCenter.lon, col: '#1a73e8' });
-  }
-  if (!feats.length) return '';
-  let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
-  feats.forEach(f => {
-    minLat = Math.min(minLat, f.lat); maxLat = Math.max(maxLat, f.lat);
-    minLon = Math.min(minLon, f.lon); maxLon = Math.max(maxLon, f.lon);
+  (photos || []).forEach(p => {
+    if (p.lat != null && p.lon != null) feats.push({ lat: p.lat, lon: p.lon, col: '#e67e22' });
   });
+  (notes || []).forEach(n => {
+    if (n.lat != null && n.lon != null) feats.push({ lat: n.lat, lon: n.lon, col: '#1a73e8' });
+  });
+  if (trackVerts.length < 2 && typeof _gpsTrack !== 'undefined' && _gpsTrack.points?.length >= 2) {
+    pushTrack(_gpsTrack.points);
+  }
+  if (!feats.length && trackVerts.length >= 2) {
+    trackVerts.forEach(v => feats.push({ lat: v.lat, lon: v.lon, col: '#1565c0', track: true }));
+  }
+  if (!feats.length && trackVerts.length < 2) {
+    const anchor = resolveReportInspectionAnchor(project || { objects: objs }, snap, photos, notes);
+    if (anchor.lat != null && anchor.lon != null) {
+      feats.push({ lat: anchor.lat, lon: anchor.lon, col: '#1a73e8' });
+    }
+  }
+  return { feats, trackVerts };
+}
+
+function drawReportMapOverlays(ctx, bounds, w, h, feats, trackVerts) {
+  const proj = (lat, lon) => ({
+    x: ((lon - bounds.minLon) / (bounds.maxLon - bounds.minLon || 1)) * w,
+    y: ((bounds.maxLat - lat) / (bounds.maxLat - bounds.minLat || 1)) * h,
+  });
+  if (trackVerts.length >= 2) {
+    ctx.beginPath();
+    trackVerts.forEach((v, i) => {
+      const q = proj(v.lat, v.lon);
+      if (i === 0) ctx.moveTo(q.x, q.y);
+      else ctx.lineTo(q.x, q.y);
+    });
+    ctx.strokeStyle = 'rgba(21, 101, 192, 0.95)';
+    ctx.lineWidth = Math.max(3, w / 280);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+  feats.forEach(f => {
+    if (f.track) return;
+    const q = proj(f.lat, f.lon);
+    const r = Math.max(5, w / 140);
+    ctx.beginPath();
+    ctx.arc(q.x, q.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = f.col || '#1a73e8';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+}
+
+function loadDataUrlImage(dataUrl) {
+  return new Promise(resolve => {
+    if (!dataUrl) return resolve(null);
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+}
+
+async function buildReportMapRasterDataUrl(bounds, lang, mapScope) {
+  if (!bounds || bounds.minLat >= bounds.maxLat) return '';
+  const w = 1000;
+  const h = 700;
+  const scope = mapScope || _activeReportMapScope || {};
+  const { feats, trackVerts } = collectReportMapFeatures(
+    scope.project, scope.snap, scope.photos, scope.notes,
+  );
+  if (!feats.length && trackVerts.length < 2) return '';
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  let basemap = '';
+  try {
+    basemap = await buildSatelliteBasemapDataUrl(bounds, w, h);
+  } catch (e) {
+    console.warn('[Report map basemap]', e);
+  }
+  if (basemap) {
+    const bg = await loadDataUrlImage(basemap);
+    if (bg) ctx.drawImage(bg, 0, 0, w, h);
+    else {
+      ctx.fillStyle = '#e8eef4';
+      ctx.fillRect(0, 0, w, h);
+    }
+  } else {
+    ctx.fillStyle = '#e8eef4';
+    ctx.fillRect(0, 0, w, h);
+  }
+  drawReportMapOverlays(ctx, bounds, w, h, feats, trackVerts);
+  ctx.fillStyle = 'rgba(90, 106, 122, 0.9)';
+  ctx.font = '12px Inter, system-ui, sans-serif';
+  ctx.fillText(lang === 'tr' ? 'PlanAI Field — rota özeti' : 'PlanAI Field — route summary', 12, 20);
+  try {
+    return canvas.toDataURL('image/jpeg', 0.9);
+  } catch (e) {
+    console.warn('[Report map raster]', e);
+    return '';
+  }
+}
+
+function dataUrlToBlob(dataUrl) {
+  const m = String(dataUrl || '').match(/^data:([^;,]+)?(?:;charset=[^;]+)?(;base64)?,(.*)$/i);
+  if (!m) return new Blob([]);
+  const mime = m[1] || 'application/octet-stream';
+  if (!m[2]) return new Blob([decodeURIComponent(m[3])], { type: mime });
+  const bin = atob(m[3]);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+const REPORT_MAP_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+function stripReportMapDataFromHtml(html) {
+  return String(html || '').replace(
+    /(<img\b[^>]*\bclass="[^"]*\brpt-map\b[^"]*"[^>]*\bsrc=")data:image\/[^"]+(")/gi,
+    '$1' + REPORT_MAP_PLACEHOLDER + '$2',
+  );
+}
+
+async function compressReportMapDataUrl(dataUrl, maxW, quality) {
+  if (!dataUrl || !/^data:image\//i.test(dataUrl)) return dataUrl || '';
+  const img = await loadDataUrlImage(dataUrl);
+  if (!img?.naturalWidth) return dataUrl;
+  maxW = maxW || 880;
+  quality = quality ?? 0.82;
+  const scale = Math.min(1, maxW / img.naturalWidth);
+  const w = Math.max(1, Math.round(img.naturalWidth * scale));
+  const h = Math.max(1, Math.round(img.naturalHeight * scale));
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  c.getContext('2d').drawImage(img, 0, 0, w, h);
+  try {
+    return c.toDataURL('image/jpeg', quality);
+  } catch (e) {
+    console.warn('[Report map compress]', e);
+    return dataUrl;
+  }
+}
+
+async function mountReportPdfMapCanvas(root, mapDataUrl) {
+  if (!root || !mapDataUrl) return null;
+  let targets = [...(root.querySelectorAll?.('img.rpt-map[data-planai-report-map], canvas.rpt-map[data-planai-report-map]') || [])];
+  if (!targets.length) targets = [...(root.querySelectorAll?.('img.rpt-map') || [])];
+  if (!targets.length) return null;
+  const compact = await compressReportMapDataUrl(mapDataUrl, 880, 0.85);
+  const img = await loadDataUrlImage(compact);
+  if (!img?.naturalWidth) return null;
+  const w = 880;
+  const h = Math.max(1, Math.round(w * (img.naturalHeight / img.naturalWidth)));
+  let mounted = null;
+  targets.forEach(el => {
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    c.className = 'rpt-map';
+    c.setAttribute('data-planai-report-map', '1');
+    c.style.cssText = 'width:100%;max-width:100%;height:auto;display:block;min-height:80mm;border:1px solid #c5d0dc;border-radius:8px;background:#e8eef4;';
+    c.getContext('2d').drawImage(img, 0, 0, w, h);
+    el.replaceWith(c);
+    mounted = c;
+  });
+  return mounted;
+}
+
+function copyReportMapCanvasToClone(sourceRoot, clonedRoot) {
+  const src = sourceRoot?.querySelector?.('canvas.rpt-map[data-planai-report-map]');
+  const dst = clonedRoot?.querySelector?.('canvas.rpt-map[data-planai-report-map]');
+  if (!src?.width || !dst) return;
+  dst.width = src.width;
+  dst.height = src.height;
+  dst.className = src.className;
+  dst.setAttribute('data-planai-report-map', '1');
+  dst.style.cssText = src.style.cssText;
+  dst.getContext('2d').drawImage(src, 0, 0);
+}
+
+let _activeReportMapScope = null;
+
+function setActiveReportMapScope(scope) {
+  _activeReportMapScope = scope || null;
+}
+
+async function resolveReportMapDataUrl(mapPng, geoBounds, snap, photos, notes) {
+  const lang = typeof PA_LANG !== 'undefined' ? PA_LANG : 'tr';
+  const scope = { snap, project: snap, photos, notes };
+  setActiveReportMapScope(scope);
+  try {
+    const anchor = resolveReportInspectionAnchor(snap, snap, photos, notes);
+    const bounds = geoBounds || computeReportGeoBounds(photos, notes, snap, anchor);
+    const raster = await buildReportMapRasterDataUrl(bounds, lang, scope);
+    if (raster) return raster;
+    if (mapPng) {
+      const url = await blobToDataUrl(mapPng);
+      if (url && /^data:image\//i.test(url)) return url;
+    }
+    const svgUrl = buildReportMapFallbackDataUrl(scope);
+    if (!svgUrl) return '';
+    const img = await loadDataUrlImage(svgUrl);
+    if (!img) return svgUrl;
+    const c = document.createElement('canvas');
+    c.width = 960;
+    c.height = 540;
+    c.getContext('2d').drawImage(img, 0, 0);
+    try {
+      return c.toDataURL('image/jpeg', 0.9);
+    } catch (_) {
+      return svgUrl;
+    }
+  } finally {
+    setActiveReportMapScope(null);
+  }
+}
+
+function buildReportMapFallbackDataUrl(mapScope) {
+  const scope = mapScope || _activeReportMapScope || {};
+  const { feats, trackVerts } = collectReportMapFeatures(
+    scope.project, scope.snap, scope.photos, scope.notes,
+  );
+  if (!feats.length && !trackVerts.length) return '';
+  let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
+  const bump = (lat, lon) => {
+    minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat);
+    minLon = Math.min(minLon, lon); maxLon = Math.max(maxLon, lon);
+  };
+  feats.forEach(f => bump(f.lat, f.lon));
+  trackVerts.forEach(v => bump(v.lat, v.lon));
   const pad = 0.12;
   const dLat = (maxLat - minLat) * pad || 0.004, dLon = (maxLon - minLon) * pad || 0.004;
   minLat -= dLat; maxLat += dLat; minLon -= dLon; maxLon += dLon;
@@ -12460,6 +12810,11 @@ async function persistProjectReportBundle(report, opts) {
     await idbPut(db, 'blobs', { key: reportArtifactBlobKey(rptId, 'pdf'), data: report.pdfBlob });
     meta.kinds.push('pdf');
   }
+  if (report.videoBlob) {
+    await idbPut(db, 'blobs', { key: reportArtifactBlobKey(rptId, 'video'), data: report.videoBlob });
+    meta.kinds.push('video');
+    meta.videoName = report.videoFilename || safeProjectExportFilename(report.videoExt || '.mp4');
+  }
   if (report.mapPng) {
     await idbPut(db, 'blobs', { key: reportArtifactBlobKey(rptId, 'map'), data: report.mapPng });
   }
@@ -12491,6 +12846,7 @@ function reportMetaById(rptId) {
 function reportFilenameForKind(meta, kind) {
   if (!meta) return 'report';
   if (kind === 'pdf') return meta.pdfName || safeProjectExportFilename('.pdf');
+  if (kind === 'video') return meta.videoName || safeProjectExportFilename('.mp4');
   if (kind === 'interactive') return meta.interactiveName || safeProjectExportFilename('_interaktif.html');
   return meta.htmlName || safeProjectExportFilename('.html');
 }
@@ -12589,6 +12945,7 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
   const titleEl = document.getElementById('frv-title');
   if (titleEl) {
     const fallback = viewKind === 'interactive' ? t('report.playbackViewerTitle')
+      : viewKind === 'video' ? t('report.video')
       : viewKind === 'pdf' ? t('report.pdf')
       : t('report.viewerTitle');
     titleEl.textContent = title || fallback;
@@ -12597,6 +12954,24 @@ async function openFieldReportViewerBlob(blob, title, pendingShare, viewKind) {
   const embed = document.getElementById('field-report-viewer-embed');
   const pdfPane = document.getElementById('field-report-viewer-pdf');
   const isPdf = viewKind === 'pdf' || (blob.type && blob.type.indexOf('pdf') >= 0);
+  const isVideo = viewKind === 'video' || (blob.type && String(blob.type).indexOf('video') >= 0);
+  if (isVideo) {
+    if (frame) { frame.removeAttribute('src'); frame.style.display = 'none'; }
+    if (embed) { embed.removeAttribute('src'); embed.style.display = 'none'; }
+    const pane = pdfPane || document.getElementById('field-report-viewer-pdf');
+    const url = URL.createObjectURL(blob);
+    _fieldReportViewerUrl = url;
+    if (pane) {
+      pane.style.display = 'block';
+      pane.classList.add('open');
+      pane.innerHTML = '<video controls playsinline webkit-playsinline style="width:100%;max-height:78vh;background:#000;border-radius:8px" src="' + url + '"></video>';
+    }
+    document.getElementById('field-report-viewer-backdrop')?.classList.add('open');
+    document.getElementById('field-report-viewer')?.classList.add('open');
+    document.body.classList.add('field-report-viewer-open');
+    fieldUiRaise('field-report-viewer', { modal: true });
+    return;
+  }
   if (isPdf) {
     if (frame) { frame.removeAttribute('src'); frame.style.display = 'none'; }
     if (embed) { embed.removeAttribute('src'); embed.style.display = 'none'; }
@@ -12684,6 +13059,12 @@ async function openSavedProjectReport(rptId, kind) {
     }, kind === 'interactive' ? 'interactive' : 'html');
     return;
   }
+  if (kind === 'video') {
+    await openFieldReportViewerBlob(blob, fname, {
+      blob, filename: fname, mimeType: blob.type || 'video/mp4', kind: 'video',
+    }, 'video');
+    return;
+  }
   await openFieldReportViewerBlob(blob, fname, { blob, filename: fname, mimeType: blob.type || 'application/octet-stream', kind: 'file' });
   };
   if (typeof FieldAccessGate !== 'undefined') await FieldAccessGate.requireAccess(open);
@@ -12705,17 +13086,17 @@ async function shareSavedProjectReport(rptId, kind) {
   await offerFieldExport({
     blob,
     filename,
-    mimeType: blob.type || (kind === 'pdf' ? 'application/pdf' : 'text/html'),
+    mimeType: blob.type || (kind === 'pdf' ? 'application/pdf' : kind === 'video' ? 'video/mp4' : 'text/html'),
     previewHtml,
     pdfBlob: kind === 'pdf' ? blob : null,
-    kind: kind === 'pdf' ? 'pdf' : (kind === 'interactive' ? 'interactive' : 'file'),
+    kind: kind === 'pdf' ? 'pdf' : (kind === 'interactive' ? 'interactive' : kind === 'video' ? 'video' : 'file'),
   });
 }
 
 async function deleteProjectReport(rptId) {
   if (!FIELD_PROJECT.id || !rptId) return;
   const db = await openProjectDb();
-  const kinds = ['pdf', 'html', 'interactive', 'map'];
+  const kinds = ['pdf', 'html', 'interactive', 'video', 'map'];
   for (const k of kinds) {
     try { await idbDelete(db, 'blobs', reportArtifactBlobKey(rptId, k)); } catch (_) {}
   }
@@ -12802,6 +13183,7 @@ function renderFieldProjectReportsList() {
     const kinds = meta.kinds || [];
     if (kinds.includes('pdf')) card.appendChild(buildFieldReportRow(meta.id, 'pdf', '📄', t('report.pdf')));
     if (kinds.includes('interactive')) card.appendChild(buildFieldReportRow(meta.id, 'interactive', '🎬', t('report.interactiveShort')));
+    if (kinds.includes('video')) card.appendChild(buildFieldReportRow(meta.id, 'video', '🎥', t('report.videoShort')));
     if (kinds.includes('html') && !kinds.includes('pdf')) {
       card.appendChild(buildFieldReportRow(meta.id, 'html', '📄', t('report.html')));
     }
@@ -12914,8 +13296,8 @@ function collectFieldInspectionContext() {
   const en = PA_LANG === 'en';
   const md = FIELD_PROJECT.metadata || {};
   const fix = _fieldGpsFix;
-  const lat = fix?.lat ?? md.centerLat ?? S.mapCenter?.lat;
-  const lon = fix?.lon ?? md.centerLon ?? S.mapCenter?.lon;
+  const lat = md.centerLat != null ? md.centerLat : (fix?.lat ?? S.mapCenter?.lat);
+  const lon = md.centerLon != null ? md.centerLon : (fix?.lon ?? S.mapCenter?.lon);
   const startIso = md.startTime || md.inspectionAt;
   const endIso = md.endTime || startIso;
   const clockRef = endIso || startIso;
@@ -13018,7 +13400,7 @@ async function generateProjectReport(onProgress) {
     prog(88, t('report.doc.progress.pdf'));
     let pdfBlob = null;
     try {
-      pdfBlob = await exportProjectPDF(html);
+      pdfBlob = await exportProjectPDF(html, { mapDataUrl: data.mapDataUrl });
     } catch (e) {
       console.warn('[Report PDF]', e);
     }
@@ -13047,22 +13429,12 @@ async function generateProjectReport(onProgress) {
   }
   const prog = (p, s) => { if (onProgress) onProgress(p, s); };
   prog(5, t('report.doc.progress.collect'));
-  await syncProjectInspectionMetadata();
+  await syncProjectInspectionMetadata({ preserveGeo: true });
   await saveCurrentProject(true);
   const snap = serializeProjectSnapshot();
   const generatedAt = new Date().toISOString();
   const measurements = computeMeasurementsFromObjects(S.objects);
   snap.measurements = measurements;
-
-  prog(25, t('report.doc.progress.map'));
-  const mapPng = await captureRouteMapSnapshot(2);
-  let mapDataUrl = mapPng ? await blobToDataUrl(mapPng) : '';
-  if (!mapDataUrl) {
-    mapDataUrl = buildReportMapFallbackDataUrl();
-    if (mapDataUrl && location.protocol === 'file:') {
-      console.info('[Report] file:// — using vector map fallback');
-    }
-  }
 
   prog(45, t('report.doc.progress.photos'));
   const photos = await collectReportPhotos();
@@ -13073,8 +13445,17 @@ async function generateProjectReport(onProgress) {
   prog(60, t('report.doc.progress.notes'));
   const notes = await collectReportNotes();
 
+  const inspectionAnchor = await ensureReportInspectionGeoReady(snap, photos, notes);
+
+  prog(25, t('report.doc.progress.map'));
+  if (typeof syncGpsTrackObject === 'function') syncGpsTrackObject();
+  const geoBounds = computeReportGeoBounds(photos, notes, snap, inspectionAnchor);
+  let mapDataUrl = await resolveReportMapDataUrl(null, geoBounds, snap, photos, notes);
+  if (!mapDataUrl) {
+    console.info('[Report] map raster unavailable');
+  }
+
   prog(68, PA_LANG === 'tr' ? 'Uydu altlığı hazırlanıyor…' : 'Satellite basemap…');
-  const geoBounds = computeReportGeoBounds(photos, notes, snap, S.mapCenter);
   let interactiveBasemapUrl = '';
   try {
     interactiveBasemapUrl = await buildSatelliteBasemapDataUrl(geoBounds);
@@ -13102,7 +13483,10 @@ async function generateProjectReport(onProgress) {
     appVersion: PLANAI_FIELD_APP_VERSION,
     lang: PA_LANG,
     crs: 'WGS84 (EPSG:4326)',
-    mapCenter: { ...S.mapCenter },
+    mapCenter: {
+      lat: inspectionAnchor.lat,
+      lon: inspectionAnchor.lon,
+    },
     gpsAccuracy: _fieldGpsFix?.accuracy ?? null,
     userName: getReportUserName(),
     objectCounts,
@@ -13128,14 +13512,14 @@ async function generateProjectReport(onProgress) {
   prog(88, t('report.doc.progress.pdf'));
   let pdfBlob = null;
   try {
-    pdfBlob = await exportProjectPDF(html);
+    pdfBlob = await exportProjectPDF(html, { mapDataUrl });
   } catch (e) {
     console.warn('[Report PDF]', e);
   }
 
   prog(100, t('report.doc.progress.done'));
   return {
-    html, pdfBlob, mapPng, mapDataUrl, interactiveBasemapUrl, geoBounds, brandLogoUrl,
+    html, pdfBlob, mapPng: null, mapDataUrl, interactiveBasemapUrl, geoBounds, brandLogoUrl,
     snap, project: snap, meta: reportMeta, photos, videos, notes, measurements,
   };
 }
@@ -13249,7 +13633,6 @@ function buildReportHTML(data) {
   const gpsPoints = gpsTrack?.path?.length || 0;
   const gpsSectionBody = gpsPoints >= 2
     ? `<p class="rpt-tech">${L('report.doc.gpsRoute.title')}: ${gpsPoints} ${lang === 'tr' ? 'nokta' : 'points'}</p>`
-      + (mapDataUrl ? `<img class="rpt-map" src="${mapDataUrl}" alt="${L('report.doc.gpsRoute.title')}"/>` : '')
     : '';
 
   const noteBlocks = (notes || []).map(n => `
@@ -13287,7 +13670,9 @@ h3{font-size:14px;color:#2c3e50;margin:18px 0 8px;}
 .rpt-stat{background:#f4f6f9;border:1px solid #dde3ea;border-radius:8px;padding:12px;}
 .rpt-stat b{display:block;font-size:20px;color:#1a3358;}
 .rpt-stat span{font-size:11px;color:#6a7a8a;}
-.rpt-map{width:100%;border:1px solid #c5d0dc;border-radius:8px;display:block;max-height:240mm;object-fit:contain;background:#f0f3f7;}
+.rpt-map{width:100%;min-height:80mm;border:1px solid #c5d0dc;border-radius:8px;display:block;max-height:240mm;object-fit:contain;background:#e8eef4;}
+.rpt-page-map{page-break-inside:avoid;}
+canvas.rpt-map{object-fit:contain;}
 table.rpt-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
 table.rpt-table th,table.rpt-table td{border:1px solid #dde3ea;padding:8px;text-align:left;}
 table.rpt-table th{background:#eef2f7;color:#1a3358;}
@@ -13349,9 +13734,11 @@ ${contextSection}
   <p class="rpt-tech">${L('report.doc.projectId')}: ${escapeHtml(project.id || '—')}<br/>${L('report.doc.created')}: ${created}<br/>${L('report.doc.updated')}: ${formatReportDateTime(project.updatedAt, lang)}</p>
 </section>
 
-<section class="rpt-page">
+<section class="rpt-page rpt-page-map">
   <h2>${L('report.doc.map.title')}</h2>
-  ${mapDataUrl ? `<img class="rpt-map" src="${mapDataUrl}" alt="${L('report.doc.map.title')}"/>` : `<p class="rpt-tech">${L('report.doc.map.unavailable')}</p>`}
+  ${mapDataUrl
+    ? `<img class="rpt-map" data-planai-report-map="1" width="880" height="616" src="${REPORT_MAP_PLACEHOLDER}" alt="${escapeHtml(L('report.doc.map.title'))}"/>`
+    : `<p class="rpt-tech">${L('report.doc.map.unavailable')}</p>`}
   <p class="rpt-meta">${L('report.doc.map.routeCaption')} · ${L('report.doc.map.basemap')}: ${escapeHtml(S.basemap || '—')} · CRS: WGS84</p>
 </section>
 
@@ -13400,8 +13787,31 @@ ${typeof PlanAIBranding !== 'undefined' ? PlanAIBranding.reportFooterHtml() : '<
 </div></body></html>`;
 }
 
-async function exportProjectPDF(htmlString) {
+async function waitReportImagesLoaded(root) {
+  const imgs = [...(root?.querySelectorAll('img[src]') || [])].filter(img => {
+    const src = img.getAttribute('src') || '';
+    return src && src !== REPORT_MAP_PLACEHOLDER;
+  });
+  await Promise.all(imgs.map(img => {
+    if (img.complete && img.naturalWidth > 0) {
+      return typeof img.decode === 'function' ? img.decode().catch(() => {}) : Promise.resolve();
+    }
+    return new Promise(resolve => {
+      const done = () => {
+        if (typeof img.decode === 'function') img.decode().then(resolve).catch(resolve);
+        else resolve();
+      };
+      img.addEventListener('load', done, { once: true });
+      img.addEventListener('error', done, { once: true });
+      setTimeout(done, 12000);
+    });
+  }));
+}
+
+async function exportProjectPDF(htmlString, opts) {
+  opts = opts || {};
   if (typeof html2pdf === 'undefined') throw new Error('html2pdf yüklenemedi');
+  htmlString = stripReportMapDataFromHtml(htmlString);
   if (typeof PlanAISecurity !== 'undefined') htmlString = PlanAISecurity.sanitizeExportHtml(htmlString);
   else if (typeof SpatialSecurity !== 'undefined') htmlString = SpatialSecurity.sanitizePdfHtml(htmlString);
   const wrap = document.createElement('div');
@@ -13414,11 +13824,24 @@ async function exportProjectPDF(htmlString) {
     throw new Error('Rapor HTML bulunamadı');
   }
   try {
+    await mountReportPdfMapCanvas(el, opts.mapDataUrl || '');
+    await waitReportImagesLoaded(el);
     const blob = await html2pdf().set({
       margin: [12, 12, 12, 12],
       filename: 'report.pdf',
       image: { type: 'jpeg', quality: 0.9 },
-      html2canvas: { scale: 2, useCORS: true, logging: false, letterRendering: true },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        letterRendering: true,
+        imageTimeout: 15000,
+        onclone: (clonedDoc) => {
+          const clonedRoot = clonedDoc.querySelector('.planai-report-root');
+          if (clonedRoot) copyReportMapCanvasToClone(el, clonedRoot);
+        },
+      },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['css', 'legacy'], avoid: '.rpt-card' },
     }).from(el).outputPdf('blob');
@@ -14066,7 +14489,7 @@ async function createInteractiveFieldReport() {
     const report = await generateProjectReport((p, s) => setReportProgress(p, s));
     if (!report.pdfBlob && report.html) {
       setReportProgress(90, t('report.doc.progress.pdf'));
-      try { report.pdfBlob = await exportProjectPDF(report.html); } catch (e) { console.warn('[Project PDF]', e); }
+      try { report.pdfBlob = await exportProjectPDF(report.html, { mapDataUrl: report.mapDataUrl }); } catch (e) { console.warn('[Project PDF]', e); }
     }
     setReportProgress(95, PA_LANG === 'tr' ? 'Mekansal tekrar hazırlanıyor…' : 'Preparing spatial playback…');
     const interactiveHtml = await buildInteractiveFieldReportHTML(report);
@@ -14082,6 +14505,74 @@ async function createInteractiveFieldReport() {
   } catch (e) {
     console.error('[InteractiveReport]', e);
     showHint('Rapor: ' + (e.message || e));
+  } finally {
+    hideReportProgress();
+  }
+}
+
+async function createVideoFieldReport() {
+  if (!FIELD_PROJECT.id) {
+    showHint(PA_LANG === 'tr' ? 'Önce çalışma açın' : 'Open a project first');
+    openProjectPanel();
+    return;
+  }
+  if (typeof VideoReportGenerator === 'undefined') {
+    showHint(t('report.videoUnsupported'));
+    return;
+  }
+  if (typeof FieldAccessGate !== 'undefined' && FieldAccessGate.hasPin() && !FieldAccessGate.isUnlocked()) {
+    const unlocked = await FieldAccessGate.requireUnlock();
+    if (!unlocked) {
+      showHint(t('gate.unlockSub'), 6000);
+      return;
+    }
+  }
+  if (deviceSecurityBlocksExport()) {
+    showHint(typeof PlanAISecurity !== 'undefined' ? PlanAISecurity.exportBlockedMessage()
+      : (typeof DeviceSecurity !== 'undefined' ? DeviceSecurity.exportBlockedMessage() : 'Export blocked'));
+    return;
+  }
+  closeProjectPanel();
+  setReportProgress(0, t('report.videoProgress'));
+  try {
+    const data = typeof ReportDataBuilder !== 'undefined'
+      ? await ReportDataBuilder.buildFromCurrentProject((p, s) => setReportProgress(Math.min(40, p), s))
+      : await generateProjectReport((p, s) => setReportProgress(Math.min(40, p), s));
+    if (!data.brandLogoUrl) data.brandLogoUrl = await loadBrandLogoDataUrl();
+    if (!data.brandLogoUrl) data.brandLogoUrl = embeddedBrandLogoDataUrl();
+    if (Array.isArray(data.allPhotos || data.photos)) {
+      const src = data.allPhotos || data.photos;
+      const enriched = await enrichPhotosWithAudio(src);
+      data.allPhotos = enriched;
+      data.photos = enriched.filter(p => !p.isPanorama);
+      data.voiceNotes = enriched.filter(p => p.hasVoice);
+      const voiceMissing = enriched.find(p => p.hasVoice && !p.audioDataUrl);
+      if (voiceMissing && data.meta?.simulation) {
+        voiceMissing.audioDataUrl = await synthesizeDemoVoiceDataUrl(voiceMissing.voiceDuration || 12);
+      }
+    }
+    setReportProgress(45, t('report.videoProgress'));
+    const { blob, ext } = await VideoReportGenerator.generateFromProjectData(
+      data,
+      (p, s) => setReportProgress(p, s || t('report.videoProgress')),
+    );
+    const videoFilename = safeProjectExportFilename(ext || '.mp4');
+    const report = Object.assign({}, data, {
+      videoBlob: blob,
+      videoExt: ext,
+      videoFilename,
+    });
+    await persistProjectReportBundle(report, {});
+    showHint(t('report.videoReady'));
+    await offerFieldExport({
+      blob,
+      filename: videoFilename,
+      mimeType: blob.type || 'video/mp4',
+      kind: 'video',
+    });
+  } catch (e) {
+    console.error('[VideoReport]', e);
+    showHint((PA_LANG === 'tr' ? 'Video rapor: ' : 'Video report: ') + (e.message || e));
   } finally {
     hideReportProgress();
   }
@@ -14198,6 +14689,7 @@ function setGpsStatus(status) {
   }
   _gpsStatus = status;
   updateGpsHud();
+  syncMapLocateButtonUi();
 }
 
 function gpsErrorMessage(err) {
@@ -17542,6 +18034,7 @@ function initFieldResponsiveLayout() {
     updateFieldMobileViewportClass();
     fitFieldTopBar();
     syncFieldTopbarHeight();
+    requestAnimationFrame(fitFieldTopBar);
   });
   if (topBar) {
     const ro = new ResizeObserver(onLayout);
@@ -17563,20 +18056,26 @@ function syncFieldTopbarHeight() {
   document.documentElement.style.setProperty('--field-topbar-h', h + 'px');
 }
 
+function getFieldTopBarTrack() {
+  const topBar = document.getElementById('top-bar');
+  return topBar?.querySelector('.top-bar-track') || topBar;
+}
+
 function fitFieldTopBar() {
   const topBar = document.getElementById('top-bar');
-  if (!topBar || !FIELD_MODE) return;
+  const track = getFieldTopBarTrack();
+  if (!topBar || !track || !FIELD_MODE) return;
   document.body.classList.remove(
     'field-top-overflow-1', 'field-top-overflow-2', 'field-top-overflow-3',
     'trial-top-compact-1', 'trial-top-compact-2', 'trial-top-compact-3', 'trial-top-compact-4',
-    'trial-top-compact-5'
+    'trial-top-compact-5', 'trial-top-compact-6'
   );
   const trialUi = document.body.classList.contains('field-trial-ui');
   const phoneScroll = trialUi && window.matchMedia('(max-width: 480px)').matches;
   if (!phoneScroll) {
     let guard = 0;
-    const maxGuard = trialUi ? 5 : 3;
-    while (topBar.scrollWidth > topBar.clientWidth + 2 && guard < maxGuard) {
+    const maxGuard = trialUi ? 6 : 3;
+    while (track.scrollWidth > topBar.clientWidth + 2 && guard < maxGuard) {
       guard++;
       if (trialUi) {
         document.body.classList.add('trial-top-compact-' + guard);
@@ -17585,7 +18084,9 @@ function fitFieldTopBar() {
       }
     }
   }
-  topBar.style.overflowX = topBar.scrollWidth > topBar.clientWidth + 2 ? 'auto' : '';
+  const overflows = track.scrollWidth > topBar.clientWidth + 2;
+  track.style.overflowX = (overflows || phoneScroll) ? 'auto' : 'hidden';
+  if (!trialUi && !overflows) track.style.overflowX = '';
 }
 
 function setFieldInteractionMode(mode, fromStylus) {
@@ -18457,6 +18958,51 @@ async function resolveInspectionLocationLabel(lat, lon) {
   return formatCoord(lat, lon);
 }
 
+async function resolveInspectionCoordsFromLabel(label) {
+  if (!label || /GPS bekleniyor|Waiting for GPS/i.test(label)) return null;
+  try {
+    const lang = PA_LANG === 'en' ? 'en' : 'tr';
+    const url = 'https://nominatim.openstreetmap.org/search?q='
+      + encodeURIComponent(label) + '&format=json&limit=1&countrycodes=tr&accept-language=' + lang;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    const row = rows?.[0];
+    if (!row?.lat || !row?.lon) return null;
+    return { lat: parseFloat(row.lat), lon: parseFloat(row.lon) };
+  } catch (e) {
+    console.warn('[ProjectMeta] forward geocode', e);
+    return null;
+  }
+}
+
+async function ensureReportInspectionGeoReady(snap, photos, notes) {
+  if (!FIELD_PROJECT.id) {
+    return resolveReportInspectionAnchor(null, snap, photos, notes);
+  }
+  const md = FIELD_PROJECT.metadata || (FIELD_PROJECT.metadata = {});
+  let anchor = resolveReportInspectionAnchor(null, snap, photos, notes);
+  if (anchor.source !== 'activity' && md.location
+      && !/GPS bekleniyor|Waiting for GPS/i.test(md.location)) {
+    const fwd = await resolveInspectionCoordsFromLabel(md.location);
+    if (fwd) anchor = { lat: fwd.lat, lon: fwd.lon, source: 'metadataLabel' };
+  }
+  if (anchor.lat == null || anchor.lon == null) return anchor;
+  const missingCoords = md.centerLat == null || md.centerLon == null;
+  if (anchor.source === 'activity' || anchor.source === 'metadataLabel' || missingCoords) {
+    md.centerLat = anchor.lat;
+    md.centerLon = anchor.lon;
+    const needsLabel = !md.location || /GPS bekleniyor|Waiting for GPS/i.test(md.location);
+    if (needsLabel) {
+      const loc = await resolveInspectionLocationLabel(anchor.lat, anchor.lon);
+      if (loc) md.location = loc;
+    }
+  }
+  return anchor;
+}
+window.ensureReportInspectionGeoReady = ensureReportInspectionGeoReady;
+window.resolveReportInspectionAnchor = resolveReportInspectionAnchor;
+
 async function syncProjectInspectionMetadata(opts = {}) {
   if (!FIELD_PROJECT.id) return;
   if (_inspectionMetaGpsPending && gpsFixUsableForInspectionMeta(_fieldGpsFix)) {
@@ -18499,12 +19045,21 @@ async function syncProjectInspectionMetadata(opts = {}) {
     }
   }
   if ((lat == null || lon == null) && !opts.gpsOnly) {
-    lat = fix?.lat ?? S.mapCenter?.lat;
-    lon = fix?.lon ?? S.mapCenter?.lon;
+    if (!opts.forceLocation && md.centerLat != null && md.centerLon != null) {
+      lat = md.centerLat;
+      lon = md.centerLon;
+    } else {
+      lat = fix?.lat ?? S.mapCenter?.lat;
+      lon = fix?.lon ?? S.mapCenter?.lon;
+    }
   }
   if (lat != null && lon != null) {
-    md.centerLat = lat;
-    md.centerLon = lon;
+    const keepSavedCenter = (opts.preserveGeo || (!opts.forceLocation && !opts.gpsOnly))
+      && md.centerLat != null && md.centerLon != null;
+    if (!keepSavedCenter) {
+      md.centerLat = lat;
+      md.centerLon = lon;
+    }
     if (!md.location || /GPS bekleniyor|Waiting for GPS/i.test(md.location) || opts.forceLocation) {
       const loc = await resolveInspectionLocationLabel(lat, lon);
       if (loc) md.location = loc;
@@ -18631,6 +19186,9 @@ function computeFieldProjectBounds() {
 }
 
 async function captureRouteMapSnapshot(scaleFactor) {
+  if (_gpsTrack.points?.length >= 2 && typeof syncGpsTrackObject === 'function') {
+    syncGpsTrackObject();
+  }
   const saved = {
     mapCenter: { ...S.mapCenter },
     scale: S.scale,
@@ -21844,10 +22402,14 @@ function togglePaftaGrid() {
 /** Pan viewport so a lat/lon stays under the map view center (does not move geo anchor). */
 /** UI zoom label is Math.round(S.scale * 100) + '%' — 0.8 → 80%. */
 const FIELD_LOCATE_TARGET_SCALE = 0.8;
+/** Konum araması: cadde/sokak bağlamı görünsün — canlı konumdan biraz yakın, bina düzeyinden uzak. */
+const FIELD_SEARCH_POINT_SCALE = 2;
+const FIELD_SEARCH_MIN_SCALE = 1.3;
+const FIELD_SEARCH_MAX_SCALE = 2.5;
+const FIELD_SEARCH_BBOX_MAX_SPAN = 0.012;
 
-function zoomMapToFieldLiveLocation(lat, lon) {
+function applyMapViewportToLatLonScale(lat, lon, targetScale) {
   if (lat == null || lon == null || !isFinite(lat) || !isFinite(lon)) return;
-  const targetScale = FIELD_LOCATE_TARGET_SCALE;
   const w = latLonToWorld(lat, lon);
   const topBar = getTopBarH();
   const dock = FIELD_MODE ? getFieldDockH() : 0;
@@ -21859,6 +22421,43 @@ function zoomMapToFieldLiveLocation(lat, lon) {
   S.ty = cy - w.y * S.scale;
   _basemapZoomState = { z: -1, ideal: -1 };
   scheduleRender();
+}
+
+function boundsFromNominatimItem(item) {
+  const bb = item && item.boundingbox;
+  if (!bb || bb.length < 4) return { ok: false };
+  const minLat = parseFloat(bb[0]);
+  const maxLat = parseFloat(bb[1]);
+  const minLon = parseFloat(bb[2]);
+  const maxLon = parseFloat(bb[3]);
+  if (![minLat, maxLat, minLon, maxLon].every(isFinite)) return { ok: false };
+  return { minLat, maxLat, minLon, maxLon, ok: true };
+}
+
+function zoomMapToSearchLocation(lat, lon, item) {
+  pauseLiveMapFollow();
+  if (!FIELD_MODE) setGeoAnchor(lat, lon);
+  else if (!fieldDrawingSessionActive()) S.mapCenter = { lat, lon };
+  const bb = boundsFromNominatimItem(item);
+  if (bb.ok) {
+    const latSpan = Math.abs(bb.maxLat - bb.minLat);
+    const lonSpan = Math.abs(bb.maxLon - bb.minLon);
+    const maxSpan = Math.max(latSpan, lonSpan);
+    if (maxSpan > 1e-7 && maxSpan <= FIELD_SEARCH_BBOX_MAX_SPAN) {
+      fitMapToLatLonBounds(bb);
+      let targetScale = S.scale;
+      if (targetScale > FIELD_SEARCH_MAX_SCALE) targetScale = FIELD_SEARCH_MAX_SCALE;
+      else if (targetScale < FIELD_SEARCH_MIN_SCALE) targetScale = FIELD_SEARCH_POINT_SCALE;
+      applyMapViewportToLatLonScale(lat, lon, targetScale);
+      return;
+    }
+  }
+  applyMapViewportToLatLonScale(lat, lon, FIELD_SEARCH_POINT_SCALE);
+}
+
+function zoomMapToFieldLiveLocation(lat, lon) {
+  if (lat == null || lon == null || !isFinite(lat) || !isFinite(lon)) return;
+  applyMapViewportToLatLonScale(lat, lon, FIELD_LOCATE_TARGET_SCALE);
 }
 
 function panViewportToLatLon(lat, lon, alpha) {
@@ -25754,8 +26353,7 @@ async function searchLocation() {
       div.onclick = () => {
         const lat = parseFloat(item.lat);
         const lon = parseFloat(item.lon);
-        pauseLiveMapFollow();
-        setMapCenter(lat, lon);
+        zoomMapToSearchLocation(lat, lon, item);
         if (S.basemap === 'none') { S.basemap='osm'; document.getElementById('btn-osm').classList.add('active'); }
         hideLocResults();
         showHint(`📍 ${item.display_name.split(',')[0]}`, 3200);
