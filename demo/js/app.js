@@ -364,8 +364,8 @@ const PA_I18N = {
     'guide.showRoute': 'Rotayı göster', 'guide.walk': 'Bu yönde yürü',
     'dock.projects': 'Saha Çalışmaları', 'dock.import': 'İçe Aktar', 'dock.gps': 'GPS', 'dock.photo': 'Foto', 'dock.video': 'Video',
     'tlbl.select': 'Seç', 'tlbl.info': 'Bilgi', 'tlbl.point': 'Nokta', 'tlbl.line': 'Ölçüm', 'tlbl.polyline': 'Kırık', 'tlbl.area': 'Alan', 'tlbl.slope': 'Eğim', 'tlbl.layers': 'Katman', 'tlbl.undo': 'Geri', 'tlbl.delete': 'Sil',
-    'dock.notes': 'Notlar', 'basemap.none': 'Kapalı', 'basemap.osm': 'OSM', 'basemap.satellite': 'Uydu', 'basemap.topo': 'Topo',
-    'basemap.hint.none': 'Altlık kapalı', 'basemap.hint.osm': 'OSM harita', 'basemap.hint.satellite': 'Uydu görüntüsü', 'basemap.hint.topo': 'Topoğrafya',
+    'dock.notes': 'Notlar', 'basemap.none': 'Kapalı', 'basemap.osm': 'OSM', 'basemap.satellite': 'Uydu Hibrit', 'basemap.topo': 'Topo',
+    'basemap.hint.none': 'Altlık kapalı', 'basemap.hint.osm': 'OSM harita', 'basemap.hint.satellite': 'Uydu + yol ve yer adları', 'basemap.hint.topo': 'Topoğrafya',
     'layer.sketch': 'Saha', 'layer.points': 'Noktalar', 'layer.imported': 'Diğer içe aktarımlar', 'layer.photos': 'Fotoğraflar', 'layer.notes': 'Notlar', 'layer.gps': 'GPS Rota',
     'layer.geom': '{n} geometri', 'layer.importSources': '{n} kaynak', 'layer.overlay': 'overlay', 'layer.planOverlay': 'Plan overlay (vektör / raster)',
     'layer.dxf': 'DXF katmanları', 'layer.gml': 'GML katmanları',
@@ -946,8 +946,8 @@ const PA_I18N = {
     'guide.showRoute': 'Show route', 'guide.walk': 'Walk this way',
     'dock.projects': 'Field Projects', 'dock.import': 'Import', 'dock.gps': 'GPS', 'dock.photo': 'Photo', 'dock.video': 'Video',
     'tlbl.select': 'Select', 'tlbl.info': 'Info', 'tlbl.point': 'Point', 'tlbl.line': 'Measure', 'tlbl.polyline': 'Polyline', 'tlbl.area': 'Area', 'tlbl.slope': 'Slope', 'tlbl.layers': 'Layers', 'tlbl.undo': 'Undo', 'tlbl.delete': 'Delete',
-    'dock.notes': 'Notes', 'basemap.none': 'Off', 'basemap.osm': 'OSM', 'basemap.satellite': 'Satellite', 'basemap.topo': 'Topo',
-    'basemap.hint.none': 'Basemap off', 'basemap.hint.osm': 'OSM map', 'basemap.hint.satellite': 'Satellite imagery', 'basemap.hint.topo': 'Topography',
+    'dock.notes': 'Notes', 'basemap.none': 'Off', 'basemap.osm': 'OSM', 'basemap.satellite': 'Satellite Hybrid', 'basemap.topo': 'Topo',
+    'basemap.hint.none': 'Basemap off', 'basemap.hint.osm': 'OSM map', 'basemap.hint.satellite': 'Satellite + roads and labels', 'basemap.hint.topo': 'Topography',
     'layer.sketch': 'Field', 'layer.points': 'Points', 'layer.imported': 'Other imports', 'layer.photos': 'Photos', 'layer.notes': 'Notes', 'layer.gps': 'GPS track',
     'project.menu': 'Field Project', 'project.new': '+ New Field Project', 'project.newName': 'Project name', 'project.create': 'Create', 'project.cancel': 'Cancel',     'project.rename': 'Rename', 'project.save': 'Save', 'project.saved': 'Project saved',
     'entry.tagline': 'Spatial Inspection Playback Platform',
@@ -9700,9 +9700,19 @@ function ensureFieldBasemapOn() {
   }
 }
 
+const ESRI_IMAGERY_TILE_BASE = 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile';
+const ESRI_HYBRID_OVERLAY_TILE_BASES = [
+  'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile',
+  'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile',
+];
+
+function isSatelliteHybridBasemap() {
+  return S.basemap === 'satellite';
+}
+
 function basemapTileUrl(zoom, tx, ty) {
   if (S.basemap === 'satellite') {
-    return 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/' + zoom + '/' + ty + '/' + tx;
+    return ESRI_IMAGERY_TILE_BASE + '/' + zoom + '/' + ty + '/' + tx;
   }
   if (S.basemap === 'topo') {
     return 'https://tile.opentopomap.org/' + zoom + '/' + tx + '/' + ty + '.png';
@@ -9711,9 +9721,14 @@ function basemapTileUrl(zoom, tx, ty) {
   return 'https://' + sub + '.tile.openstreetmap.org/' + zoom + '/' + tx + '/' + ty + '.png';
 }
 
+function basemapOverlayTileUrls(zoom, tx, ty) {
+  if (!isSatelliteHybridBasemap()) return [];
+  return ESRI_HYBRID_OVERLAY_TILE_BASES.map(base => base + '/' + zoom + '/' + ty + '/' + tx);
+}
+
 function basemapTileFallbackUrls(url) {
   const out = [];
-  if (S.basemap === 'satellite') {
+  if (url.indexOf('arcgisonline') >= 0) {
     if (url.indexOf('services.arcgisonline.com') >= 0) {
       out.push(url.replace('services.arcgisonline.com', 'server.arcgisonline.com'));
     } else if (url.indexOf('server.arcgisonline.com') >= 0) {
@@ -9750,6 +9765,7 @@ function isEsriNoDataPlaceholder(img) {
 
 function rejectBasemapPlaceholderTile(url, img) {
   if (!img || img.naturalWidth <= 0) return true;
+  if (url.indexOf('/Reference/') >= 0) return false;
   if (S.basemap === 'satellite' && url.indexOf('arcgisonline') >= 0 && isEsriNoDataPlaceholder(img)) {
     markTileCacheMiss(url);
     return true;
@@ -9798,6 +9814,24 @@ function computeBasemapTileZoom(mPerScreenPx) {
   }
   _basemapZoomState = { z, ideal };
   return z;
+}
+
+function tryDrawBasemapTileFromUrl(url, sx, sy, sw, sh) {
+  if (!(sw > 0.5 && sh > 0.5)) return false;
+  const cached = _tileCache[url];
+  if (cached && cached instanceof Image && cached.complete && cached.naturalWidth > 0) {
+    if (rejectBasemapPlaceholderTile(url, cached)) {
+      delete _tileCache[url];
+      return false;
+    }
+    const prevSmooth = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = true;
+    if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(cached, sx, sy, sw, sh);
+    ctx.imageSmoothingEnabled = prevSmooth;
+    return true;
+  }
+  return false;
 }
 
 function tryDrawBasemapTile(tx, ty, zoom, sx, sy, sw, sh) {
@@ -9915,6 +9949,7 @@ function tryBasemapTileFallback(origUrl, fallbacks, idx) {
 
 function kickoffBasemapTileLoad(zoom, tx, ty) {
   startBasemapTileImageLoad(basemapTileUrl(zoom, tx, ty));
+  basemapOverlayTileUrls(zoom, tx, ty).forEach(url => startBasemapTileImageLoad(url));
   for (let pz = zoom - 1; pz >= Math.max(1, zoom - 3); pz--) {
     const shift = zoom - pz;
     const scale = Math.pow(2, shift);
@@ -9946,7 +9981,10 @@ function getVisibleMapTileUrls() {
   if ((norm.brx - norm.tlx + 1) * (norm.bry - norm.tly + 1) > 200) return [];
   const urls = [];
   for (let tx = norm.tlx; tx <= norm.brx; tx++) {
-    for (let ty = norm.tly; ty <= norm.bry; ty++) urls.push(basemapTileUrl(zoom, tx, ty));
+    for (let ty = norm.tly; ty <= norm.bry; ty++) {
+      urls.push(basemapTileUrl(zoom, tx, ty));
+      basemapOverlayTileUrls(zoom, tx, ty).forEach(u => urls.push(u));
+    }
   }
   return urls;
 }
@@ -12374,7 +12412,28 @@ function computeReportGeoBounds(photos, notes, project, fallbackCenter) {
 }
 
 async function loadSatelliteTileImageForReport(z, tx, ty) {
-  const url = 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/' + z + '/' + ty + '/' + tx;
+  const url = ESRI_IMAGERY_TILE_BASE + '/' + z + '/' + ty + '/' + tx;
+  try {
+    const db = await openProjectDb();
+    const row = await idbGet(db, 'map_tiles', url);
+    if (row?.blob) {
+      const cached = await blobToImage(row.blob);
+      if (cached) return await compositeHybridReportTile(cached, z, tx, ty);
+    }
+  } catch (_) {}
+  if (!navigator.onLine) return null;
+  try {
+    let img = await loadMapTileViaImage(url, true);
+    if (!img) img = await loadMapTileViaImage(url, false);
+    if (!img) return null;
+    return await compositeHybridReportTile(img, z, tx, ty);
+  } catch (_) {
+    return null;
+  }
+}
+
+async function loadHybridOverlayTileForReport(z, tx, ty, overlayBase) {
+  const url = overlayBase + '/' + z + '/' + ty + '/' + tx;
   try {
     const db = await openProjectDb();
     const row = await idbGet(db, 'map_tiles', url);
@@ -12388,6 +12447,28 @@ async function loadSatelliteTileImageForReport(z, tx, ty) {
   } catch (_) {
     return null;
   }
+}
+
+async function compositeHybridReportTile(baseImg, z, tx, ty) {
+  if (!baseImg?.naturalWidth) return baseImg;
+  const overlays = [];
+  for (const base of ESRI_HYBRID_OVERLAY_TILE_BASES) {
+    const ov = await loadHybridOverlayTileForReport(z, tx, ty, base);
+    if (ov?.naturalWidth) overlays.push(ov);
+  }
+  if (!overlays.length) return baseImg;
+  const c = document.createElement('canvas');
+  c.width = baseImg.naturalWidth;
+  c.height = baseImg.naturalHeight;
+  const cx = c.getContext('2d');
+  cx.drawImage(baseImg, 0, 0);
+  overlays.forEach(ov => cx.drawImage(ov, 0, 0, c.width, c.height));
+  return new Promise(resolve => {
+    const out = new Image();
+    out.onload = () => resolve(out);
+    out.onerror = () => resolve(baseImg);
+    out.src = c.toDataURL('image/png');
+  });
 }
 
 async function buildSatelliteBasemapDataUrl(bounds, w, h) {
@@ -22234,6 +22315,11 @@ function renderOSMTiles() {
 
       const tileDraw = tryDrawBasemapTile(tx, ty, zoom, sx, sy, sw, sh);
       if (!tileDraw.native) kickoffBasemapTileLoad(zoom, tx, ty);
+      if (isSatelliteHybridBasemap()) {
+        basemapOverlayTileUrls(zoom, tx, ty).forEach(ovUrl => {
+          if (!tryDrawBasemapTileFromUrl(ovUrl, sx, sy, sw, sh)) startBasemapTileImageLoad(ovUrl);
+        });
+      }
     }
   }
 
@@ -22245,7 +22331,7 @@ function renderOSMTiles() {
   ctx.font = '9px Inter, sans-serif';
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.textAlign = 'right';
-  const attr = S.basemap === 'satellite' ? '© Esri World Imagery'
+  const attr = S.basemap === 'satellite' ? '© Esri · Imagery, Transportation, Places'
     : S.basemap === 'topo' ? '© OpenTopoMap © OSM'
     : '© OpenStreetMap contributors';
   ctx.fillText(attr, CW - 8, CH - 8);
