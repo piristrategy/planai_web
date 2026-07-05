@@ -52,8 +52,12 @@ const FieldSettingsHub = (function () {
         security: t('sec.title'),
         help: t('settings.help'),
         about: t('settings.about'),
+        ai: (typeof PA_LANG !== 'undefined' && PA_LANG === 'tr') ? 'Saha Asistanı AI' : 'Field Assistant AI',
       };
       title.textContent = titles[which] || t('settings.title');
+    }
+    if (which === 'ai' && typeof FieldInspectionLlm !== 'undefined') {
+      FieldInspectionLlm.loadSettingsForm();
     }
   }
 

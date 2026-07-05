@@ -18,7 +18,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="planai-field-build" content="20260629-v1.7.2">
+<meta name="planai-field-build" content="20260706-v1.8.0-ai">
+<script>window.FIELD_TRIAL_AI_ENABLED = true;</script>
 <style id="field-trial-boot">
 body.field-trial-ui:not(.field-trial-ready) #trial-top-tools.trial-right-tools,
 body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
@@ -32,6 +33,7 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="stylesheet" href="css/app.css?v=2.0.2">
 <link rel="stylesheet" href="css/field-trial-shell.css?v=1.7.2">
+<link rel="stylesheet" href="css/field-trial-ai.css?v=1.0.11">
 <script src="libs/jszip.min.js"></script>
 <script src="libs/exif.min.js"></script>
 <script src="libs/proj4.js"></script>
@@ -474,6 +476,92 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
       <button type="button" class="note-pin-cancel" onclick="cancelFieldNotePinMode()">✕ İptal</button>
     </div>
     <div id="trial-locate-coach" class="trial-locate-coach" data-i18n-html="trial.locateCoach" aria-live="polite" hidden>Canlı konumunuzu görmek için <strong>sağdaki bu butona</strong> dokunun.</div>
+
+    <div id="field-ai-end-sheet" hidden aria-hidden="true" role="dialog" aria-labelledby="field-ai-end-title">
+      <div id="field-ai-end-backdrop" aria-hidden="true"></div>
+      <div class="field-ai-sheet-card">
+        <div class="field-ai-sheet-head">
+          <div>
+            <h3 id="field-ai-end-title">İnceleme tamamlandı mı?</h3>
+            <p id="field-ai-end-sub">Gözlemlerinizi sinematik rapor veya PDF olarak paylaşabilirsiniz.</p>
+          </div>
+          <button type="button" id="field-ai-end-close" aria-label="Kapat">✕</button>
+        </div>
+        <div class="field-ai-end-actions">
+          <button type="button" id="field-ai-end-cinematic" class="field-ai-coach-primary">🎬 Sinematik rapor</button>
+          <button type="button" id="field-ai-end-pdf" class="field-ai-coach-primary">📄 PDF rapor</button>
+          <button type="button" id="field-ai-end-summary" class="field-ai-coach-secondary">✦ AI özet</button>
+          <button type="button" id="field-ai-end-later" class="field-ai-sheet-done">Sonra</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="field-ai-sheet" hidden aria-hidden="true" role="dialog" aria-labelledby="field-ai-sheet-title">
+      <div id="field-ai-sheet-backdrop" aria-hidden="true"></div>
+      <div class="field-ai-sheet-card">
+        <div class="field-ai-sheet-head">
+          <div>
+            <h3 id="field-ai-sheet-title">Saha Asistanı</h3>
+            <p id="field-ai-sheet-sub">Ne incelemek istiyorsunuz?</p>
+          </div>
+          <button type="button" id="field-ai-sheet-close" aria-label="Kapat">✕</button>
+        </div>
+        <div id="field-ai-sheet-intent">
+          <p class="field-ai-intent-lead">İnceleme türünü seçin — asistan boyunca size özel hatırlatmalar yapar.</p>
+          <div id="field-ai-intent-choices" class="field-ai-intent-grid"></div>
+          <div class="field-ai-intent-foot field-ai-intent-foot-compact">
+            <button type="button" id="field-ai-intent-skip" class="field-ai-coach-secondary field-ai-intent-skip-full">Geç</button>
+          </div>
+        </div>
+        <div id="field-ai-sheet-capture" hidden>
+          <textarea id="field-ai-note-input" placeholder="Örn: Kuzey cephede drenaj tıkanmış, su birikintisi var…"></textarea>
+          <p id="field-ai-note-status" aria-live="polite"></p>
+          <div class="field-ai-sheet-actions">
+            <button type="button" id="field-ai-note-dictate">🎤 Konuş</button>
+            <button type="button" id="field-ai-note-save">Süz ve kaydet</button>
+          </div>
+        </div>
+        <div id="field-ai-sheet-result" hidden>
+          <div id="field-ai-obs-card"></div>
+          <div id="field-ai-coach" class="field-ai-coach" hidden>
+            <p id="field-ai-coach-msg"></p>
+            <div class="field-ai-coach-actions">
+              <button type="button" id="field-ai-coach-action" class="field-ai-coach-primary"></button>
+              <button type="button" id="field-ai-coach-dismiss" class="field-ai-coach-secondary">Sonra</button>
+            </div>
+          </div>
+          <button type="button" id="field-ai-sheet-done" class="field-ai-sheet-done">Tamam</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="field-ai-intent-guide" hidden aria-hidden="true" role="dialog" aria-labelledby="field-ai-guide-title">
+      <div id="field-ai-intent-guide-backdrop" aria-hidden="true"></div>
+      <div class="field-ai-sheet-card field-ai-guide-card">
+        <div class="field-ai-sheet-head">
+          <div>
+            <h3 id="field-ai-guide-title">—</h3>
+            <p id="field-ai-guide-sub">İnceleme rehberi</p>
+          </div>
+          <button type="button" id="field-ai-guide-close" aria-label="Kapat">✕</button>
+        </div>
+        <div id="field-ai-guide-body" class="field-ai-guide-scroll"></div>
+        <div class="field-ai-guide-foot">
+          <button type="button" id="field-ai-guide-import" class="field-ai-coach-primary" hidden>İçe aktar</button>
+          <button type="button" id="field-ai-guide-continue" class="field-ai-coach-primary">📍 Canlı konuma git</button>
+          <button type="button" id="field-ai-guide-back" class="field-ai-coach-secondary">← Geri</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="field-ai-coach-bar" class="field-ai-coach-bar" hidden aria-hidden="true" role="status">
+      <p id="field-ai-coach-bar-msg"></p>
+      <div class="field-ai-coach-bar-actions">
+        <button type="button" id="field-ai-coach-bar-action" class="field-ai-coach-primary"></button>
+        <button type="button" id="field-ai-coach-bar-dismiss" class="field-ai-coach-secondary" aria-label="Sonra">✕</button>
+      </div>
+    </div>
+
     <div id="map-float-controls">
       <button type="button" id="btn-map-locate" class="trial-locate-btn" onclick="mapControlLocate()" data-i18n-title="trial.locateBtn" data-i18n-aria="trial.locateBtn" title="Canlı konum" aria-label="Canlı konum">
         <span class="trial-locate-led" aria-hidden="true"></span>
@@ -511,9 +599,9 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
         <span class="field-dock-icon field-dock-icon-video" aria-hidden="true"></span>
         <span class="field-dock-label" data-i18n="dock.video">Video</span>
       </button>
-      <button type="button" class="field-dock-btn" id="btn-dock-notes" onclick="openFieldNotes()">
-        <span class="field-dock-icon field-dock-icon-notes" aria-hidden="true"></span>
-        <span class="field-dock-label" data-i18n="dock.notes">Notlar</span>
+      <button type="button" class="field-dock-btn field-dock-ai" id="btn-dock-ai" title="Saha Asistanı — konuşun, süzer ve yönlendirir" aria-label="Saha Asistanı">
+        <span class="field-dock-icon field-dock-icon-ai" aria-hidden="true"></span>
+        <span class="field-dock-label">Asistan</span>
       </button>
       <button type="button" class="field-dock-btn active" id="btn-dock-basemap" onclick="toggleOSM()" title="Altlık değiştir">
         <span class="field-dock-icon field-dock-icon-basemap" aria-hidden="true" id="btn-dock-basemap-icon" data-dynamic-basemap="1"></span>
@@ -645,8 +733,11 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
             <button type="button" id="pdet-btn-archive" class="proj-btn" data-i18n="phub.archive">Arşivle</button>
             <button type="button" id="pdet-btn-delete" class="proj-btn danger" data-i18n="project.delete">Sil</button>
           </section>
-          <section class="pdet-block pdet-ai" hidden aria-hidden="true" data-cloud-reserved="ai">
-            <h3>AI</h3>
+          <section class="pdet-block pdet-ai" id="pdet-ai-block" aria-hidden="true" hidden>
+            <h3>AI Saha Asistanı</h3>
+            <p class="pdet-ai-intro">Yürürken gözlemlerinizi asistan kaydeder; fotoğraf, video ve eğim analizi için yönlendirir. İnceleme bitince tek dokunuşla özet üretin.</p>
+            <button type="button" id="pdet-btn-ai-summary" class="proj-btn">AI Saha Özeti Oluştur</button>
+            <div id="field-ai-summary" class="field-ai-summary" aria-live="polite"></div>
           </section>
         </div>
       </div>
@@ -664,6 +755,7 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
             <button type="button" class="fset-nav-row" data-fset-go="permissions"><span data-i18n="settings.permissions">İzinler</span><span>›</span></button>
             <button type="button" class="fset-nav-row" id="fset-btn-offline"><span data-i18n="settings.offlineMaps">Çevrimdışı Haritalar</span><span>›</span></button>
             <button type="button" class="fset-nav-row" data-fset-go="security"><span data-i18n="sec.title">Güvenlik</span><span>›</span></button>
+            <button type="button" class="fset-nav-row" id="fset-btn-ai" data-fset-go="ai"><span>Saha Asistanı AI</span><span>›</span></button>
             <button type="button" class="fset-nav-row" id="fset-btn-tutorial-main"><span data-i18n="settings.tutorial">Kullanım Turu</span><span>›</span></button>
             <button type="button" class="fset-nav-row" data-fset-go="about"><span data-i18n="settings.about">Hakkında</span><span>›</span></button>
           </div>
@@ -679,6 +771,17 @@ body.field-trial-ui:not(.field-trial-ready) #map-float-controls {
             </div>
             <button type="button" id="fset-btn-sec-open" class="fset-btn primary" data-i18n="settings.openSecurity">Güvenlik Ayarları</button>
             <button type="button" id="fset-btn-delete-data" class="fset-btn danger" data-i18n="settings.deleteLocal">Yerel Verileri Sil</button>
+          </div>
+          <div class="fset-panel" data-fset-panel="ai" hidden>
+            <p class="fset-intro">İsteğe bağlı bulut AI — kapalıyken yerel kural motoru çalışır. Yalnızca metin gözlemleri ve özet istatistikleri gönderilir.</p>
+            <label class="fset-field-check"><input type="checkbox" id="fai-llm-enabled"> Bulut AI kullan</label>
+            <label class="fset-field">API uç noktası<input type="url" id="fai-llm-endpoint" placeholder="https://your-worker.workers.dev/v1" autocomplete="off"></label>
+            <label class="fset-field">Model<input type="text" id="fai-llm-model" value="gpt-4o-mini" autocomplete="off"></label>
+            <label class="fset-field">API anahtarı (isteğe bağlı)<input type="password" id="fai-llm-key" autocomplete="off"></label>
+            <label class="fset-field-check"><input type="checkbox" id="fai-llm-refine" checked> Gözlem süzme</label>
+            <label class="fset-field-check"><input type="checkbox" id="fai-llm-summary" checked> İnceleme özeti</label>
+            <button type="button" id="fai-llm-save" class="fset-btn primary">Kaydet</button>
+            <p id="fai-llm-status" class="fset-hint"></p>
           </div>
           <div class="fset-panel" data-fset-panel="help" hidden>
             <button type="button" id="fset-btn-tutorial" class="fset-btn primary" data-i18n="settings.restartTutorial">Kullanım Turunu Tekrar Başlat</button>
@@ -1642,7 +1745,7 @@ window.pdfjsLib = pdfjs;
 <script src="js/ui/FieldProjectStats.js?v=2.0.1"></script>
 <script src="js/ui/FieldProjectHub.js?v=2.0.2"></script>
 <script src="js/ui/FieldProjectDetails.js?v=2.0.1"></script>
-<script src="js/ui/FieldSettingsHub.js?v=2.0.1"></script>
+<script src="js/ui/FieldSettingsHub.js?v=2.0.2"></script>
 <script src="js/ui/StopInspectionController.js?v=2.0.1"></script>
 <script src="js/ui/ProjectHubController.js?v=2.0.1"></script>
 <script src="js/report/ReportDataBuilder.js?v=2.0.1"></script>
@@ -1655,5 +1758,11 @@ window.pdfjsLib = pdfjs;
 <script src="js/mobile/PanoCaptureEngine.js?v=2.0.0"></script>
 <script src="js/mobile/FieldTrialCapture.js?v=2.0.0"></script>
 <script src="js/ui/FieldTrialShell.js?v=2.0.1"></script>
+<script src="js/ai/FieldInspectionModes.js?v=1.0.8"></script>
+<script src="js/ai/FieldInspectionAi.js?v=1.0.8"></script>
+<script src="js/ai/FieldInspectionLlm.js?v=1.0.8"></script>
+<script src="js/ai/FieldInspectionRadar.js?v=1.0.8"></script>
+<script src="js/ai/FieldInspectionMeasureCoach.js?v=1.0.9"></script>
+<script src="js/ui/FieldTrialAiShell.js?v=1.0.11"></script>
 </body>
 </html>

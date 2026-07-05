@@ -155,6 +155,9 @@ const FieldProjectDetails = (function () {
     showHint(t('phub.saved'));
     const title = document.getElementById('pdet-title');
     if (title) title.textContent = displayName(_meta.name);
+    if (window.FIELD_TRIAL_AI_ENABLED && typeof FieldTrialAiShell !== 'undefined') {
+      FieldTrialAiShell.onInspectionInfoSaved(md);
+    }
   }
 
   async function openWorkspace() {
@@ -189,6 +192,10 @@ const FieldProjectDetails = (function () {
     const archiveBtn = document.getElementById('pdet-btn-archive');
     if (archiveBtn) archiveBtn.textContent = _meta.archived ? t('phub.unarchive') : t('phub.archive');
     if (typeof FieldProjectHub !== 'undefined') FieldProjectHub.refresh();
+    if (_meta.archived && FIELD_PROJECT.id === _projectId && window.FIELD_TRIAL_AI_ENABLED
+        && typeof FieldTrialAiShell !== 'undefined') {
+      FieldTrialAiShell.onProjectArchived();
+    }
   }
 
   async function runOnCurrent(fn) {

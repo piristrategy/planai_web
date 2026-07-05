@@ -2820,6 +2820,47 @@ function scheduleCircleSlopeAnalysis(obj) {
   }, 380);
 }
 
+/** Trial AI coach — eğim dairesi GPS merkezinde (yaklaşık radiusM metre). */
+function createFieldSlopeCircleAtLatLon(lat, lon, radiusM) {
+  if (lat == null || lon == null || typeof latLonToWorld !== 'function' || typeof makeCircle !== 'function') return null;
+  const w = latLonToWorld(lat, lon);
+  const obj = makeCircle(w.x, w.y);
+  const mpp = typeof pxToMeters === 'function' ? pxToMeters(1) : null;
+  obj.r = mpp ? Math.max(12, (radiusM || 28) / mpp) : 40;
+  S.objects.push(obj);
+  S.activeId = obj.id;
+  S.selectedIds = [obj.id];
+  pushHistory();
+  scheduleProjectSave();
+  buildLayerPanel();
+  scheduleRender();
+  scheduleCircleSlopeAnalysis(obj);
+  setTool('select');
+  return obj;
+}
+window.createFieldSlopeCircleAtLatLon = createFieldSlopeCircleAtLatLon;
+
+function activateFieldMeasureTool(kind) {
+  requireProject(() => {
+    if (typeof setTool !== 'function') return;
+    const area = kind === 'area';
+    setTool(area ? 'polygon' : 'polyline');
+    showHint(area
+      ? (PA_LANG === 'tr' ? 'Alan sınırı için köşelere dokunun · Enter bitir' : 'Tap corners along the boundary · Enter to finish')
+      : (PA_LANG === 'tr' ? 'Ölçüm için köşelere dokunun · Enter bitir' : 'Tap points to measure · Enter to finish'));
+  });
+}
+window.activateFieldMeasureTool = activateFieldMeasureTool;
+
+function notifyFieldTrialMeasureComplete(obj) {
+  if (!window.FIELD_TRIAL_AI_ENABLED || !FIELD_MODE || !obj) return;
+  try {
+    if (typeof FieldInspectionMeasureCoach !== 'undefined') FieldInspectionMeasureCoach.onMeasureComplete(obj);
+  } catch (e) {
+    console.warn('[FieldTrial]', e);
+  }
+}
+
 function polygonAreaM2FromRing(ring) {
   if (ring.length < 3) return 0;
   const pts = ring.map(c => latLonToWorld(c.lat, c.lon));
@@ -4106,6 +4147,9 @@ function gpsTrackOnPosition(pos) {
   syncGpsTrackObject();
   updateGpsTrackHud();
   scheduleRender();
+  if (window.FIELD_TRIAL_AI_ENABLED && typeof FieldInspectionRadar !== 'undefined') {
+    FieldInspectionRadar.onGpsTrackPoint();
+  }
 }
 
 function syncGpsTrackObject() {
@@ -4194,6 +4238,9 @@ function stopGpsTrackRecording(keepGps) {
     scheduleRender();
   } else {
     showHint(t('track.stop'));
+  }
+  if (window.FIELD_TRIAL_AI_ENABLED && typeof FieldInspectionRadar !== 'undefined') {
+    FieldInspectionRadar.onGpsTrackStopped();
   }
 }
 
@@ -10440,6 +10487,9 @@ async function createNewProject(name) {
       await activateFieldLocationSession(false, { liveFollow: true, expandHud: true });
       if (_fieldGpsOn) restartGpsWatchOnly();
     }
+    if (window.FIELD_TRIAL_AI_ENABLED && typeof FieldTrialAiShell !== 'undefined') {
+      FieldTrialAiShell.onNewProject();
+    }
   } catch (e) {
     console.error('[New Project]', e);
     showHint('Çalışma oluşturulamadı: ' + (e.message || e));
@@ -14099,7 +14149,7 @@ function buildInspectionPlaybackPayload(data) {
       ts: n.timestamp,
       lat: n.lat,
       lon: n.lon,
-      severity: noteSeverity(n.text),
+      severity: n.aiSeverity || noteSeverity(n.text),
     });
   });
   photoList.forEach(p => {
@@ -15326,12 +15376,18 @@ function makeFieldNote(lat, lon, textNote, handwritingData) {
   });
 }
 
-function drawEarthPushpin(ctx, x, y, scale, selected, noteNum) {
+function drawEarthPushpin(ctx, x, y, scale, selected, noteNum, opts) {
+  opts = opts || {};
+  const voiceQuick = !!opts.voiceQuick || !!opts.aiObservation;
   const s = 1 / scale;
   const headR = 11 * s;
   const headCy = y - 22 * s;
-  const headColor = selected ? '#E53935' : '#FFCA28';
-  const headDark = selected ? '#B71C1C' : '#F9A825';
+  const headColor = voiceQuick
+    ? (selected ? '#2dd4bf' : '#40c057')
+    : (selected ? '#E53935' : '#FFCA28');
+  const headDark = voiceQuick
+    ? (selected ? '#0f766e' : '#1f9d63')
+    : (selected ? '#B71C1C' : '#F9A825');
   ctx.save();
   ctx.strokeStyle = 'rgba(0,0,0,.45)';
   ctx.lineWidth = 1.2 * s;
@@ -15344,7 +15400,7 @@ function drawEarthPushpin(ctx, x, y, scale, selected, noteNum) {
   ctx.fill();
   ctx.stroke();
   const grad = ctx.createRadialGradient(x - 3 * s, headCy - 3 * s, 2 * s, x, headCy, headR);
-  grad.addColorStop(0, selected ? '#EF5350' : '#FFE082');
+  grad.addColorStop(0, voiceQuick ? (selected ? '#5eead4' : '#86efac') : (selected ? '#EF5350' : '#FFE082'));
   grad.addColorStop(0.55, headColor);
   grad.addColorStop(1, headDark);
   ctx.fillStyle = grad;
@@ -15354,7 +15410,13 @@ function drawEarthPushpin(ctx, x, y, scale, selected, noteNum) {
   ctx.arc(x, headCy, headR, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  if (noteNum != null) {
+  if (voiceQuick) {
+    ctx.fillStyle = selected ? '#042f2e' : '#0f1a28';
+    ctx.font = `bold ${Math.max(11, 12 * s)}px Inter,sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(opts.aiObservation ? '✦' : '🎤', x, headCy + 0.5 * s);
+  } else if (noteNum != null) {
     ctx.fillStyle = selected ? '#fff' : '#3E2723';
     ctx.font = `bold ${Math.max(10, 11 * s)}px Inter,sans-serif`;
     ctx.textAlign = 'center';
@@ -15547,6 +15609,10 @@ async function showFieldObservationPopup(primary) {
       numEl.textContent = '📷 #' + (primary.photoNum || '?');
     } else if (primary.type === 'field_video') {
       numEl.textContent = '🎬 #' + (primary.videoNum || '?');
+    } else if (primary.type === 'field_note') {
+      numEl.textContent = (primary.captureMode === 'ai_observation' || primary.captureMode === 'voice_quick')
+        ? (PA_LANG === 'tr' ? '✦ Gözlem #' + (primary.noteNum || '?') : '✦ Obs #' + (primary.noteNum || '?'))
+        : '#' + (primary.noteNum || '?');
     } else {
       numEl.textContent = '#' + (primary.noteNum || '?');
     }
@@ -15724,8 +15790,10 @@ function buildFieldNotesList() {
     const row = document.createElement('div');
     row.className = 'note-row' + (S.selectedIds.includes(n.id) ? ' active' : '');
     const handTag = noteHasHandwriting(n) ? '<span class="note-hand-tag"> ✏️</span>' : '';
+    const quickTag = (n.captureMode === 'ai_observation' || n.captureMode === 'voice_quick')
+      ? '<span class="note-quick-tag"> ✦</span>' : '';
     const preview = getNoteText(n) || (noteHasHandwriting(n) ? 'El yazısı notu' : 'Not');
-    row.innerHTML = '<strong>#' + (n.noteNum || '?') + '</strong> ' + escapeHtml(preview.slice(0, 50)) + handTag +
+    row.innerHTML = '<strong>#' + (n.noteNum || '?') + '</strong> ' + escapeHtml(preview.slice(0, 50)) + handTag + quickTag +
       '<small>' + formatFieldLocalDateTime(n.timestamp || n.createdAt) + '</small>';
     row.onclick = () => selectNoteFromLayer(n.id);
     el.appendChild(row);
@@ -21343,7 +21411,10 @@ function renderFieldSpatialObj(obj, sel) {
     ctx.save();
     ctx.globalAlpha = obj.opacity ?? 1;
     const isSel = sel || S.selectedIds.includes(obj.id);
-    drawEarthPushpin(ctx, w.x, w.y, S.scale, isSel, obj.noteNum);
+    drawEarthPushpin(ctx, w.x, w.y, S.scale, isSel, obj.noteNum, {
+      voiceQuick: obj.captureMode === 'voice_quick' || obj.captureMode === 'ai_observation',
+      aiObservation: obj.captureMode === 'ai_observation',
+    });
     ctx.restore();
   } else if (obj.type === 'field_photo') {
     if (!obj._thumbReady) prefetchPhotoThumb(obj);
@@ -23389,6 +23460,7 @@ function finishPlSession() {
   S.objects.push(obj); pushHistory();
   S.selectedIds = [obj.id];
   updateSelPanel(obj);
+  notifyFieldTrialMeasureComplete(obj);
   cancelPlSession(); scheduleRender();
   fieldResumeGpsFollowAfterDrawing();
 }
@@ -23466,6 +23538,7 @@ function finishPolygon() {
     if (FIELD_MODE) {
       S.selectedIds = [obj.id];
       updateSelPanel(obj);
+      notifyFieldTrialMeasureComplete(obj);
     }
   }
   cancelPolygon();
