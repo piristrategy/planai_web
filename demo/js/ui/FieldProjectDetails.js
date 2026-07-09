@@ -79,6 +79,8 @@ const FieldProjectDetails = (function () {
     }
     const overlay = document.getElementById('project-details-overlay');
     if (!overlay) return;
+    /* Hub sits at z-index 9400 — reparent so details is not trapped under start hub */
+    if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
     const isCurrent = FIELD_PROJECT.id === projectId;
     const title = document.getElementById('pdet-title');
     if (title) title.textContent = displayName(_meta.name);

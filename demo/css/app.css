@@ -1034,6 +1034,13 @@ body.field-mode #left-bar .field-move-to-dock + .tool-sep{display:none!important
   display:none;align-items:center;justify-content:center;
   padding:max(12px, var(--safe-top)) max(12px, var(--safe-right)) max(12px, var(--safe-bottom)) max(12px, var(--safe-left));
 }
+/* Above start hub (9400) when opened from Detay & Raporlar / Settings */
+body.field-start-hub-active #project-details-overlay,
+body.field-start-hub-active #field-settings-overlay,
+body.project-details-open #project-details-overlay,
+body.field-settings-open #field-settings-overlay{
+  z-index:9500;
+}
 .pdet-panel,.fset-panel-wrap{
   width:min(480px, calc(100vw - 24px));max-height:calc(100dvh - 24px);
   background:rgba(10,16,26,.94);border-radius:14px;border:1.5px solid rgba(255,255,255,.14);

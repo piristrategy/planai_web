@@ -45,10 +45,13 @@ body.field-trial-ui.field-mode #top-bar {
   gap: 0;
   box-shadow: var(--trial-glass-shadow);
   color: #f4f7fb;
-  overflow: hidden;
+  /* Above left dock (125) / map floats (130) / trial tools (131) so Settings + search stay reachable */
+  z-index: 200;
+  overflow: visible;
   min-width: 0;
   max-width: calc(100vw - var(--trial-chrome-left) - var(--trial-edge-r));
   display: block;
+  pointer-events: auto;
 }
 body.field-trial-ui.field-mode #top-bar .top-bar-track {
   display: flex;
@@ -58,6 +61,15 @@ body.field-trial-ui.field-mode #top-bar .top-bar-track {
   width: 100%;
   min-width: 0;
   min-height: 44px;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+body.field-trial-ui.field-mode #top-bar .top-bar-track::-webkit-scrollbar {
+  display: none;
+}
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -138,11 +150,11 @@ body.field-trial-ui.field-mode #top-bar #btn-trial-sun.active {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22) !important;
 }
 
-/* Üst bar içi — öğeler yeşil çerçeve içinde kalsın */
+/* Üst bar içi — shrinkable chrome; overflow visible so sticky Settings/search stay clickable */
 body.field-trial-ui.field-mode #top-bar #trial-inspection-chrome {
   flex: 0 1 auto;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 body.field-trial-ui.field-mode #top-bar .trial-badge {
   padding: 4px 8px;
@@ -319,6 +331,22 @@ body.field-trial-ui.field-mode #top-bar #trial-top-tools {
 body.field-trial-ui.field-mode #top-bar #field-lang-switch.trial-lang-switch {
   margin-left: auto;
   flex: 0 0 auto;
+}
+/* Pin Settings + location search on the right so they never scroll under map floats */
+body.field-trial-ui.field-mode #top-bar #btn-settings-menu.field-top-settings,
+body.field-trial-ui.field-mode #top-bar #loc-search {
+  position: sticky;
+  right: 0;
+  z-index: 3;
+  flex-shrink: 0;
+  background: transparent;
+}
+body.field-trial-ui.field-mode #top-bar #btn-settings-menu.field-top-settings {
+  right: 0;
+  margin-left: 4px;
+}
+body.field-trial-ui.field-mode #top-bar #loc-search {
+  right: 0;
 }
 
 #trial-top-tools.trial-right-tools {
@@ -1513,18 +1541,9 @@ body.field-trial-ui.trial-top-compact-6 #top-bar #loc-search button {
     max-width: none;
     margin-left: 6px;
   }
-  body.field-trial-ui.field-mode #top-bar .trial-stat .t2,
-  body.field-trial-ui.field-mode #top-bar #trial-loc-line2,
-  body.field-trial-ui.field-mode #top-bar .trial-badge .l2 {
-    display: block !important;
-  }
-  body.field-trial-ui.field-mode #top-bar .trial-stat-wx,
-  body.field-trial-ui.field-mode #top-bar .trial-stat-alt,
-  body.field-trial-ui.field-mode #top-bar .trial-stat-clock {
-    display: flex !important;
-  }
+  /* Keep fitFieldTopBar compact classes effective — do not force all stats visible */
   body.field-trial-ui.field-mode #top-bar #trial-loc-line1 {
-    max-width: none;
+    max-width: min(140px, 36vw);
   }
   body.field-trial-ui.trial-top-compact-1 #top-bar .trial-stat .t2,
   body.field-trial-ui.trial-top-compact-1 #top-bar #trial-loc-line2,
