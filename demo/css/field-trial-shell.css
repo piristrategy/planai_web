@@ -45,9 +45,9 @@ body.field-trial-ui.field-mode #top-bar {
   gap: 0;
   box-shadow: var(--trial-glass-shadow);
   color: #f4f7fb;
-  /* Above left dock (125) / map floats (130) / trial tools (131) so Settings + search stay reachable */
+  /* Floating pill above left dock / map floats / trial tools */
   z-index: 200;
-  overflow: visible;
+  overflow: hidden;
   min-width: 0;
   max-width: calc(100vw - var(--trial-chrome-left) - var(--trial-edge-r));
   display: block;
@@ -61,24 +61,10 @@ body.field-trial-ui.field-mode #top-bar .top-bar-track {
   width: 100%;
   min-width: 0;
   min-height: 44px;
-  overflow-x: auto;
-  overflow-y: visible;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
+  /* Never horizontal-scroll — compact instead of swipe */
+  overflow: hidden;
+  touch-action: manipulation;
 }
-body.field-trial-ui.field-mode #top-bar .top-bar-track::-webkit-scrollbar {
-  display: none;
-}
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
-  scroll-snap-type: x proximity;
-  scrollbar-width: none;
-  touch-action: pan-x;
-}
-body.field-trial-ui.field-mode #top-bar .top-bar-track::-webkit-scrollbar { display: none; }
 
 body.field-trial-ui #btn-project-menu,
 body.field-trial-ui #gps-status-pill,
@@ -328,25 +314,21 @@ body.field-trial-ui.field-mode #top-bar #trial-top-tools {
   display: none !important;
 }
 
+/* Right cluster: lang + settings + search — always visible, never scrolls away */
 body.field-trial-ui.field-mode #top-bar #field-lang-switch.trial-lang-switch {
   margin-left: auto;
   flex: 0 0 auto;
 }
-/* Pin Settings + location search on the right so they never scroll under map floats */
-body.field-trial-ui.field-mode #top-bar #btn-settings-menu.field-top-settings,
-body.field-trial-ui.field-mode #top-bar #loc-search {
-  position: sticky;
-  right: 0;
-  z-index: 3;
-  flex-shrink: 0;
-  background: transparent;
-}
 body.field-trial-ui.field-mode #top-bar #btn-settings-menu.field-top-settings {
-  right: 0;
-  margin-left: 4px;
+  flex: 0 0 auto;
+  margin-left: 2px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
 }
 body.field-trial-ui.field-mode #top-bar #loc-search {
-  right: 0;
+  flex: 0 0 auto;
+  margin-left: 2px;
 }
 
 #trial-top-tools.trial-right-tools {
@@ -1509,72 +1491,109 @@ body.field-trial-ui.trial-top-compact-6 #top-bar #loc-search button {
   min-width: 0;
 }
 
-/* iPhone / dar ekran — üst bar yatay kaydırma (arama için sola çek) */
-@media (max-width: 480px) {
+/* Phone / dar ekran — kaydırmasız yüzer pill: yalnızca temel kontroller */
+@media (max-width: 640px) {
+  body.field-trial-ui.field-mode {
+    --field-topbar-h: 52px;
+    --trial-edge: max(8px, var(--safe-left));
+    --trial-edge-r: max(8px, var(--safe-right));
+  }
   body.field-trial-ui.field-mode #top-bar {
+    left: var(--trial-chrome-left);
+    right: var(--trial-edge-r);
+    min-height: 52px;
+    padding: 5px 8px;
+    border-radius: 16px;
     overflow: hidden !important;
   }
   body.field-trial-ui.field-mode #top-bar .top-bar-track {
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x proximity;
-    scrollbar-width: none;
-    touch-action: pan-x;
+    overflow: hidden !important;
+    gap: 4px;
+    min-height: 40px;
+    touch-action: manipulation;
   }
-  body.field-trial-ui.field-mode #top-bar .top-bar-track::-webkit-scrollbar {
-    display: none;
+  /* Secondary stats off — keep REC / STOP / GPS only */
+  body.field-trial-ui.field-mode #top-bar .trial-tb-sep,
+  body.field-trial-ui.field-mode #top-bar .trial-stat,
+  body.field-trial-ui.field-mode #top-bar .trial-stat-wx,
+  body.field-trial-ui.field-mode #top-bar .trial-stat-alt,
+  body.field-trial-ui.field-mode #top-bar .trial-stat-clock,
+  body.field-trial-ui.field-mode #top-bar .trial-badge .l2 {
+    display: none !important;
   }
   body.field-trial-ui.field-mode #top-bar #trial-inspection-chrome {
-    flex: 0 0 auto;
-    min-width: max-content;
-    overflow: visible;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    gap: 4px;
+  }
+  body.field-trial-ui.field-mode #top-bar .trial-badge {
+    padding: 4px 7px;
+    gap: 6px;
+  }
+  body.field-trial-ui.field-mode #top-bar .trial-badge .l1 {
+    font-size: 11px;
   }
   body.field-trial-ui.field-mode #top-bar #field-lang-switch.trial-lang-switch {
-    margin-left: 0;
+    margin-left: auto;
     flex: 0 0 auto;
+    padding: 1px;
+  }
+  body.field-trial-ui.field-mode #top-bar #field-lang-switch.trial-lang-switch button {
+    min-height: 28px;
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+  body.field-trial-ui.field-mode #top-bar #btn-settings-menu.field-top-settings {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
   }
   body.field-trial-ui.field-mode #top-bar #loc-search {
-    flex: 0 0 auto;
-    min-width: min(148px, 40vw);
-    max-width: none;
-    margin-left: 6px;
+    flex: 0 0 auto !important;
+    width: auto;
+    min-width: 0;
+    max-width: none !important;
+    margin-left: 0 !important;
+    padding: 2px;
+    max-height: 36px;
   }
-  /* Keep fitFieldTopBar compact classes effective — do not force all stats visible */
-  body.field-trial-ui.field-mode #top-bar #trial-loc-line1 {
-    max-width: min(140px, 36vw);
+  /* Icon-only search on phone — tap opens / focuses input via expanded state if needed */
+  body.field-trial-ui.field-mode #top-bar #loc-search input {
+    width: 0;
+    min-width: 0;
+    padding: 0 !important;
+    opacity: 0;
+    pointer-events: none;
+    border: 0;
   }
-  body.field-trial-ui.trial-top-compact-1 #top-bar .trial-stat .t2,
-  body.field-trial-ui.trial-top-compact-1 #top-bar #trial-loc-line2,
-  body.field-trial-ui.trial-top-compact-2 #top-bar .trial-stat-wx,
-  body.field-trial-ui.trial-top-compact-3 #top-bar .trial-stat-alt,
-  body.field-trial-ui.trial-top-compact-3 #top-bar .trial-stat-clock,
-  body.field-trial-ui.trial-top-compact-4 #top-bar .trial-badge .l2 {
-    display: revert !important;
+  body.field-trial-ui.field-mode #top-bar #loc-search button {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    min-width: 40px;
   }
-  body.field-trial-ui.trial-top-compact-5 #top-bar .trial-tb-sep,
-  body.field-trial-ui.trial-top-compact-5 #top-bar .trial-stat-wx {
-    display: revert !important;
+  body.field-trial-ui.field-mode #top-bar #loc-search.loc-search-open {
+    flex: 1 1 auto !important;
+    max-width: none !important;
   }
-  body.field-trial-ui.trial-top-compact-5 #top-bar .trial-stat-wx {
-    display: flex !important;
-  }
-  body.field-trial-ui.trial-top-compact-2 #top-bar .trial-stat-wx,
-  body.field-trial-ui.trial-top-compact-3 #top-bar .trial-stat-alt,
-  body.field-trial-ui.trial-top-compact-3 #top-bar .trial-stat-clock {
-    display: flex !important;
+  body.field-trial-ui.field-mode #top-bar #loc-search.loc-search-open input {
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 72px;
+    opacity: 1;
+    pointer-events: auto;
+    padding: 4px 6px !important;
   }
 }
 
-@media (min-width: 481px) and (max-width: 900px) {
+@media (min-width: 641px) and (max-width: 900px) {
   body.field-trial-ui.field-mode #top-bar .top-bar-track {
-    overflow-x: auto;
-    touch-action: pan-x;
+    overflow: hidden;
   }
   body.field-trial-ui.field-mode #top-bar #loc-search {
-    max-width: min(160px, 30vw);
-    flex: 0 1 clamp(68px, 14vw, 160px);
+    max-width: min(160px, 28vw);
+    flex: 0 1 clamp(72px, 14vw, 160px);
   }
 }
 

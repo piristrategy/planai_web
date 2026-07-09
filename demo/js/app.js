@@ -18220,22 +18220,23 @@ function fitFieldTopBar() {
     'trial-top-compact-5', 'trial-top-compact-6'
   );
   const trialUi = document.body.classList.contains('field-trial-ui');
-  const phoneScroll = trialUi && window.matchMedia('(max-width: 480px)').matches;
-  if (!phoneScroll) {
+  /* Trial floating pill: never horizontal-scroll — CSS + compact classes fit content */
+  if (trialUi) {
+    track.style.overflowX = 'hidden';
     let guard = 0;
-    const maxGuard = trialUi ? 6 : 3;
-    while (track.scrollWidth > topBar.clientWidth + 2 && guard < maxGuard) {
+    while (track.scrollWidth > topBar.clientWidth + 2 && guard < 6) {
       guard++;
-      if (trialUi) {
-        document.body.classList.add('trial-top-compact-' + guard);
-      } else {
-        document.body.classList.add('field-top-overflow-' + guard);
-      }
+      document.body.classList.add('trial-top-compact-' + guard);
     }
+    return;
+  }
+  let guard = 0;
+  while (track.scrollWidth > topBar.clientWidth + 2 && guard < 3) {
+    guard++;
+    document.body.classList.add('field-top-overflow-' + guard);
   }
   const overflows = track.scrollWidth > topBar.clientWidth + 2;
-  track.style.overflowX = (overflows || phoneScroll) ? 'auto' : 'hidden';
-  if (!trialUi && !overflows) track.style.overflowX = '';
+  track.style.overflowX = overflows ? 'auto' : '';
 }
 
 function setFieldInteractionMode(mode, fromStylus) {
@@ -26486,8 +26487,20 @@ function hideLocResults() {
 }
 
 async function searchLocation() {
-  const q = document.getElementById('loc-input').value.trim();
-  if (!q) return;
+  const wrap = document.getElementById('loc-search');
+  const input = document.getElementById('loc-input');
+  if (!input) return;
+  /* Phone: first tap expands search field; second tap / Enter runs search */
+  if (wrap && window.matchMedia('(max-width: 640px)').matches && !wrap.classList.contains('loc-search-open')) {
+    wrap.classList.add('loc-search-open');
+    setTimeout(() => input.focus(), 40);
+    return;
+  }
+  const q = input.value.trim();
+  if (!q) {
+    if (wrap?.classList.contains('loc-search-open')) input.focus();
+    return;
+  }
   const resultsEl = document.getElementById('loc-results');
   showLocResults();
   resultsEl.innerHTML = '<div class="loc-item" style="color:var(--muted)">Aranıyor...</div>';
@@ -26515,6 +26528,7 @@ async function searchLocation() {
         zoomMapToSearchLocation(lat, lon, item);
         if (S.basemap === 'none') { S.basemap='osm'; document.getElementById('btn-osm').classList.add('active'); }
         hideLocResults();
+        document.getElementById('loc-search')?.classList.remove('loc-search-open');
         showHint(`📍 ${item.display_name.split(',')[0]}`, 3200);
         showHint(t('gps.hint.searchPinned'), 6000);
       };
@@ -26533,8 +26547,10 @@ window.addEventListener('orientationchange', () => setTimeout(positionLocResults
 
 // Close search results on click outside
 document.addEventListener('click', e => {
-  if (!e.target.closest('#loc-search') && !e.target.closest('#loc-results'))
+  if (!e.target.closest('#loc-search') && !e.target.closest('#loc-results')) {
     hideLocResults();
+    document.getElementById('loc-search')?.classList.remove('loc-search-open');
+  }
 });
 
 // ── Panel collapse ────────────────────────────────────────────
