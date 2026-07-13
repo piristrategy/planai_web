@@ -1,0 +1,103 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlanAI — Giriş · Destination Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0B1120; --panel:#151F38; --line:#26335A;
+  --cream:#EFE8D8; --cream-dim:#B9B29F; --muted:#7E8AA8;
+  --gold:#C9A24B; --gold-soft:#E3C88A; --fall:#E36B58;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 20%,#141E38,#0B1120 60%);color:var(--cream);font-family:"DM Sans",sans-serif;padding:24px}
+.shell{width:100%;max-width:420px}
+.brand{text-align:center;margin-bottom:32px}
+.brand .mark{font-family:"Cormorant Garamond",serif;font-weight:700;font-size:28px;letter-spacing:.4px}
+.brand .mark span{color:var(--gold)}
+.brand .sub{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:1.8px;color:var(--muted);text-transform:uppercase;margin-top:6px}
+.card{background:linear-gradient(180deg,var(--panel),#101830);border:1px solid var(--line);border-radius:12px;padding:28px 26px 24px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+h1{font-family:"Cormorant Garamond",serif;font-size:24px;font-weight:600;margin-bottom:8px}
+.lede{font-size:13px;color:var(--cream-dim);margin-bottom:22px;line-height:1.5}
+label{display:block;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+input{width:100%;background:#0A0F1D;border:1px solid var(--line);border-radius:8px;padding:11px 12px;color:var(--cream);font:inherit;font-size:14px;margin-bottom:16px}
+input:focus{outline:2px solid rgba(201,162,75,.45);border-color:rgba(201,162,75,.5)}
+button{width:100%;background:linear-gradient(180deg,rgba(201,162,75,.95),rgba(201,162,75,.75));border:none;border-radius:8px;padding:12px;color:#1a1205;font-weight:700;font-size:14px;cursor:pointer;margin-top:4px}
+button:disabled{opacity:.55;cursor:not-allowed}
+button:hover:not(:disabled){filter:brightness(1.05)}
+.err{color:var(--fall);font-size:13px;margin-top:12px;display:none}
+.foot{margin-top:20px;text-align:center;font-size:11px;color:var(--muted);line-height:1.6}
+.foot b{color:var(--cream-dim);font-weight:500}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="brand">
+    <div class="mark">Plan<span>AI</span></div>
+    <div class="sub">Destination Intelligence · Private Alpha</div>
+  </div>
+  <div class="card">
+    <div class="eyebrow">Varşova Görev Masası</div>
+    <h1>Giriş yapın</h1>
+    <p class="lede">T.C. Varşova Turizm Müşavirliği için güvenli erişim. Platform yalnızca yetkili kullanıcılara açıktır.</p>
+    <form id="loginForm">
+      <label for="email">E-posta</label>
+      <input id="email" name="email" type="email" autocomplete="username" required>
+      <label for="password">Şifre</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required minlength="8">
+      <button type="submit" id="submitBtn">Platforma gir</button>
+      <div class="err" id="errBox"></div>
+    </form>
+  </div>
+  <div class="foot">
+    <b>Country Pack #1 · Polonya</b><br>
+    planai.tr · Production architecture
+  </div>
+</div>
+<script src="assets/js/config.js"></script>
+<script>
+function apiBase() {
+  return (window.PLANAI_API_BASE != null ? String(window.PLANAI_API_BASE) : '').replace(/\/$/, '');
+}
+document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  const err = document.getElementById('errBox');
+  const base = apiBase();
+  err.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Doğrulanıyor…';
+  try{
+    const res = await fetch(base + '/api/auth/login', {
+      method:'POST',
+      credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        email: document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value
+      })
+    });
+    if(!res.ok){
+      const data = await res.json().catch(()=>({}));
+      throw new Error(data.detail || 'Giriş başarısız');
+    }
+    const base = apiBase();
+    const home = location.protocol === 'file:'
+      ? 'index.html'
+      : ((base ? base : '') + '/').replace(/\/+/g, '/');
+    window.location.href = home;
+  }catch(ex){
+    err.textContent = ex.message || 'Giriş başarısız. Bilgilerinizi kontrol edin.';
+    err.style.display = 'block';
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Platforma gir';
+  }
+});
+</script>
+</body>
+</html>

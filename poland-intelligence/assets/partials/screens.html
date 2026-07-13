@@ -1,0 +1,541 @@
+<!-- ============ 1 · SABAH BRİFİNGİ ============ -->
+<section class="screen active" id="s-brief">
+  <div class="pipeline-alert" id="pipelineDelayedAlert"><b>İstihbarat gecikti.</b> Son otomatik güncelleme bugünün brifingini üretemedi. Platform ekibi bilgilendirildi.</div>
+  <div class="pipeline-alert trust" id="trustHonestyNote"><b>Operasyonel güven</b> <span id="trustHonestyText">—</span></div>
+
+  <div class="intel-search-bar" id="intelSearchBar">
+    <input type="search" id="intelSearchInput" placeholder="Global Intelligence Search — destinasyon, operatör, varlık, makale…" autocomplete="off" />
+    <button type="button" class="pill" id="intelSearchBtn">Ara</button>
+  </div>
+  <div class="intel-search-results drill-panel" id="intelSearchResults" hidden>
+    <div class="drill-head"><b>Arama Sonuçları</b><button type="button" class="pill drill-close" data-close-search>×</button></div>
+    <div class="drill-body" id="intelSearchBody"></div>
+  </div>
+
+  <div class="live-pipeline-strip" id="livePipelineStrip" aria-label="Canlı hat"></div>
+
+  <!-- DECISION VIEWPORT: Hero → Exec → Today → Signals → Action (30s) -->
+  <div class="decision-viewport" id="briefDecisionViewport">
+    <div class="hero-block">
+      <div class="eyebrow" id="briefEyebrow">Günlük Sevkiyat · yükleniyor</div>
+      <h1 class="disp" id="briefHeadline">Bugünün En Önemli 5 İstihbarat Sinyali</h1>
+    </div>
+
+    <div class="exec-summary" id="briefExecSummary" aria-label="Yönetici özeti"></div>
+    <div class="section-freshness" id="briefSectionFreshness" aria-live="polite"></div>
+
+    <div class="decision-strip" id="briefDecisionStrip" aria-label="Bugünün kararı">
+      <button type="button" class="ds ds-click" data-drill="articles" id="dsNewsBtn" title="Makale listesini aç">
+        <div class="k"><span class="ico-sm info">N</span> Makale</div><div class="v" id="dsNews">—</div><div class="d">Tıkla · liste</div>
+      </button>
+      <button type="button" class="ds ds-click" data-drill="signals" id="dsSignalsBtn" title="Sinyal listesini aç">
+        <div class="k"><span class="ico-sm ai">S</span> Sinyal</div><div class="v" id="dsSignals">—</div><div class="d">Tıkla · sinyaller</div>
+      </button>
+      <button type="button" class="ds ds-click" data-drill="actions" id="dsOppsBtn" title="Aksiyon listesini aç">
+        <div class="k"><span class="ico-sm positive">F</span> Aksiyon</div><div class="v" id="dsOpps">—</div><div class="d">Tıkla · hamleler</div>
+      </button>
+      <button type="button" class="ds ds-click" data-drill="risks" id="dsRisksBtn" title="Risk merkezini aç">
+        <div class="k"><span class="ico-sm alarm">R</span> Kritik risk</div><div class="v" id="dsRisks">—</div><div class="d">Tıkla · risk</div>
+      </button>
+    </div>
+
+    <div class="drill-panel" id="drillArticles" hidden>
+      <div class="drill-head"><b>Article Explorer</b><button type="button" class="pill drill-close" data-close-drill>×</button></div>
+      <div class="explorer-filters" id="articleExplorerFilters">
+        <button type="button" class="pill" data-af-day="today">Bugün</button>
+        <button type="button" class="pill" data-af-day="yesterday">Dün</button>
+        <input type="text" id="afOperator" placeholder="Operatör" class="af-input" />
+        <input type="text" id="afTopic" placeholder="Konu" class="af-input" />
+        <input type="text" id="afLang" placeholder="Dil" class="af-input" />
+        <button type="button" class="pill" id="afApplyBtn">Filtrele</button>
+      </div>
+      <div class="drill-body" id="drillArticlesBody"></div>
+    </div>
+    <div class="drill-panel" id="drillSignals" hidden>
+      <div class="drill-head"><b>Signal Explorer</b><button type="button" class="pill drill-close" data-close-drill>×</button></div>
+      <div class="drill-body" id="drillSignalsBody"></div>
+    </div>
+    <div class="drill-panel" id="drillActions" hidden>
+      <div class="drill-head"><b>Action Center</b><button type="button" class="pill drill-close" data-close-drill>×</button></div>
+      <div class="drill-body" id="drillActionsBody"></div>
+    </div>
+    <div class="drill-panel" id="drillRisks" hidden>
+      <div class="drill-head"><b>Risk Center</b><button type="button" class="pill drill-close" data-close-drill>×</button></div>
+      <div class="drill-body" id="drillRisksBody"></div>
+    </div>
+
+    <div class="decision-callout">
+      <div class="card bg-warn">
+        <div class="k"><span class="ico-sm warn">⚡</span> En büyük rakip baskısı</div>
+        <div class="d" style="margin-top:8px;font-size:15px" id="dsRival">Yükleniyor…</div>
+      </div>
+      <div class="card bg-ai">
+        <div class="k"><span class="ico-sm ai">★</span> Türkiye için bugünün önerisi</div>
+        <div class="d" style="margin-top:8px;font-size:15px;color:var(--gold-soft)" id="dsTodayRec">Yükleniyor…</div>
+      </div>
+    </div>
+
+    <div class="sect" style="margin-top:8px"><h2 class="disp">Kritik sinyaller</h2><span class="hint">İlk bakışta karar · detay Analyst modunda</span></div>
+    <div class="grid g4" id="briefKpis"></div>
+
+    <div class="sect"><h2 class="disp">Bugünün sevkiyatı</h2><span class="hint">TR özet · orijinal expand</span></div>
+    <div class="dispatch">
+      <div class="dispatch-head">
+        <span class="cls">Görev İstihbaratı — Dahili</span>
+        <span class="mono" id="briefMeta" style="font-size:10px;color:var(--muted)">Kaynak karması yükleniyor…</span>
+      </div>
+      <div class="dispatch-body" id="briefSignals">
+        <div class="sig-line"><span class="t">—</span><span class="icon" style="background:var(--amber)"></span><p><b>Sabah brifingi yükleniyor</b> — açık kaynak hattından veri çekiliyor.<span class="why">Neden önemli: bu ekrandaki tüm içerik SQLite'tan gelir; sahte veri yok.</span></p></div>
+      </div>
+    </div>
+
+    <div class="sect"><h2 class="disp">Bugünün üç hamlesi</h2><span class="hint">Immediate · Near Term · Strategic</span></div>
+    <div id="briefRecs"></div>
+
+    <div class="sec-end" id="briefSecEnd">
+      <div class="k">Kısa sonuç — bugün</div>
+      <ul id="briefSecEndList">
+        <li>Özet yükleniyor…</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ANALYST / ARCHIVE — below the fold -->
+  <div class="analyst-only deep-archive" id="briefAnalystBlock">
+    <div class="sec-30s"><b>Analyst katmanı</b> — cockpit, haftalık, aylık ve canlı istihbarat aşağıdadır.</div>
+
+    <div class="brief-cockpit" id="briefCockpit">
+      <div class="cockpit-top">
+        <div class="cockpit-card" id="cockpitPipeline">
+          <h3>Pipeline</h3>
+          <div class="cockpit-status" id="cockpitPipelineStatus">—</div>
+          <div class="cockpit-metrics" id="cockpitPipelineMetrics"></div>
+        </div>
+        <div class="cockpit-card" id="cockpitConfidenceCard">
+          <h3 id="cockpitConfTitle">Bugünkü Güven</h3>
+          <div class="conf-big" id="cockpitConfPercent">—</div>
+          <div class="conf-expl" id="cockpitConfToggle" tabindex="0" role="button">Hesaplama yöntemi</div>
+          <div class="conf-factors" id="cockpitConfFactors"></div>
+        </div>
+        <div class="cockpit-card">
+          <h3>Sistem Sağlığı</h3>
+          <div class="health-overall" id="cockpitHealthOverall">—</div>
+          <div id="cockpitHealthRows"></div>
+        </div>
+      </div>
+      <div class="cockpit-progress" id="cockpitProgress" style="display:none">
+        <div class="msg" id="cockpitProgressMsg"></div>
+        <div id="cockpitProgressStages"></div>
+      </div>
+      <div class="cockpit-summary" id="cockpitSummary"></div>
+      <div class="cockpit-feed">
+        <div class="feed-head">Canlı İstihbarat Hattı — doğrulanmış sinyaller</div>
+        <div id="cockpitFeed"></div>
+      </div>
+    </div>
+
+    <div class="pipeline-panel" id="pipelineStatusPanel" style="display:none">
+      <h3>Live Intelligence Status</h3>
+      <div class="pg" id="pipelineStatusGrid"></div>
+    </div>
+
+    <div class="sect" id="weeklyOutlookSection" style="display:none">
+      <h2 class="disp">Haftalık İstihbarat Görünümü</h2>
+      <span class="hint" id="weeklyOutlookHint">Stratejik haftalık bakış · 7 günlük ufuk</span>
+    </div>
+    <div class="dispatch" id="weeklyOutlookPanel" style="display:none;margin-bottom:28px">
+      <div class="dispatch-head">
+        <span class="cls">Weekly Outlook</span>
+        <span class="mono" style="font-size:10px;color:var(--muted)" id="weeklyOutlookMeta">—</span>
+      </div>
+      <div class="dispatch-body" id="weeklyOutlookBody"></div>
+    </div>
+
+    <div class="sect" id="monthlyReviewSection" style="display:none">
+      <h2 class="disp">Aylık İstihbarat İncelemesi</h2>
+      <span class="hint" id="monthlyReviewHint">Yönetici stratejik özet · 30 günlük ufuk</span>
+    </div>
+    <div class="dispatch" id="monthlyReviewPanel" style="display:none;margin-bottom:28px">
+      <div class="dispatch-head">
+        <span class="cls">Monthly Review</span>
+        <span class="mono" style="font-size:10px;color:var(--muted)" id="monthlyReviewMeta">—</span>
+      </div>
+      <div class="dispatch-body" id="monthlyReviewBody"></div>
+    </div>
+
+    <div class="sect" id="liveIntelSection" style="display:none">
+      <h2 class="disp">Canlı İstihbarat Güncellemeleri</h2>
+      <span class="hint">Sabah Brifingi (<span id="morningBriefTime">—</span>) sabit · gün içi deltalar</span>
+    </div>
+    <div class="dispatch" id="liveIntelFeed" style="display:none;margin-bottom:28px">
+      <div class="dispatch-head">
+        <span class="cls">Live Intelligence</span>
+        <span class="mono" style="font-size:10px;color:var(--muted)" id="liveIntelMeta">—</span>
+      </div>
+      <div class="dispatch-body" id="liveIntelDeltas"></div>
+    </div>
+
+    <div class="note" id="briefDataHonestyNote"><b>Veri dürüstlüğü:</b> <span class="prov verified"><span class="dot"></span>Kaynak doğrulandı</span> · <span class="prov computed"><span class="dot"></span>Hesaplanmış</span> · <span class="prov stub"><span class="dot"></span>Stub modül</span> · <span class="prov unverified"><span class="dot"></span>Doğrulanmamış</span>. Kanıtsız öneri yok.</div>
+  </div>
+</section>
+
+<!-- ============ 2 · PAZAR NABZI ============ -->
+<section class="screen" id="s-market">
+  <div class="eyebrow">Pazar İstihbaratı · Decision Intelligence</div>
+  <h1 class="disp">Polonya pazarı: büyüyen, kendi planını yapan,<br>kışın da seyahat eden bir kaynak.</h1>
+  <p class="lede" style="margin-top:10px">Yönetici karar ekranı — What happened · So what · What should we do.</p>
+  <div class="exec-summary" id="marketExecSummary"></div>
+  <div class="sec-30s" id="marketSec30"><b>30 sn:</b> Health breakdown → karar kartları → Executive Advice.</div>
+
+  <div class="sect"><h2 class="disp">Market Health · Score Breakdown</h2><span class="hint">Tek sayı değil — bileşenlerle okuyun</span></div>
+  <div id="marketHealthBreakdown"></div>
+
+  <div class="sect"><h2 class="disp">Executive Advice</h2><span class="hint">Immediate · Near Term · Strategic</span></div>
+  <div class="grid g3" id="marketExecAdvice"></div>
+
+  <div class="sect"><h2 class="disp">Decision Cards</h2><span class="hint">Signal → Decision → Actions · tıkla</span></div>
+  <div class="grid g2 card-eq" id="marketDecisionCards"></div>
+  <div class="drill-panel dios-decision-panel" id="diosDecisionPanel" hidden>
+    <div class="drill-head"><b id="diosDecisionPanelTitle">Karar Detayı</b><button type="button" class="pill drill-close" data-close-dios>×</button></div>
+    <div class="drill-body" id="diosDecisionPanelBody"></div>
+  </div>
+
+  <div class="sect"><h2 class="disp">Awaiting Feed</h2><span class="hint">Planlanan kaynak · beklenen istihbarat · iş etkisi</span></div>
+  <div class="grid g2 card-eq" id="marketAwaitingGrid"></div>
+
+  <div class="sect analyst-only"><h2 class="disp">Analyst · Evidence Path</h2><span class="hint">Evidence · Confidence · Reasoning · Sources · Decision Tree</span></div>
+  <div class="analyst-only" id="marketAnalystPanel"></div>
+
+  <div class="sect analyst-only"><h2 class="disp" id="marketSeasonTitle">Talep sezonluğu</h2><span class="hint" id="marketSeasonHint">—</span></div>
+  <div class="card analyst-only" id="marketSeasonCard">
+    <div class="spark" style="height:90px" id="marketSpark" aria-label="Aylık talep grafiği"></div>
+    <div class="mono" style="font-size:10px;color:var(--muted);display:flex;justify-content:space-between;margin-top:8px" id="marketSparkLabels"></div>
+    <p style="margin-top:14px;color:var(--cream-dim);font-size:13px" id="marketSeasonNarrative">Yükleniyor…</p>
+  </div>
+
+  <div class="sect analyst-only"><h2 class="disp">Tüketici sinyalleri · detay</h2></div>
+  <div class="grid g3 analyst-only" id="marketSignals"></div>
+  <div class="grid g4 analyst-only" style="margin-top:22px" id="marketKpis"></div>
+  <div id="marketSecEnd"></div>
+</section>
+
+<!-- ============ 3 · RAKİP İZLEME ============ -->
+<section class="screen" id="s-comp">
+  <div class="eyebrow">Rakip İstihbaratı · 10 Destinasyon</div>
+  <h1 class="disp">İki cepheli savaş: yukarıda Yunanistan,<br>aşağıda Arnavutluk ve Mısır.</h1>
+  <div class="exec-summary" id="compExecSummary"></div>
+  <div class="sec-30s"><b>30 sn:</b> Rakip dashboard + Türkiye etkisi — karşı öneriyi okuyun.</div>
+
+  <div class="sect"><h2 class="disp">Rakip dashboard</h2><span class="hint">Paylaşım · kampanya · etki · karşı öneri</span></div>
+  <div class="grid g2" id="compRivalDash"></div>
+
+  <div class="sect"><h2 class="disp">Destinasyon AI Görünürlük Endeksi (DAVI)</h2><span class="hint" id="compMethodHint">—</span></div>
+  <div class="card" style="padding:6px 10px">
+    <table>
+      <thead><tr><th>Destinasyon</th><th>DAVI</th><th style="width:220px"></th><th>30 gün</th><th>Anlatı çerçevesi</th></tr></thead>
+      <tbody id="compDaviBody"></tbody>
+    </table>
+  </div>
+
+  <div class="sect"><h2 class="disp">Rakip hamle akışı — son 14 gün</h2><span class="hint" id="compMovesHint">—</span></div>
+  <div class="grid g2" id="compMoves"></div>
+  <div id="compSecEnd"></div>
+</section>
+
+<!-- ============ 4 · AI INTELLIGENCE (Phase 12 — Free Core) ============ -->
+<section class="screen" id="s-aivis">
+  <div class="eyebrow">AI Intelligence · Consumer AI Intelligence · Ücretsiz Çekirdek</div>
+  <h1 class="disp">Polonya pazarında Türkiye'nin<br>yapay zekâ ekosistemindeki dijital otoritesi</h1>
+  <p class="lede" style="margin-top:10px" id="aivisBanner">Kanıt öncelikli rule engine — LLM API zorunlu değil.</p>
+  <div class="exec-summary" id="aivisExecSummary"></div>
+  <div class="sec-30s"><b>30 sn:</b> Citation → Authority → Narrative → Gap → Media → Readiness → Visibility (opsiyonel).</div>
+  <div class="aivis-score-row" id="aivisScoreRow"></div>
+
+  <div class="sect"><h2 class="disp">Citation Intelligence</h2><span class="hint">Toplanan haberlerden · ücretsiz</span></div>
+  <div class="grid g3 card-eq" id="aivisCitationCards"></div>
+
+  <div class="sect"><h2 class="disp">Authority Intelligence</h2><span class="hint">High / Medium / Low — sahte skor yok</span></div>
+  <div class="card" style="padding:6px 10px" id="aivisAuthorityWrap">
+    <table><thead><tr><th>Kaynak</th><th>Seviye</th><th>TR haber</th><th>Süreklilik</th></tr></thead>
+    <tbody id="aivisAuthorityBody"><tr><td colspan="4" style="padding:14px;color:var(--cream-dim)">Yükleniyor…</td></tr></tbody></table>
+  </div>
+
+  <div class="sect"><h2 class="disp">Narrative Intelligence</h2><span class="hint">Türkiye vs Yunanistan · İspanya · Mısır</span></div>
+  <div class="grid g3 card-eq" id="aivisNarrativeCards"></div>
+
+  <div class="sect"><h2 class="disp">Content Gap</h2><span class="hint">Rule engine · LLM gerektirmez</span></div>
+  <div class="card" style="padding:6px 10px" id="aivisGapWrap">
+    <table><thead><tr><th>Tema</th><th>Türkiye</th><th>Önde rakip</th><th>Gap</th><th>Öneri</th></tr></thead>
+    <tbody id="aivisGapBody"><tr><td colspan="5" style="padding:14px;color:var(--cream-dim)">Yükleniyor…</td></tr></tbody></table>
+  </div>
+
+  <div class="sect"><h2 class="disp">Media Influence</h2><span class="hint">Polonya medyasının Türkiye üzerindeki etkisi</span></div>
+  <div class="grid g3 card-eq" id="aivisMediaCards"></div>
+
+  <div class="sect"><h2 class="disp">Consumer AI Readiness</h2><span class="hint">AI-okunur içerik yapısı</span></div>
+  <div class="grid g3 card-eq" id="aivisReadinessCards"></div>
+
+  <div class="sect"><h2 class="disp">AI Visibility Layer</h2><span class="hint">İsteğe bağlı API / probe — gelecek katman</span></div>
+  <div class="grid g3 card-eq" id="aivisVisibilityCards"></div>
+  <div class="card" style="padding:6px 10px;margin-top:12px" id="aivisMeasurementWrap">
+    <table><thead><tr><th>Motor</th><th>Durum</th></tr></thead>
+    <tbody id="aivisMeasurementBody"><tr><td colspan="2" style="padding:14px;color:var(--cream-dim)">Yükleniyor…</td></tr></tbody></table>
+  </div>
+
+  <div class="sect"><h2 class="disp">Executive Recommendation</h2><span class="hint">Yalnızca çoklu motor kanıtı varsa</span></div>
+  <div class="card" id="aivisExecRec"></div>
+
+  <div class="pill-row" role="group" aria-label="Niyet filtresi">
+    <button class="pill active" onclick="filtSom(this,'all')">Tüm niyetler</button>
+    <button class="pill" onclick="filtSom(this,'win')">Kazandıklarımız</button>
+    <button class="pill" onclick="filtSom(this,'lose')">Kayıp fırsatlar</button>
+  </div>
+
+  <div class="som" id="somGrid">
+    <div class="h">Sorgu (Lehçe niyet)</div><div class="h">ChatGPT</div><div class="h">Claude</div><div class="h">Gemini</div><div class="h">Perplexity</div><div class="h">Grok</div><div class="h">Durum</div>
+  </div>
+
+  <div class="note" style="margin-top:18px"><b>Okuma:</b> Ücretsiz motorlar RSS/HTML haberlerinden çalışır. AI Visibility matrisi yalnızca probe bağlandığında dolar — sahte skor üretilmez.</div>
+
+  <div class="sect"><h2 class="disp">Anlatı özeti</h2><span class="hint" id="aivisNarrHint">—</span></div>
+  <div class="grid g3" id="aivisNarratives"></div>
+  <div id="aivisSecEnd"></div>
+</section>
+
+<!-- ============ 5 · KAYNAK ANALİZİ ============ -->
+<section class="screen" id="s-cite">
+  <div class="eyebrow">Citation İstihbaratı · Oynatabileceğiniz Tek Katman</div>
+  <h1 class="disp">Motoru değiştiremezsiniz.<br>Motorun okuduğu 30 sayfayı değiştirebilirsiniz.</h1>
+  <p class="lede" style="margin-top:10px">AI asistanları Türkiye cevaplarını bu kaynaklardan yazıyor. Strateji: resmî, Lehçe, AI-okunur içeriği tam bu rafa sokmak.</p>
+  <div class="exec-summary" id="citeExecSummary"></div>
+
+  <div class="sect"><h2 class="disp">Türkiye'nin AI anlatısını bugün kim yazıyor?</h2><span class="hint" id="citeMethodHint">—</span></div>
+  <div class="card" style="padding:6px 10px">
+    <table>
+      <thead><tr><th>Kaynak</th><th>Tür</th><th>Alıntı sıklığı</th><th>Kontrol</th><th>Fırsat</th></tr></thead>
+      <tbody id="citeTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="sect"><h2 class="disp">Optimizasyon kuyruğu</h2><span class="hint">Ölçüm değil, hamle — canlı öneri motorundan</span></div>
+  <div class="grid g2" id="citeQueue"></div>
+</section>
+
+<!-- ============ 6 · MEDYA PLANI ============ -->
+<section class="screen" id="s-media">
+  <div class="eyebrow">Strateji · Decision &amp; Media Strategy Engine</div>
+  <h1 class="disp">Bütçeyi Polonyalının gerçekten baktığı yere koyun:<br>kanıt → karar → medya planı.</h1>
+  <p class="lede" style="margin-top:10px" id="mediaNorthStar">Bugün Polonya turizm pazarında Türkiye ne yapmalı ve neden?</p>
+  <div class="exec-summary" id="mediaExecSummary"></div>
+  <div class="note" id="mediaHonestyNote" style="display:none"></div>
+
+  <div class="sec-30s"><b>30 sn:</b> Ajans brief → kampanya → medya mix → kanıt.</div>
+  <div class="sect"><h2 class="disp">Ajans brief'i</h2><span class="hint">Campaign · Audience · Message · Mix · Timeline · Evidence</span></div>
+  <div class="grid g3 card-eq agency-grid" id="mediaAgencyBrief"></div>
+
+  <div class="sect"><h2 class="disp">Kampanya Operasyonları</h2><span class="hint">Campaign · Content · Distribution · Timeline · KPI</span></div>
+  <div id="campaignOperationsPanel"></div>
+
+  <div class="sect"><h2 class="disp">Bugünün stratejik öncelikleri</h2><span class="hint">Decision layer · aksiyon başlat <span class="prov real"><span class="dot"></span>Kanıtlı</span></span></div>
+  <div id="mediaPriorities"></div>
+
+  <div class="sect"><h2 class="disp">Karar desteği</h2><span class="hint">Müşavir · GoTürkiye · Ankara · ekipler</span></div>
+  <div class="grid g2" id="mediaDecisionSupport"></div>
+
+  <div class="sect"><h2 class="disp">Kanal ağırlıkları — öneri</h2><span class="hint" id="mediaMixHint">Geçerli kararlardan türetilir</span></div>
+  <div class="card" style="padding:6px 10px">
+    <table>
+      <thead><tr><th>Kanal</th><th>Önerilen pay</th><th style="width:230px"></th><th>Gerekçe</th></tr></thead>
+      <tbody id="mediaChannelBody">
+        <tr><td colspan="4" style="padding:14px;color:var(--cream-dim)">Yükleniyor…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sect"><h2 class="disp">Kampanya alternatifleri</h2><span class="hint">A Awareness · B Performance · C SEO+AI · D PR — yalnızca karar sonrası</span></div>
+  <div id="mediaCampaignAlts"></div>
+
+  <div class="sect"><h2 class="disp">Yaratıcı kısa listesi — brief'e hazır</h2><span class="hint">Kanıtlı kararlardan <span class="prov real"><span class="dot"></span>Gerçek</span></span></div>
+  <div class="grid g3" id="mediaCreativeGrid"></div>
+
+  <div class="sect"><h2 class="disp">GoTürkiye Advisor</h2><span class="hint">Resmî içerik aksiyonları</span></div>
+  <div class="grid g2" id="mediaGotrAdvisor"></div>
+
+  <div class="sect"><h2 class="disp">Ankara Executive Brief</h2><span class="hint">Yönetici / bakanlık notu</span></div>
+  <div id="mediaAnkaraBriefs"></div>
+
+  <div class="note" id="mediaCalendarNote"><b>Kampanya takvimi:</b> yükleniyor…</div>
+  <div id="mediaSecEnd"></div>
+</section>
+
+<!-- ============ 7 · ANKARA RAPORU ============ -->
+<section class="screen" id="s-report">
+  <div class="prototype-alert"><b>Ankara Raporu:</b> üstteki taslak şablondur. <b>Taslağı panoya kopyala</b> düğmesi, Sabah Brifingi'ndeki canlı Haftalık Brief + Aylık Review metnini de ekler (SQLite).</div>
+  <div class="eyebrow">Haftalık Yönetici Raporu · Otomatik Taslak</div>
+  <h1 class="disp">Pazartesi sabahı Ankara'ya gidecek rapor,<br>Pazar gecesi kendi kendini yazmış olsun.</h1>
+  <p class="lede" style="margin-top:10px">Platform, haftanın sinyallerinden TGA/Bakanlık formatında taslak üretir. Siz düzeltir, imzalar, gönderirsiniz — 3 saat yerine 10 dakika.</p>
+
+  <div style="display:flex;gap:10px;margin:20px 0 16px">
+    <button class="btn" onclick="copyReport()">⧉ Taslağı panoya kopyala</button>
+    <button class="btn ghost">Word olarak indir (V1)</button>
+    <button class="btn ghost">Geçmiş raporlar (V1)</button>
+  </div>
+
+  <div class="report-paper" id="reportBody">
+    <div class="rp-mono">T.C. Kültür ve Turizm Bakanlığı — TGA · Varşova Turizm Müşavirliği · Haftalık Pazar Raporu</div>
+    <h3>Polonya Pazarı — 27. Hafta Değerlendirmesi (6–12 Temmuz 2026)</h3>
+    <p><b>Özet:</b> Türkiye, Polonya kaynak pazarında 4. sıradaki konumunu korumaktadır. Bununla birlikte 2026 sezonunda Avrupa genelinde erken rezervasyonların yaklaşık %20–25 gerilediği ve sezonun son-dakika ağırlıklı seyrettiği teyit edilmiştir. Rakip cephede Arnavutluk'un yükselişi (2019'a göre +%95) ve Mısır'ın ikinci-şehir charter hamleleri yakından izlenmektedir.</p>
+    <p class="rp-h">1. Talep Görünümü</p>
+    <p>"Her şey dahil Türkiye" arama hacmi haftalık %18 artmıştır; okul tatili planlama dönemi başlamıştır. Kasım–Aralık kış-güneşi talep penceresi için Rainbow Tours kış kataloğunu erken açmıştır. Müşavirliğimiz, kış-güneşi temalı Lehçe içerik çalışmasının bu hafta öne çekilmesini planlamaktadır.</p>
+    <p class="rp-h">2. Rakip Hareketleri</p>
+    <p>Polonya medyasında "Albania — nowa Turcja?" çerçeveli yayın dizisi geniş etkileşim almıştır. Doğrudan polemik yerine, aile altyapısı ve uçuş derinliği eksenli veri-temelli karşılaştırma içeriğiyle yanıt verilmesi öngörülmektedir. Mısır'ın Kraków ve Katowice çıkışlı yeni Sharm el-Sheikh frekansları Ekim'de başlayacaktır.</p>
+    <p class="rp-h">3. Dijital &amp; AI Görünürlük</p>
+    <p>Yapay zekâ asistanlarının Polonyalı kullanıcılara verdiği tatil önerilerinde Türkiye'nin "kış güneşi" ve "tarih/kültür" niyetlerinde güçlü, "balayı, gastronomi ve termal-wellness" niyetlerinde zayıf konumlandığı değerlendirilmektedir (uzman tahmini; otomatik ölçüm altyapısı kurulum aşamasındadır). Resmî içeriğin AI kaynak katmanındaki payının artırılmasına yönelik dört maddelik optimizasyon planı yürürlüktedir.</p>
+    <p class="rp-h">4. Önümüzdeki Hafta</p>
+    <p>(i) "Zimowe słońce w Turcji" içerik merkezinin yayına alınması; (ii) Onet Podróże editörlüğü ile premium-deneyim veri paketi görüşmesi; (iii) "Turcja vs Albania" karşılaştırma içeriği brief'inin tamamlanması.</p>
+    <p style="margin-top:18px;font-size:12px;color:#8A7C57">Bu taslak PlanAI Poland Intelligence tarafından hafta sinyallerinden otomatik üretilmiştir · Müşavir onayı beklemektedir</p>
+  </div>
+</section>
+
+<!-- ============ 8 · AI DANIŞMAN ============ -->
+<section class="screen" id="s-advisor">
+  <div class="prototype-alert"><b>Prototip ekran — canlı istihbarat değil.</b> Örnek soru-cevaplar sabit metindir; [GERÇEK] rozeti yanıltıcıdır. Kanıtlı karar için Sabah Brifingi önerilerini kullanın.</div>
+  <div class="eyebrow">AI Danışman · Karar Desteği</div>
+  <h1 class="disp">Sorun. Ama her cevap kanıtıyla gelsin.</h1>
+  <p class="lede" style="margin-top:10px">Danışman hükmü asla devralmaz (Madde 4): her tavsiye <b>neden · kanıt · beklenen etki · güven · alternatif</b> beşlisini taşır. Örnek soruları deneyin:</p>
+
+  <div class="adv-chip-row" style="margin-top:16px">
+    <button class="pill" onclick="ask(0)">Kış bütçesini nereye koyayım?</button>
+    <button class="pill" onclick="ask(1)">Arnavutluk'a cevap verelim mi?</button>
+    <button class="pill" onclick="ask(2)">Ankara'ya hangi göstergeyi raporlamalıyım?</button>
+  </div>
+
+  <div class="adv-thread" id="advThread">
+    <div class="msg a">Günaydın. Bu sabahki beş sinyali işledim; kış-güneşi penceresi bu haftanın en yüksek kaldıraçlı konusu. Yukarıdan bir soru seçin ya da kendi sorunuzu düşünün — her cevabımı kanıt şeridiyle vereceğim.</div>
+  </div>
+</section>
+
+<!-- ============ PLAYBOOK ============ -->
+<section class="screen" id="s-playbook">
+  <div class="eyebrow">Polonya Playbook · Decision Engine</div>
+  <h1 class="disp">Şimdi ne yapmalıyım?<br>Ansiklopedi değil — karar motoru.</h1>
+  <div class="exec-summary" id="playbookExecSummary"></div>
+  <div class="sec-30s"><b>60 sn:</b> Problem → Kanıt → Tavsiye → Sonraki modül.</div>
+  <input type="text" id="pbSearch" placeholder="Konu ara: aile, rakip, operatör, AI, kampanya…" style="width:100%;margin:18px 0 6px;background:var(--ink2);border:1px solid var(--line);border-radius:8px;color:var(--cream);font-family:inherit;font-size:13.5px;padding:12px 14px" onkeyup="pbFilter()">
+
+  <div class="sect"><h2 class="disp">Karar Kartları</h2><span class="hint">Problem → Evidence → Action · tıkla → drawer</span></div>
+  <div class="grid g2 card-eq" id="playbookDecisionGrid"></div>
+  <div class="note" id="playbookStatus"><b>Playbook:</b> yükleniyor…</div>
+  <div id="playbookSecEnd"></div>
+
+  <aside class="playbook-drawer" id="playbookDrawer" hidden aria-hidden="true">
+    <div class="playbook-drawer-head">
+      <b id="playbookDrawerTitle">Karar Detayı</b>
+      <button type="button" class="pill drill-close" data-close-playbook aria-label="Kapat">×</button>
+    </div>
+    <div class="playbook-drawer-body" id="playbookDrawerBody"></div>
+  </aside>
+  <div class="playbook-drawer-backdrop" id="playbookDrawerBackdrop" hidden data-close-playbook></div>
+</section>
+
+<!-- ============ STRATEJİ KURUCU ============ -->
+<section class="screen" id="s-strategy">
+  <div class="eyebrow">Strateji Kurucu · Decision Intelligence</div>
+  <h1 class="disp">Üç seçim yapın.<br>Kanıta dayalı strateji taslağı alın.</h1>
+  <div class="exec-summary" id="strategyExecSummary"></div>
+  <div class="sect"><h2 class="disp">Motor kararları</h2><span class="hint">Situation → Evidence → Recommendation</span></div>
+  <div id="strategyEngineOut"></div>
+  <div class="disc-banner">ℹ️ <span><b>Etkileşimli strateji kurucu:</b> üstteki blok Decision Engine çıktısıdır. Alttaki şablon, kitle/tema seçimiyle canlı hub kancası ekler.</span></div>
+
+  <div class="sect"><h2 class="disp">Hedef kitle</h2></div>
+  <div class="pill-row" id="stAud"><button class="pill active" onclick="stPick(this,'aud','aile')">Aileler</button><button class="pill" onclick="stPick(this,'aud','cift')">Çiftler / balayı</button><button class="pill" onclick="stPick(this,'aud','deneyim')">Deneyim arayanlar</button></div>
+  <div class="sect"><h2 class="disp">Tema</h2></div>
+  <div class="pill-row" id="stTheme"><button class="pill active" onclick="stPick(this,'theme','kis')">Kış güneşi</button><button class="pill" onclick="stPick(this,'theme','gastro')">Gastronomi</button><button class="pill" onclick="stPick(this,'theme','kultur')">Kültür & tarih</button></div>
+  <div class="sect"><h2 class="disp">Bütçe düzeyi</h2></div>
+  <div class="pill-row" id="stBud"><button class="pill active" onclick="stPick(this,'bud','orta')">Orta</button><button class="pill" onclick="stPick(this,'bud','dusuk')">Sınırlı</button><button class="pill" onclick="stPick(this,'bud','yuksek')">Geniş</button></div>
+  <button class="btn" onclick="stBuild()" style="margin:6px 0 18px">Strateji taslağı üret</button>
+  <div id="stOut"></div>
+</section>
+
+<!-- ============ GOTÜRKİYE DANIŞMANI ============ -->
+<section class="screen" id="s-gotr">
+  <div class="eyebrow">GoTürkiye Danışmanı · Resmî İçeriği Pazar Aksiyonuna Çevir</div>
+  <h1 class="disp">GoTürkiye anlatır.<br>Bu ekran, o anlatıyı Polonya'da kazandırır.</h1>
+  <p class="lede" style="margin-top:10px">İlke: asla kopyalama — tamamla. Resmî varlık envanteri × Polonya talebi × AI-citation boşluğu.</p>
+
+  <div class="sect"><h2 class="disp">Anlatı-boşluk matrisi</h2><span class="hint">Resmî varlık var mı → Lehçe mi → AI alıntılıyor mu <span class="prov real"><span class="dot"></span>Gerçek envanter</span></span></div>
+  <div class="card" style="padding:6px 10px">
+    <table>
+      <thead><tr><th>Deneyim dikeyi (resmî varlık)</th><th>PL talebi</th><th>Lehçe içerik</th><th>AI citation</th><th>Aksiyon</th></tr></thead>
+      <tbody>
+        <tr><td>Kış/termal (Pamukkale, Afyon; Palandöken GSTC-sertifikalı)</td><td class="up">Yüksek ▲</td><td class="dn">Yok</td><td class="dn">Yok</td><td><b class="up">P1: Lehçe kış-güneşi hub'ına resmî varlıkları bağla</b></td></tr>
+        <tr><td>Gastronomi (Afyon UNESCO gastronomi ağı; "Deliciously Türkiye")</td><td class="am">Yükseliyor</td><td class="dn">Yok</td><td class="dn">Yok</td><td>P1: kayıp-niyet içeriğine resmî omurga</td></tr>
+        <tr><td>Antalya mikro-sitesi (antalya.goturkiye.com)</td><td class="up">Çok yüksek</td><td class="am">Kısmî</td><td class="am">Nadir</td><td>P2: AI-okunurluk denetimi + Lehçe derinleştirme</td></tr>
+        <tr><td>Macera/doğa dikeyi (adventure.goturkiye.com)</td><td class="am">Orta</td><td class="dn">Yok</td><td class="dn">Yok</td><td>P3: deneyim-arayan segmente eşle</td></tr>
+        <tr><td>Etkinlik takvimi (festival/kültür)</td><td class="am">Orta</td><td class="dn">Yok</td><td>—</td><td>P2: basın-gezisi gerekçesi olarak kullan</td></tr>
+        <tr><td><b>Yerel PL GoTürkiye sitesi</b></td><td>—</td><td colspan="2" class="am">⚠ Varlığı ve yetki sınırı <b>discovery'de doğrulanacak</b></td><td>Oturum sorusu (T5)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sect"><h2 class="disp">Önerilen landing-page rafı</h2><span class="hint">Eksik sayfalar — AI'ın alıntılayacağı formatta</span></div>
+  <div class="grid g3">
+    <div class="card"><div class="k up">01 · Zimowe słońce w Turcji</div><div class="d" style="margin-top:8px">Kış-güneşi hub'ı: Antalya 12-ay + uçuş süreleri (PL kalkışlı) + PLN fiyat bandı + resmî sürdürülebilirlik rozetleri. Schema'lı, SSS bloklu.</div></div>
+    <div class="card"><div class="k up">02 · Turcja vs Grecja / vs Albania</div><div class="d" style="margin-top:8px">Aile eksenli karşılaştırma çifti — AI motorlarının en çok alıntıladığı format. Veri: uçuş derinliği, altyapı, sezon uzunluğu.</div></div>
+    <div class="card"><div class="k up">03 · Smaki Turcji (gastronomi)</div><div class="d" style="margin-top:8px">UNESCO-gastronomi + bölgesel rota; "wakacje gastronomiczne" niyetine Lehçe eşleme. Kayıp-niyet #1 kapatıcısı.</div></div>
+  </div>
+  <div class="note"><b>Sınır (anayasal):</b> Bu ekran içerik üretmez, GoTürkiye'yi kopyalamaz — hangi resmî varlığın nerede eksik/görünmez olduğunu söyler ve aksiyona bağlar.</div>
+</section>
+
+<!-- ============ V2 · KEŞİF MODÜLÜ ============ -->
+<section class="screen" id="s-v2">
+  <div class="eyebrow">Keşif Modülü · Version 2</div>
+  <h1 class="disp">Misyon Operasyonları</h1>
+  <div class="disc-banner">⚠ <span><b>Bu modül henüz inşa edilmedi.</b> Burası bir yazılım değil, bir sohbet aracı: amacı, sizin günlük operasyonel gerçeğinizi anlamak ve V2 gereksinimlerini birlikte tanımlamak. Sahte veri yok, işlev yok — sadece sorular.</span></div>
+
+  <div class="sect"><h2 class="disp">Amaç</h2></div>
+  <p class="lede">Müşavirliğin günlük operasyonel işini tek çalışma alanında toplamak: kişiler ve ilişkiler, görevler, toplantılar, belgeler, etkinlik takvimi, bütçe ve harcama kayıtları — ve hepsinin üstünde <b style="color:var(--gold-soft)">kurumsal hafıza</b>: müşavirler değişir, bilgi kalmalı.</p>
+
+  <div class="sect"><h2 class="disp">Gelecek vizyonu</h2></div>
+  <p class="lede">Yeni atanan bir müşavir, beş yıllık pazar geçmişini — hangi kampanya işledi, hangi editörle nasıl ilişki kuruldu, hangi operatörle ne konuşuldu — günler içinde devralabilsin. Misyonun CRM'i, ajandası ve arşivi; istihbarat katmanıyla aynı masada.</p>
+
+  <div class="sect"><h2 class="disp">Size sorularımız</h2><span class="hint">Oturumda birlikte cevaplayalım</span></div>
+  <div class="qcard"><div class="qn">SORU 01</div><p>Bugün kişileri (gazeteci, operatör, editör) nerede tutuyorsunuz — ve göreve başladığınızda selefinizden ne devraldınız, ne kayboldu?</p><div class="sub">Kurumsal hafıza hipotezinin gerçek acı testi.</div></div>
+  <div class="qcard"><div class="qn">SORU 02</div><p>Haftanızın operasyonel kısmında (toplantı, rapor, onay, harcama kaydı) en çok vakit yiyen tek iş hangisi?</p><div class="sub">V2'nin ilk modülünü bu cevap seçer.</div></div>
+  <div class="qcard"><div class="qn">SORU 03</div><p>Bakanlığın/misyonun hâlihazırda kullandığı hangi sistemler var — ve hangileriyle asla çakışmamalıyız?</p><div class="sub">Mevcut devlet sistemleriyle çarpışma riski V2'nin en büyük bilinmeyeni.</div></div>
+  <div class="qcard"><div class="qn">SORU 04</div><p>Kişi verisi, bütçe ve yazışma kayıtları için hangi gizlilik/saklama kurallarına tabisiniz? Bu veriler nerede durabilir, nerede duramaz?</p><div class="sub">Anayasa Madde 8 — veri egemenliği tasarımdan önce gelir.</div></div>
+
+  <div class="fb-box">
+    <div class="k" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)">Görüşünüz — bu modül hakkında</div>
+    <textarea id="fb-v2" placeholder="Bu ekranda ne olsun isterdiniz? Ne asla olmasın? İlk aklınıza gelen…"></textarea>
+    <button class="btn" onclick="fbSave('v2')">Görüşü oturum notuna ekle</button>
+    <div class="fb-saved" id="fb-v2-ok">✓ Not alındı — oturum sonunda issue-001/feedback klasörüne işlenecek.</div>
+    <div class="fb-note">Bu prototipte notlar yalnızca bu oturumda tutulur; kalıcı kayıt validasyon oturumu notlarıyla birlikte yapılır.</div>
+  </div>
+</section>
+
+<!-- ============ V3 · KEŞİF MODÜLÜ ============ -->
+<section class="screen" id="s-v3">
+  <div class="eyebrow">Keşif Modülü · Version 3</div>
+  <h1 class="disp">Yönetici İstihbaratı</h1>
+  <div class="disc-banner">⚠ <span><b>Bu modül henüz inşa edilmedi.</b> Sohbet aracı: TGA/Bakanlık perspektifinin gereksinimlerini sizin gözünüzden anlamak için. Sahte pano yok, sahte KPI yok — sadece sorular.</span></div>
+
+  <div class="sect"><h2 class="disp">Amaç</h2></div>
+  <p class="lede">Merkeze (TGA / Bakanlık) misyonlar-üstü bir görüş sağlamak: ülke karşılaştırmaları, misyon performansı, kampanya etkisi, stratejik KPI'lar ve ülkeler arası öğrenme — her müşavirliğin ürettiği istihbaratın toplamı, tek panoda.</p>
+
+  <div class="sect"><h2 class="disp">Gelecek vizyonu</h2></div>
+  <p class="lede">Ankara'nın pazartesi sabahı, 40 kaynak pazarın nabzını, hangi misyonun hangi hamleyi denediğini ve neyin işe yaradığını tek bakışta görmesi — ve iyi pratiğin Varşova'dan Berlin'e kendiliğinden akması.</p>
+
+  <div class="sect"><h2 class="disp">Size sorularımız</h2><span class="hint">Merkezi siz temsil edemezsiniz — ama en iyi siz bilirsiniz</span></div>
+  <div class="qcard"><div class="qn">SORU 01</div><p>Merkez sizin performansınızı bugün fiilen neye göre değerlendiriyor — resmî KPI ile gerçekte konuşulan aynı mı?</p><div class="sub">V3'ün gösterge setini bu belirler.</div></div>
+  <div class="qcard"><div class="qn">SORU 02</div><p>Diğer müşavirliklerin ne yaptığını bugün nasıl öğreniyorsunuz? Hiç "keşke Berlin'in şu kampanyasını önceden bilseydim" dediğiniz oldu mu?</p><div class="sub">Ülkeler-arası öğrenme hipotezinin testi.</div></div>
+  <div class="qcard"><div class="qn">SORU 03</div><p>Merkezle raporlama formatınız kimin tarafından, ne sıklıkla belirleniyor — ve merkez bir "canlı pano"yu gerçekten kullanır mı, yoksa PDF/sunum kültürü mü hâkim?</p><div class="sub">V3'ün biçimini (pano vs rapor) gerçek kültür seçmeli.</div></div>
+
+  <div class="fb-box">
+    <div class="k" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)">Görüşünüz — bu modül hakkında</div>
+    <textarea id="fb-v3" placeholder="Merkez böyle bir katmanı nasıl karşılar? İlk itiraz ne olur?"></textarea>
+    <button class="btn" onclick="fbSave('v3')">Görüşü oturum notuna ekle</button>
+    <div class="fb-saved" id="fb-v3-ok">✓ Not alındı — oturum sonunda issue-001/feedback klasörüne işlenecek.</div>
+    <div class="fb-note">Bu prototipte notlar yalnızca bu oturumda tutulur; kalıcı kayıt validasyon oturumu notlarıyla birlikte yapılır.</div>
+  </div>
+</section>

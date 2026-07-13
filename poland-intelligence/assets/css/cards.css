@@ -1,0 +1,10 @@
+/* ---------- cards & grid ---------- */
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.card{background:linear-gradient(180deg,var(--panel),var(--ink2));border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+.card .k{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card .v{font-family:"Cormorant Garamond",serif;font-size:34px;font-weight:600;margin-top:6px;line-height:1}
+.card .d{font-size:12px;color:var(--cream-dim);margin-top:7px}
+.up{color:var(--rise)}.dn{color:var(--fall)}.am{color:var(--amber)}
+.sect{margin:34px 0 14px;display:flex;align-items:baseline;justify-content:space-between;gap:14px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.sect .hint{font-size:12px;color:var(--muted)}

@@ -1,0 +1,14 @@
+:root{
+  --ink:#0B1120; --ink2:#101830; --panel:#151F38; --panel2:#1B2745;
+  --line:#26335A; --line2:#33437400;
+  --cream:#EFE8D8; --cream-dim:#B9B29F; --muted:#7E8AA8;
+  --gold:#C9A24B; --gold-soft:#E3C88A;
+  --rise:#43BCB0; --fall:#E36B58; --amber:#D9A441;
+  --real:#43BCB0; --est:#D9A441;
+  --r:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--ink);color:var(--cream);font-family:"DM Sans",sans-serif;font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+::selection{background:rgba(201,162,75,.35)}

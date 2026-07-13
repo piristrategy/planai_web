@@ -1,0 +1,42 @@
+<div class="topbar">
+  <div class="where">GÖREV MASASI — <b>VARŞOVA / POLONYA</b></div>
+  <div class="chips">
+    <div class="mode-toggle" role="group" aria-label="Görünüm modu">
+      <button type="button" id="modeExecutiveBtn" class="active" onclick="setViewMode('executive')" title="Yalnızca özetler — 30 sn karar">Executive</button>
+      <button type="button" id="modeAnalystBtn" onclick="setViewMode('analyst')" title="Tüm detaylar">Analyst</button>
+    </div>
+    <span class="chip" id="topDateChip">—</span>
+    <span class="chip live-clock-chip" id="liveClockChip" title="Canlı saat">—</span>
+    <span class="chip" id="freshnessChip" title="Platform tazeliği">Güncellik · —</span>
+    <button type="button" class="chip" id="capabilityChip" title="Platform yetenekleri">Yetenekler · —</button>
+    <button type="button" class="chip" id="pipelineStatusChip" title="Canlı istihbarat durumu">Live Intelligence · —</button>
+    <span class="chip gold" id="topSeasonChip">Sabah Brifingi · yükleniyor</span>
+  </div>
+</div>
+
+<div class="live-clock-bar" id="liveClockBar" aria-live="polite">
+  <span id="liveClockUpdated">Güncellendi · —</span>
+  <span id="liveClockNext">Sonraki Tarama · —</span>
+  <span id="liveClockFeed">Son Feed · —</span>
+  <span id="liveClockAnalysis">Son Analiz · —</span>
+  <span id="liveClockRec">Son Öneri · —</span>
+</div>
+
+<div class="capability-panel" id="capabilityPanel" hidden>
+  <div class="cap-head"><b>Platform Yetenekleri</b><button type="button" class="pill" data-close-cap>×</button></div>
+  <div class="cap-body" id="capabilityBody"></div>
+</div>
+
+<div class="exec-situation-panel" id="execSituationPanel" aria-label="Yönetici durumu">
+  <div class="esp-k">Bugünün Durumu</div>
+  <div class="esp-v" id="espSituation">—</div>
+  <div class="esp-row"><span class="esp-k">Fırsat</span><span class="esp-v" id="espOpportunity">—</span></div>
+  <div class="esp-row"><span class="esp-k">Tehdit</span><span class="esp-v" id="espThreat">—</span></div>
+  <div class="esp-row"><span class="esp-k">Bekleyen</span><span class="esp-v" id="espPending">—</span></div>
+  <div class="esp-row"><span class="esp-k">Son öneri</span><span class="esp-v" id="espLatestRec">—</span></div>
+</div>
+
+<div class="live-intel-banner" id="liveIntelBanner" role="status" aria-live="polite">
+  <span id="liveIntelBannerText"><b>Canlı istihbarat</b> — yükleniyor…</span>
+  <button type="button" id="liveIntelAckBtn">Okudum</button>
+</div>
