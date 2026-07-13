@@ -8,6 +8,7 @@ const GLOBALS = [
   'openDiosDecisionPanel', 'handleDiosPriorityAction', 'navigateToScreen', 'scrollToBriefTarget',
   'toggleDrillPanel', 'exportRecPdf', 'generateExecBriefing',
   'openPlaybookDrawer', 'closePlaybookDrawer', 'handlePlaybookAction', 'exportPlaybookBrief',
+  'loadAnkaraReport', 'loadAdvisorLive', 'loadGoTurkiyeLive', 'loadMarketIntelligenceBundle',
 ];
 export function bindGlobals() {
   for (const k of GLOBALS) {

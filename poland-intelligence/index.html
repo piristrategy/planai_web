@@ -1333,48 +1333,36 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
 
 <!-- ============ 7 · ANKARA RAPORU ============ -->
 <section class="screen" id="s-report">
-  <div class="prototype-alert"><b>Ankara Raporu:</b> üstteki taslak şablondur. <b>Taslağı panoya kopyala</b> düğmesi, Sabah Brifingi'ndeki canlı Haftalık Brief + Aylık Review metnini de ekler (SQLite).</div>
-  <div class="eyebrow">Haftalık Yönetici Raporu · Otomatik Taslak</div>
-  <h1 class="disp">Pazartesi sabahı Ankara'ya gidecek rapor,<br>Pazar gecesi kendi kendini yazmış olsun.</h1>
-  <p class="lede" style="margin-top:10px">Platform, haftanın sinyallerinden TGA/Bakanlık formatında taslak üretir. Siz düzeltir, imzalar, gönderirsiniz — 3 saat yerine 10 dakika.</p>
+  <div class="prototype-alert"><b>Ankara Raporu:</b> canlı Haftalık / Aylık / Market Intelligence API çıktılarından üretilir. Sahte istatistik yok.</div>
+  <div class="eyebrow">Haftalık Yönetici Raporu · Canlı Derleme</div>
+  <h1 class="disp">Pazartesi sabahı Ankara'ya gidecek rapor,<br>canlı sinyallerden derlensin.</h1>
+  <p class="lede" style="margin-top:10px">Platform, haftanın sinyallerinden TGA/Bakanlık formatında taslak üretir. Siz düzeltir, imzalar, gönderirsiniz.</p>
 
   <div style="display:flex;gap:10px;margin:20px 0 16px">
-    <button class="btn" onclick="copyReport()">⧉ Taslağı panoya kopyala</button>
-    <button class="btn ghost">Word olarak indir (V1)</button>
-    <button class="btn ghost">Geçmiş raporlar (V1)</button>
+    <button class="btn" onclick="loadAnkaraReport()">↻ Yeniden yükle</button>
+    <button class="btn ghost" onclick="copyReport()">⧉ Taslağı panoya kopyala</button>
   </div>
 
   <div class="report-paper" id="reportBody">
-    <div class="rp-mono">T.C. Kültür ve Turizm Bakanlığı — TGA · Varşova Turizm Müşavirliği · Haftalık Pazar Raporu</div>
-    <h3>Polonya Pazarı — 27. Hafta Değerlendirmesi (6–12 Temmuz 2026)</h3>
-    <p><b>Özet:</b> Türkiye, Polonya kaynak pazarında 4. sıradaki konumunu korumaktadır. Bununla birlikte 2026 sezonunda Avrupa genelinde erken rezervasyonların yaklaşık %20–25 gerilediği ve sezonun son-dakika ağırlıklı seyrettiği teyit edilmiştir. Rakip cephede Arnavutluk'un yükselişi (2019'a göre +%95) ve Mısır'ın ikinci-şehir charter hamleleri yakından izlenmektedir.</p>
-    <p class="rp-h">1. Talep Görünümü</p>
-    <p>"Her şey dahil Türkiye" arama hacmi haftalık %18 artmıştır; okul tatili planlama dönemi başlamıştır. Kasım–Aralık kış-güneşi talep penceresi için Rainbow Tours kış kataloğunu erken açmıştır. Müşavirliğimiz, kış-güneşi temalı Lehçe içerik çalışmasının bu hafta öne çekilmesini planlamaktadır.</p>
-    <p class="rp-h">2. Rakip Hareketleri</p>
-    <p>Polonya medyasında "Albania — nowa Turcja?" çerçeveli yayın dizisi geniş etkileşim almıştır. Doğrudan polemik yerine, aile altyapısı ve uçuş derinliği eksenli veri-temelli karşılaştırma içeriğiyle yanıt verilmesi öngörülmektedir. Mısır'ın Kraków ve Katowice çıkışlı yeni Sharm el-Sheikh frekansları Ekim'de başlayacaktır.</p>
-    <p class="rp-h">3. Dijital &amp; AI Görünürlük</p>
-    <p>Yapay zekâ asistanlarının Polonyalı kullanıcılara verdiği tatil önerilerinde Türkiye'nin "kış güneşi" ve "tarih/kültür" niyetlerinde güçlü, "balayı, gastronomi ve termal-wellness" niyetlerinde zayıf konumlandığı değerlendirilmektedir (uzman tahmini; otomatik ölçüm altyapısı kurulum aşamasındadır). Resmî içeriğin AI kaynak katmanındaki payının artırılmasına yönelik dört maddelik optimizasyon planı yürürlüktedir.</p>
-    <p class="rp-h">4. Önümüzdeki Hafta</p>
-    <p>(i) "Zimowe słońce w Turcji" içerik merkezinin yayına alınması; (ii) Onet Podróże editörlüğü ile premium-deneyim veri paketi görüşmesi; (iii) "Turcja vs Albania" karşılaştırma içeriği brief'inin tamamlanması.</p>
-    <p style="margin-top:18px;font-size:12px;color:#8A7C57">Bu taslak PlanAI Poland Intelligence tarafından hafta sinyallerinden otomatik üretilmiştir · Müşavir onayı beklemektedir</p>
+    <p class="rp-mono">Canlı rapor yükleniyor…</p>
   </div>
 </section>
 
 <!-- ============ 8 · AI DANIŞMAN ============ -->
 <section class="screen" id="s-advisor">
-  <div class="prototype-alert"><b>Prototip ekran — canlı istihbarat değil.</b> Örnek soru-cevaplar sabit metindir; [GERÇEK] rozeti yanıltıcıdır. Kanıtlı karar için Sabah Brifingi önerilerini kullanın.</div>
+  <div class="prototype-alert"><b>Canlı AI Danışman:</b> cevaplar yalnızca API öneri/karar kayıtlarından üretilir. Sabit [GERÇEK] metin yok.</div>
   <div class="eyebrow">AI Danışman · Karar Desteği</div>
-  <h1 class="disp">Sorun. Ama her cevap kanıtıyla gelsin.</h1>
-  <p class="lede" style="margin-top:10px">Danışman hükmü asla devralmaz (Madde 4): her tavsiye <b>neden · kanıt · beklenen etki · güven · alternatif</b> beşlisini taşır. Örnek soruları deneyin:</p>
+  <h1 class="disp">Sorun. Her cevap kanıtıyla gelsin.</h1>
+  <p class="lede" style="margin-top:10px">Danışman hükmü asla devralmaz: her tavsiye <b>ne değişti · neden · etki · aksiyon · öncelik · sahip · son tarih</b> alanlarını taşır.</p>
 
   <div class="adv-chip-row" style="margin-top:16px">
     <button class="pill" onclick="ask(0)">Kış bütçesini nereye koyayım?</button>
-    <button class="pill" onclick="ask(1)">Arnavutluk'a cevap verelim mi?</button>
+    <button class="pill" onclick="ask(1)">Rakibe nasıl cevap verelim?</button>
     <button class="pill" onclick="ask(2)">Ankara'ya hangi göstergeyi raporlamalıyım?</button>
   </div>
 
   <div class="adv-thread" id="advThread">
-    <div class="msg a">Günaydın. Bu sabahki beş sinyali işledim; kış-güneşi penceresi bu haftanın en yüksek kaldıraçlı konusu. Yukarıdan bir soru seçin ya da kendi sorunuzu düşünün — her cevabımı kanıt şeridiyle vereceğim.</div>
+    <div class="msg a">Canlı öneriler yükleniyor…</div>
   </div>
 </section>
 
@@ -1408,7 +1396,7 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
   <div class="exec-summary" id="strategyExecSummary"></div>
   <div class="sect"><h2 class="disp">Motor kararları</h2><span class="hint">Situation → Evidence → Recommendation</span></div>
   <div id="strategyEngineOut"></div>
-  <div class="disc-banner">ℹ️ <span><b>Etkileşimli strateji kurucu:</b> üstteki blok Decision Engine çıktısıdır. Alttaki şablon, kitle/tema seçimiyle canlı hub kancası ekler.</span></div>
+  <div class="disc-banner">ℹ️ <span><b>Strateji kurucu:</b> üstteki blok Decision Engine çıktısıdır. Alttaki seçimler canlı öneri/karar kayıtlarını filtreler — şablon metin yok.</span></div>
 
   <div class="sect"><h2 class="disp">Hedef kitle</h2></div>
   <div class="pill-row" id="stAud"><button class="pill active" onclick="stPick(this,'aud','aile')">Aileler</button><button class="pill" onclick="stPick(this,'aud','cift')">Çiftler / balayı</button><button class="pill" onclick="stPick(this,'aud','deneyim')">Deneyim arayanlar</button></div>
@@ -1533,53 +1521,90 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
 
 /* boot */
 /**
- * Erken köprü — file:// açılışında API varsa localhost'a yönlendir.
- * Bu platform canlı API kullandığı için START_UI.bat / CALISTIR.bat ile başlatılmalıdır.
+ * Erken köprü — file:// açılışında API varsa same-host'a yönlendir.
+ * Offline: tanılama + retry (BAT mesajı yok).
  */
 (function () {
   var api = window.PLANAI_API_BASE || 'http://localhost:8787';
   var isFile = location.protocol === 'file:';
 
-  var hint =
-    'Bu platform canlı API kullandığı için <b>START_UI.bat</b> veya <b>CALISTIR.bat</b> ile başlatılmalıdır.';
+  function diagnosticsHtml(err) {
+    return (
+      '<div style="margin-top:8px;font-size:12px;color:var(--cream-dim);line-height:1.5">' +
+      'API: <code>' + api + '</code><br>' +
+      'Protocol: <code>' + location.protocol + '</code><br>' +
+      (err ? ('Hata: ' + String(err) + '<br>') : '') +
+      'Sahte veri gösterilmez. Bağlantı gelince otomatik yönlendirilir.' +
+      '</div>'
+    );
+  }
 
-  function showOffline() {
+  function showOffline(err) {
     var banner = document.getElementById('liveIntelBanner');
     var text = document.getElementById('liveIntelBannerText');
     if (banner && text) {
       banner.classList.add('show');
-      text.innerHTML = '<b>API bağlantısı yok</b> — ' + hint;
+      text.innerHTML =
+        '<b>API bağlantısı yok</b> — canlı FastAPI\'ye ulaşılamadı. ' +
+        '<button type="button" class="pill" id="bootRetryBtn" style="margin-left:8px">Tekrar dene</button>' +
+        diagnosticsHtml(err);
+      var btn = document.getElementById('bootRetryBtn');
+      if (btn) btn.onclick = function () { tryConnect(true); };
     }
     var chip = document.getElementById('topSeasonChip');
     if (chip) chip.textContent = 'Sabah Brifingi · bağlantı yok';
     var meta = document.getElementById('briefMeta');
-    if (meta) meta.textContent = 'API bağlantısı yok';
+    if (meta) meta.textContent = 'API bağlantısı yok — tekrar deneniyor';
     var sig = document.getElementById('briefSignals');
     if (sig) {
       sig.innerHTML =
         '<div class="sig-line"><span class="t">—</span><span class="icon" style="background:var(--fall)"></span>' +
-        '<p><b>Platforma ulaşılamadı</b> — ' + hint +
-        '<span class="why">Neden önemli: tüm içerik SQLite üzerinden API ile gelir; file:// tek başına yetmez.</span></p></div>';
+        '<p><b>Platforma ulaşılamadı</b> — canlı API bekleniyor.' +
+        '<span class="why">Neden önemli: tüm içerik SQLite üzerinden FastAPI ile gelir.</span></p></div>' +
+        diagnosticsHtml(err);
     }
   }
 
   function probe() {
-    return fetch(api + '/api/health', { credentials: 'omit', mode: 'cors' }).then(function (r) {
+    return fetch(api.replace(/\/$/, '') + '/api/health/live', {
+      credentials: 'omit',
+      mode: 'cors',
+    }).then(function (r) {
       return r.ok;
     });
   }
 
-  if (!isFile) return;
+  function tryConnect(fromClick) {
+    probe()
+      .then(function (ok) {
+        if (ok) {
+          location.replace(api.replace(/\/$/, '') + '/');
+          return;
+        }
+        showOffline(fromClick ? 'health not ok' : null);
+        if (!window._bootRetry) {
+          window._bootRetry = setInterval(function () {
+            probe().then(function (ok2) {
+              if (ok2) {
+                clearInterval(window._bootRetry);
+                location.replace(api.replace(/\/$/, '') + '/');
+              }
+            }).catch(function () {});
+          }, 4000);
+        }
+      })
+      .catch(function (e) {
+        showOffline(e && e.message ? e.message : e);
+        if (!window._bootRetry) {
+          window._bootRetry = setInterval(function () {
+            tryConnect(false);
+          }, 4000);
+        }
+      });
+  }
 
-  probe()
-    .then(function (ok) {
-      if (ok) {
-        location.replace(api.replace(/\/$/, '') + '/');
-        return;
-      }
-      showOffline();
-    })
-    .catch(showOffline);
+  if (!isFile) return;
+  tryConnect(false);
 })();
 
 /* app */
@@ -1621,20 +1646,183 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
   function apiCredentials() {
     return useFileOrigin() ? "omit" : "include";
   }
+  function getAuthToken() {
+    try {
+      return sessionStorage.getItem("planai_api_token") || "";
+    } catch (_) {
+      return "";
+    }
+  }
+  function apiLog(level, message, detail) {
+    const payload = { t: (/* @__PURE__ */ new Date()).toISOString(), message, detail };
+    const line = `[PlanAI API] ${message}`;
+    if (level === "error") console.error(line, detail || "");
+    else if (level === "warn") console.warn(line, detail || "");
+    else console.info(line, detail || "");
+    try {
+      const key = "planai_api_log";
+      const prev = JSON.parse(sessionStorage.getItem(key) || "[]");
+      prev.push(payload);
+      sessionStorage.setItem(key, JSON.stringify(prev.slice(-40)));
+    } catch (_) {
+    }
+  }
+  function getApiDiagnostics() {
+    try {
+      return {
+        base: API_BASE || "(same-origin)",
+        origin: typeof location !== "undefined" ? location.origin : "",
+        protocol: typeof location !== "undefined" ? location.protocol : "",
+        hasToken: Boolean(getAuthToken()),
+        recent: JSON.parse(sessionStorage.getItem("planai_api_log") || "[]").slice(-8)
+      };
+    } catch (_) {
+      return { base: API_BASE || "(same-origin)", recent: [] };
+    }
+  }
+  function sleep(ms) {
+    return new Promise((r) => setTimeout(r, ms));
+  }
+  function shouldRetry(status, attempt, maxRetries) {
+    if (attempt >= maxRetries) return false;
+    if (status === 0) return true;
+    if (status === 408 || status === 429) return true;
+    if (status >= 500) return true;
+    return false;
+  }
   async function apiFetch(path, opts) {
     opts = opts || {};
-    opts.credentials = opts.credentials || apiCredentials();
-    const res = await fetch(API_BASE + path, opts);
-    if (res.status === 401) {
-      window.location.href = loginUrl();
-      return null;
+    const timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : DEFAULT_TIMEOUT_MS;
+    const maxRetries = opts.skipRetry ? 0 : opts.retries != null ? opts.retries : DEFAULT_RETRIES;
+    const method = (opts.method || "GET").toUpperCase();
+    const headers = Object.assign({}, opts.headers || {});
+    const token = getAuthToken();
+    if (token && !headers.Authorization) {
+      headers.Authorization = "Bearer " + token;
     }
-    return res;
+    let lastErr = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+      try {
+        const fetchOpts = Object.assign({}, opts, {
+          credentials: opts.credentials || apiCredentials(),
+          headers,
+          signal: controller ? controller.signal : opts.signal
+        });
+        delete fetchOpts.timeoutMs;
+        delete fetchOpts.retries;
+        delete fetchOpts.skipRetry;
+        const url = API_BASE + path;
+        const res = await fetch(url, fetchOpts);
+        if (timer) clearTimeout(timer);
+        if (res.status === 401) {
+          apiLog("warn", "401 unauthorized", { path });
+          window.location.href = loginUrl();
+          return null;
+        }
+        if (!res.ok && shouldRetry(res.status, attempt, maxRetries) && method === "GET") {
+          apiLog("warn", `retry ${attempt + 1}/${maxRetries} after HTTP ${res.status}`, { path });
+          await sleep(RETRY_BASE_MS * Math.pow(2, attempt));
+          continue;
+        }
+        if (!res.ok) {
+          apiLog("warn", `HTTP ${res.status}`, { path, status: res.status });
+        }
+        return res;
+      } catch (err) {
+        if (timer) clearTimeout(timer);
+        lastErr = err;
+        const aborted = err && (err.name === "AbortError" || /abort/i.test(String(err)));
+        apiLog("error", aborted ? "timeout" : "network error", {
+          path,
+          attempt,
+          error: String(err && err.message ? err.message : err)
+        });
+        if (attempt < maxRetries && method === "GET") {
+          await sleep(RETRY_BASE_MS * Math.pow(2, attempt));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastErr || new Error("apiFetch failed: " + path);
   }
-  var INJECTED, API_BASE;
+  async function apiJson(path, opts) {
+    try {
+      const res = await apiFetch(path, opts);
+      if (res == null) {
+        return { ok: false, data: null, error: "unauthorized", status: 401, diagnostics: getApiDiagnostics() };
+      }
+      const status = res.status;
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (_) {
+        data = null;
+      }
+      if (!res.ok) {
+        return {
+          ok: false,
+          data,
+          error: data && (data.detail || data.message || data.error) || "HTTP " + status,
+          status,
+          diagnostics: getApiDiagnostics()
+        };
+      }
+      return { ok: true, data, error: null, status, diagnostics: getApiDiagnostics() };
+    } catch (err) {
+      return {
+        ok: false,
+        data: null,
+        error: String(err && err.message ? err.message : err),
+        status: 0,
+        diagnostics: getApiDiagnostics()
+      };
+    }
+  }
+  async function probeLive() {
+    const r = await apiJson("/api/health/live", { retries: 1, timeoutMs: 8e3 });
+    return r.ok;
+  }
+  function formatDiagnosticsHtml(extra) {
+    const d = getApiDiagnostics();
+    const lines = [
+      `API base: <code>${escDiag(d.base)}</code>`,
+      `Origin: <code>${escDiag(d.origin || "\u2014")}</code>`,
+      `Protocol: <code>${escDiag(d.protocol || "\u2014")}</code>`,
+      `Auth token: ${d.hasToken ? "present" : "cookie session"}`
+    ];
+    if (extra) lines.push(String(extra));
+    if (d.recent && d.recent.length) {
+      const last = d.recent[d.recent.length - 1];
+      lines.push(`Last log: ${escDiag(last.message)}`);
+    }
+    return `<div class="api-diag" style="margin-top:8px;font-size:12px;color:var(--cream-dim);line-height:1.5">${lines.join("<br>")}</div>`;
+  }
+  function escDiag(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function renderConnectionError(targetEl, opts) {
+    opts = opts || {};
+    if (!targetEl) return;
+    const title = opts.title || "API'ye ula\u015F\u0131lamad\u0131";
+    const detail = opts.detail || "Ba\u011Flant\u0131 yenilenince canl\u0131 veri otomatik y\xFCklenecek.";
+    const onRetry = opts.onRetry;
+    const retryId = "api-retry-" + Math.random().toString(36).slice(2, 8);
+    targetEl.innerHTML = `<div class="sig-line"><span class="t">!</span><span class="icon" style="background:var(--fall)"></span><p><b>${title}</b> \u2014 ${detail}<span class="why">Tan\u0131lama a\u015Fa\u011F\u0131da. Sahte veri g\xF6sterilmez.</span></p></div>` + formatDiagnosticsHtml(opts.error ? "Hata: " + String(opts.error) : "") + `<div style="margin-top:10px"><button type="button" class="btn" id="${retryId}">Tekrar dene</button></div>`;
+    const btn = document.getElementById(retryId);
+    if (btn && typeof onRetry === "function") {
+      btn.addEventListener("click", () => onRetry());
+    }
+  }
+  var INJECTED, DEFAULT_TIMEOUT_MS, DEFAULT_RETRIES, RETRY_BASE_MS, API_BASE;
   var init_api = __esm({
     "assets/js/api.js"() {
       INJECTED = "/poland-intelligence";
+      DEFAULT_TIMEOUT_MS = 25e3;
+      DEFAULT_RETRIES = 2;
+      RETRY_BASE_MS = 400;
       API_BASE = resolveApiBase();
     }
   });
@@ -1701,11 +1889,15 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
     initTranslationListeners: () => initTranslationListeners,
     initViewMode: () => initViewMode,
     intelligenceReportHtml: () => intelligenceReportHtml,
+    loadAdvisorLive: () => loadAdvisorLive,
     loadAiVisibility: () => loadAiVisibility,
+    loadAnkaraReport: () => loadAnkaraReport,
     loadArticleExplorer: () => loadArticleExplorer,
     loadDecisionMediaStrategy: () => loadDecisionMediaStrategy,
+    loadGoTurkiyeLive: () => loadGoTurkiyeLive,
     loadIntelligenceHub: () => loadIntelligenceHub,
     loadIntelligenceSection: () => loadIntelligenceSection,
+    loadMarketIntelligenceBundle: () => loadMarketIntelligenceBundle,
     loadMonthlyReview: () => loadMonthlyReview,
     loadMorningBrief: () => loadMorningBrief,
     loadPipelineStatus: () => loadPipelineStatus,
@@ -3165,10 +3357,16 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
       loadWeeklyOutlook();
       loadMonthlyReview();
     } catch (err) {
-      const isFile = typeof location !== "undefined" && location.protocol === "file:";
-      const hint = isFile ? "<b>START_UI.bat</b> dosyas\u0131na \xE7ift t\u0131klay\u0131n, sonra F5 ile yenileyin." : "L\xFCtfen birka\xE7 dakika sonra yenileyin.";
+      apiLog("error", "loadMorningBrief failed", { error: String(err && err.message ? err.message : err) });
+      const sig = document.getElementById("briefSignals");
       document.getElementById("briefEyebrow").textContent = "G\xFCnl\xFCk Sevkiyat \xB7 ba\u011Flant\u0131 yok";
-      document.getElementById("briefSignals").innerHTML = `<div class="sig-line"><span class="t">\u2014</span><span class="icon" style="background:var(--fall)"></span><p><b>Platforma ula\u015F\u0131lamad\u0131</b> \u2014 ${hint}<span class="why">Neden \xF6nemli: ba\u011Flant\u0131 d\xFCzeldi\u011Finde canl\u0131 sabah brifingi otomatik y\xFCklenir.</span></p></div>`;
+      renderConnectionError(sig, {
+        title: "Platforma ula\u015F\u0131lamad\u0131",
+        detail: "Canl\u0131 FastAPI yan\u0131t vermiyor. Sahte brifing g\xF6sterilmez.",
+        error: err && err.message ? err.message : err,
+        onRetry: () => loadMorningBrief(0)
+      });
+      if (retry < 12) setTimeout(() => loadMorningBrief(retry + 1), 8e3);
     }
   }
   function renderWeeklyOutlook(data) {
@@ -3595,6 +3793,10 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
     if (section === "media" || section === "strategy" || section === "gotr" || section === "report") {
       loadDecisionMediaStrategy();
     }
+    if (section === "report") loadAnkaraReport();
+    if (section === "advisor") loadAdvisorLive();
+    if (section === "gotr") loadGoTurkiyeLive();
+    if (section === "market" || section === "brief") loadMarketIntelligenceBundle();
   }
   async function loadAiVisibility() {
     try {
@@ -4197,23 +4399,17 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
     somFilter = f;
     renderAiVisibility(window._aiVisCache || intelligenceCache && state.intelligenceCache.ai_visibility);
   }
-  function copyReport() {
+  async function copyReport() {
+    await loadAnkaraReport();
     const paper = document.getElementById("reportBody");
     if (!paper) return;
-    const weeklyBody = document.getElementById("weeklyOutlookBody");
-    const monthlyBody = document.getElementById("monthlyReviewBody");
-    let extra = "";
-    if (weeklyBody && weeklyBody.innerText && weeklyBody.innerText.indexOf("hen\xFCz yok") === -1) {
-      extra += "\n\n--- Canl\u0131 Haftal\u0131k Intelligence Brief ---\n" + weeklyBody.innerText;
-    }
-    if (monthlyBody && monthlyBody.innerText && monthlyBody.innerText.indexOf("hen\xFCz yok") === -1) {
-      extra += "\n\n--- Canl\u0131 Ayl\u0131k Executive Review ---\n" + monthlyBody.innerText;
-    }
-    const t = paper.innerText + extra;
+    const t = paper.innerText || "";
     (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).finally(() => {
       const el = document.getElementById("toast");
-      el.classList.add("show");
-      setTimeout(() => el.classList.remove("show"), 2200);
+      if (el) {
+        el.classList.add("show");
+        setTimeout(() => el.classList.remove("show"), 2200);
+      }
     });
   }
   function fbSave(mod) {
@@ -4238,32 +4434,304 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
     btn.parentElement.querySelectorAll(".pill").forEach((p) => p.classList.remove("active"));
     btn.classList.add("active");
   }
-  function stBuild() {
-    const t = ST[stSel.theme];
+  async function stBuild() {
+    const out = document.getElementById("stOut");
+    if (!out) return;
+    out.innerHTML = '<div class="note">Canl\u0131 strateji motoru y\xFCkleniyor\u2026</div>';
     const hub = state.intelligenceCache || intelligenceCache || {};
-    const mp = hub.market_pulse || {};
+    const themeMap = { kis: "k\u0131\u015F", gastro: "gastronomi", kultur: "k\xFClt\xFCr" };
+    const audMap = { aile: "aile", cift: "\xE7ift", deneyim: "deneyim" };
+    const themeKey = themeMap[stSel.theme] || stSel.theme;
+    const audKey = audMap[stSel.aud] || stSel.aud;
+    const [strat, recs, dash] = await Promise.all([
+      apiJson("/api/intelligence/decision-media-strategy"),
+      apiJson("/api/v1/market-intelligence/recommendations?limit=20"),
+      apiJson("/api/v1/market-intelligence/dashboard")
+    ]);
+    const decisions = strat.ok && strat.data && (strat.data.decisions || strat.data.priority_decisions || strat.data.items) || [];
+    const list = recs.ok && recs.data && recs.data.recommendations || [];
+    const mp = hub.market_pulse || dash.ok && dash.data && dash.data.market_pulse || {};
     const liveSignals = ((mp.consumer_signals || {}).rising || {}).lines || [];
-    const liveLine = liveSignals.length ? `<div class="sig-line"><span class="t">CANLI</span><span class="icon" style="background:var(--rise)"></span><p><b>SQLite pazar kancas\u0131:</b> ${liveSignals.slice(0, 3).map(esc).join(" \xB7 ")}<span class="why">Kaynak: Pazar Nabz\u0131 / consumer_signals [GER\xC7EK veya TAHM\u0130N\u0130 rozetli]</span></p></div>` : "";
-    const comps = ((hub.competitors || {}).move_cards || []).slice(0, 2);
-    const compLine = comps.length ? `<div class="sig-line"><span class="t">RAK\u0130P</span><span class="icon" style="background:var(--fall)"></span><p><b>Canl\u0131 rakip kancas\u0131:</b> ${comps.map((c) => esc(c.name_tr || "")).join(" \xB7 ")}<span class="why">Kaynak: Rakip \u0130zleme / move_cards</span></p></div>` : "";
-    document.getElementById("stOut").innerHTML = `
-  <div class="dispatch"><div class="dispatch-head"><span class="cls">Strateji Tasla\u011F\u0131 \u2014 Canl\u0131 kancal\u0131 sim\xFClasyon</span><span class="mono" style="font-size:10px;color:var(--muted)">kitle: ${stSel.aud} \xB7 tema: ${stSel.theme} \xB7 b\xFCt\xE7e: ${stSel.bud}</span></div>
-  <div class="dispatch-body">
-    <div class="sig-line"><span class="t">HEDEF</span><span class="icon" style="background:var(--gold)"></span><p><b>Destinasyon oda\u011F\u0131:</b> ${t.dest}<span class="why">Kitle uyarlamas\u0131: ${STAUD[stSel.aud]}</span></p></div>
-    <div class="sig-line"><span class="t">ZAMAN</span><span class="icon" style="background:var(--rise)"></span><p><b>Kampanya penceresi:</b> ${t.win}<span class="why">Takvim kilidi: PL okul tatilleri + rezervasyon dalgalar\u0131</span></p></div>
-    <div class="sig-line"><span class="t">MEDYA</span><span class="icon" style="background:var(--gold)"></span><p><b>Kanal karmas\u0131:</b> ${t.med}<span class="why">B\xFCt\xE7e uyarlamas\u0131: ${STBUD[stSel.bud]}</span></p></div>
-    <div class="sig-line"><span class="t">\xD6L\xC7\xDCM</span><span class="icon" style="background:var(--rise)"></span><p><b>Ba\u015Far\u0131 g\xF6stergeleri:</b> ${t.kpi}<span class="why">Kan\u0131t zinciri: her g\xF6sterge kay\u0131t defterindeki bir kayna\u011Fa ba\u011Flan\u0131r</span></p></div>
-    ${liveLine}${compLine}
-  </div></div>
-  <div class="note" style="margin-top:14px"><b>D\xFCr\xFCstl\xFCk notu:</b> \u015Fablon sim\xFClasyondur; CANLI/RAK\u0130P sat\u0131rlar\u0131 SQLite hub'dan gelir. Tam otomatik strateji motoru sonraki s\xFCr\xFCmde.</div>`;
+    const comps = ((hub.competitors || {}).move_cards || []).slice(0, 3);
+    const matched = list.filter((r) => {
+      const blob = JSON.stringify(r).toLowerCase();
+      return blob.includes(themeKey) || blob.includes(audKey) || blob.includes("t\xFCrk") || blob.includes("turcj");
+    }).slice(0, 4);
+    const decisionCards = (Array.isArray(decisions) ? decisions : []).slice(0, 3);
+    if (!matched.length && !decisionCards.length && !liveSignals.length) {
+      out.innerHTML = `<div class="note"><b>Canl\u0131 strateji verisi yok</b> \u2014 Decision Engine veya \xF6neri kayd\u0131 bulunamad\u0131. Sahte taslak \xFCretilmez.</div>` + formatDiagnosticsHtml([strat.error, recs.error].filter(Boolean).join(" \xB7 "));
+      return;
+    }
+    let html2 = `<div class="dispatch"><div class="dispatch-head"><span class="cls">Strateji \u2014 canl\u0131 Decision Engine</span>
+    <span class="mono" style="font-size:10px;color:var(--muted)">kitle: ${esc(stSel.aud)} \xB7 tema: ${esc(stSel.theme)} \xB7 b\xFCt\xE7e: ${esc(stSel.bud)}</span></div>
+    <div class="dispatch-body">`;
+    matched.forEach((r, i) => {
+      html2 += `<div class="sig-line"><span class="t">\xD6${i + 1}</span><span class="icon" style="background:var(--gold)"></span>
+      <p><b>${esc(r.recommended_action || r.what_changed || "\xD6neri")}</b> \u2014
+      ${esc(r.why || r.why_important || "")}
+      <span class="why">Etki: ${esc(r.impact || "\u2014")} \xB7 \xD6ncelik: ${esc(r.priority || "\u2014")} \xB7 Sahip: ${esc(r.owner || "\u2014")} \xB7 Son: ${esc(r.deadline || "\u2014")}</span></p></div>`;
+    });
+    decisionCards.forEach((d, i) => {
+      const q = d.five_questions || {};
+      html2 += `<div class="sig-line"><span class="t">K${i + 1}</span><span class="icon" style="background:var(--rise)"></span>
+      <p><b>${esc(d.dios && d.dios.decision || q.do_today || d.recommendation || "Karar")}</b> \u2014
+      ${esc(q.what_happened || d.problem || "")}
+      <span class="why">${esc(q.evidence_summary || d.reason || "")}</span></p></div>`;
+    });
+    if (liveSignals.length) {
+      html2 += `<div class="sig-line"><span class="t">CANLI</span><span class="icon" style="background:var(--rise)"></span>
+      <p><b>Pazar kancas\u0131:</b> ${liveSignals.slice(0, 3).map(esc).join(" \xB7 ")}
+      <span class="why">Kaynak: Pazar Nabz\u0131 / consumer_signals</span></p></div>`;
+    }
+    if (comps.length) {
+      html2 += `<div class="sig-line"><span class="t">RAK\u0130P</span><span class="icon" style="background:var(--fall)"></span>
+      <p><b>Rakip:</b> ${comps.map((c) => esc(c.name_tr || c.title || "")).join(" \xB7 ")}
+      <span class="why">Kaynak: Rakip \u0130zleme</span></p></div>`;
+    }
+    html2 += `</div></div>
+    <div class="note" style="margin-top:14px"><b>Kaynak:</b> yaln\u0131zca SQLite/API. \u015Eablon metin kullan\u0131lmaz.</div>`;
+    out.innerHTML = html2;
+  }
+  function _formatAdvisorAnswer(recs) {
+    if (!recs || !recs.length) {
+      return "<b>Canl\u0131 \xF6neri bulunamad\u0131.</b><br>Sabah Brifingi veya Decision Engine kayd\u0131 yok. Sahte cevap \xFCretilmez.";
+    }
+    return recs.map((r, i) => {
+      return `<b>${i + 1}. ${esc(r.recommended_action || r.what_changed || "\xD6neri")}</b><br>
+      <b>Ne de\u011Fi\u015Fti:</b> ${esc(r.what_changed || "\u2014")}<br>
+      <b>Neden:</b> ${esc(r.why || "\u2014")}<br>
+      <b>Neden \xF6nemli:</b> ${esc(r.why_important || "\u2014")}<br>
+      <b>Etki:</b> ${esc(r.impact || "\u2014")}<br>
+      <b>\xD6ncelik / sahip / son:</b> ${esc(r.priority || "\u2014")} \xB7 ${esc(r.owner || "\u2014")} \xB7 ${esc(r.deadline || "\u2014")}<br>
+      <b>G\xFCven:</b> ${r.confidence != null ? esc(String(r.confidence)) : r.valid === false ? "k\u0131smi kay\u0131t" : "\u2014"}`;
+    }).join("<br><br>");
+  }
+  async function loadAdvisorLive() {
+    const thread = document.getElementById("advThread");
+    const alert2 = document.querySelector("#s-advisor .prototype-alert");
+    if (alert2) {
+      alert2.innerHTML = "<b>Canl\u0131 AI Dan\u0131\u015Fman:</b> cevaplar yaln\u0131zca API \xF6nerilerinden \xFCretilir. Sabit metin yok.";
+    }
+    const [recs, brief] = await Promise.all([
+      apiJson("/api/v1/market-intelligence/recommendations?limit=30"),
+      apiJson("/api/brief/today", { retries: 0 })
+    ]);
+    const list = recs.ok && recs.data && recs.data.recommendations || [];
+    let briefRecs = [];
+    if (brief.ok && brief.data && Array.isArray(brief.data.recommendations)) {
+      briefRecs = brief.data.recommendations.map((r) => ({
+        what_changed: r.title || r.what_changed,
+        why: r.why,
+        why_important: r.evidence || r.why_it_matters,
+        impact: r.expected_impact,
+        recommended_action: r.title || r.recommended_action,
+        priority: r.priority,
+        owner: r.owner || "Warsaw Tourism Counsellor",
+        deadline: r.timing || r.deadline,
+        confidence: r.confidence_score,
+        valid: true
+      }));
+    }
+    advisorCache = {
+      recommendations: list.length ? list : briefRecs,
+      brief: brief.ok ? brief.data : null
+    };
+    if (thread && !thread.dataset.liveBootstrapped) {
+      thread.dataset.liveBootstrapped = "1";
+      const n = advisorCache.recommendations.length;
+      thread.innerHTML = n ? `<div class="msg a">G\xFCnayd\u0131n. ${n} canl\u0131 \xF6neri/karar kayd\u0131 y\xFCklendi. Yukar\u0131dan bir soru se\xE7in \u2014 cevaplar SQLite kay\u0131tlar\u0131ndan \xFCretilecek.</div>` : `<div class="msg a">Hen\xFCz canl\u0131 \xF6neri yok. Pipeline \xE7al\u0131\u015Ft\u0131k\xE7a burada g\xF6r\xFCnecek. Sahte cevap \xFCretilmez.${formatDiagnosticsHtml(recs.error || "")}</div>`;
+    }
   }
   function ask(i) {
     const t = document.getElementById("advThread");
-    t.insertAdjacentHTML("beforeend", `<div class="msg q">${QA[i].q}</div>`);
-    setTimeout(() => {
-      t.insertAdjacentHTML("beforeend", `<div class="msg a">${QA[i].a}</div>`);
-      t.lastElementChild.scrollIntoView({ behavior: "smooth", block: "end" });
-    }, 350);
+    if (!t) return;
+    const prompt = ADVISOR_PROMPTS[i] || ADVISOR_PROMPTS[0];
+    t.insertAdjacentHTML("beforeend", `<div class="msg q">${esc(prompt.label)}</div>`);
+    const loadingId = "adv-loading-" + Date.now();
+    t.insertAdjacentHTML("beforeend", `<div class="msg a" id="${loadingId}">Canl\u0131 kay\u0131tlar taran\u0131yor\u2026</div>`);
+    const run = async () => {
+      if (!advisorCache.recommendations.length) await loadAdvisorLive();
+      const pool = advisorCache.recommendations || [];
+      const matched = pool.filter((r) => {
+        const blob = JSON.stringify(r).toLowerCase();
+        return prompt.match.some((m) => blob.includes(m));
+      }).slice(0, 3);
+      const use = matched.length ? matched : pool.slice(0, 3);
+      const el = document.getElementById(loadingId);
+      if (el) el.innerHTML = _formatAdvisorAnswer(use);
+      t.lastElementChild?.scrollIntoView({ behavior: "smooth", block: "end" });
+    };
+    run().catch((err) => {
+      const el = document.getElementById(loadingId);
+      if (el) el.innerHTML = "API hatas\u0131: " + esc(String(err && err.message ? err.message : err)) + formatDiagnosticsHtml();
+    });
+  }
+  async function loadAnkaraReport() {
+    const paper = document.getElementById("reportBody");
+    const alert2 = document.querySelector("#s-report .prototype-alert");
+    if (alert2) {
+      alert2.innerHTML = "<b>Ankara Raporu:</b> metin canl\u0131 Haftal\u0131k / Ayl\u0131k / MI executive API \xE7\u0131kt\u0131lar\u0131ndan \xFCretilir.";
+    }
+    if (!paper) return;
+    paper.innerHTML = '<p class="rp-mono">Canl\u0131 rapor y\xFCkleniyor\u2026</p>';
+    const [weekly, monthly, daily, recs] = await Promise.all([
+      apiJson("/api/weekly/outlook"),
+      apiJson("/api/monthly/review"),
+      apiJson("/api/v1/market-intelligence/reports/daily"),
+      apiJson("/api/v1/market-intelligence/recommendations?limit=8")
+    ]);
+    const errors = [weekly, monthly, daily, recs].filter((r) => !r.ok).map((r) => r.error).filter(Boolean);
+    const w = weekly.ok ? weekly.data : null;
+    const m = monthly.ok ? monthly.data : null;
+    const d = daily.ok ? daily.data : null;
+    const recommendations = recs.ok && recs.data && recs.data.recommendations || [];
+    const weekLabel = w && (w.week_start || w.outlook && w.outlook.week_label) || "\u2014";
+    const glance = w && w.outlook && w.outlook.week_at_glance || {};
+    const brief = d && d.brief;
+    const signals = d && d.signals || [];
+    if (!w && !m && !d && !recommendations.length) {
+      paper.innerHTML = `<p class="rp-mono">T.C. \xB7 Var\u015Fova Turizm M\xFC\u015Favirli\u011Fi</p>
+       <h3>Canl\u0131 rapor verisi yok</h3>
+       <p>Haftal\u0131k/ayl\u0131k snapshot veya sabah brifingi hen\xFCz \xFCretilmemi\u015F. Sahte istatistik g\xF6sterilmez.</p>` + formatDiagnosticsHtml(errors.join(" \xB7 "));
+      return;
+    }
+    let html2 = `<div class="rp-mono">T.C. K\xFClt\xFCr ve Turizm Bakanl\u0131\u011F\u0131 \u2014 TGA \xB7 Var\u015Fova Turizm M\xFC\u015Favirli\u011Fi \xB7 Canl\u0131 Pazar Raporu</div>
+    <h3>Polonya Pazar\u0131 \u2014 ${esc(String(weekLabel))} (canl\u0131 derleme)</h3>
+    <p><b>\xD6zet:</b> ${esc(
+      brief && (brief.headline || brief.title) || (glance.summary_tr || glance.headline_tr) || m && m.executive_summary_tr || "Sabah brifingi ve haftal\u0131k bak\u0131\u015Ftan derlendi."
+    )}</p>`;
+    if (signals.length) {
+      html2 += `<p class="rp-h">1. Pazar Sinyalleri</p><ul>`;
+      signals.slice(0, 8).forEach((s) => {
+        html2 += `<li><b>${esc(s.title || "")}</b> \u2014 ${esc((s.body || s.why_it_matters || "").slice(0, 220))}</li>`;
+      });
+      html2 += `</ul>`;
+    } else if (w && w.outlook) {
+      html2 += `<p class="rp-h">1. Haftal\u0131k Bak\u0131\u015F</p><p>${esc(JSON.stringify(glance).slice(0, 500))}</p>`;
+    }
+    const hub = state.intelligenceCache || intelligenceCache || {};
+    const comps = (hub.competitors || {}).move_cards || [];
+    html2 += `<p class="rp-h">2. Rakip Hareketleri</p>`;
+    if (comps.length) {
+      html2 += `<ul>` + comps.slice(0, 5).map(
+        (c) => `<li><b>${esc(c.name_tr || c.title || "")}</b> \u2014 ${esc((c.summary_tr || c.move_tr || "").slice(0, 200))}</li>`
+      ).join("") + `</ul>`;
+    } else {
+      html2 += `<p>Canl\u0131 rakip kart\u0131 yok (API bo\u015F d\xF6nd\xFC).</p>`;
+    }
+    html2 += `<p class="rp-h">3. \xD6neriler</p>`;
+    if (recommendations.length) {
+      html2 += `<ul>` + recommendations.slice(0, 6).map(
+        (r) => `<li><b>${esc(r.recommended_action || r.what_changed || "")}</b> \u2014 ${esc(r.why || "")} \xB7 \xD6ncelik ${esc(r.priority || "\u2014")} \xB7 Son ${esc(r.deadline || "\u2014")}</li>`
+      ).join("") + `</ul>`;
+    } else {
+      html2 += `<p>Canl\u0131 \xF6neri kayd\u0131 yok.</p>`;
+    }
+    if (m) {
+      html2 += `<p class="rp-h">4. Ayl\u0131k Executive</p><p>${esc(
+        m.executive_summary_tr || m.summary_tr || m.title || "Ayl\u0131k review y\xFCklendi."
+      ).slice(0, 600)}</p>`;
+    }
+    html2 += `<p style="margin-top:18px;font-size:12px;color:#8A7C57">\xDCretim: PlanAI live API \xB7 ${esc((/* @__PURE__ */ new Date()).toISOString())} \xB7 M\xFC\u015Favir onay\u0131 beklenir</p>`;
+    paper.innerHTML = html2;
+  }
+  async function loadGoTurkiyeLive() {
+    const section = document.getElementById("s-gotr");
+    if (!section) return;
+    let mount = document.getElementById("gotrLiveMount");
+    if (!mount) {
+      mount = document.createElement("div");
+      mount.id = "gotrLiveMount";
+      const lede = section.querySelector(".lede");
+      if (lede && lede.parentNode) lede.parentNode.insertBefore(mount, lede.nextSibling);
+      else section.appendChild(mount);
+    }
+    mount.innerHTML = '<div class="note">GoT\xFCrkiye canl\u0131 matris y\xFCkleniyor\u2026</div>';
+    const [playbook, citeRes, strat, miSources] = await Promise.all([
+      apiJson("/api/intelligence/playbook"),
+      apiJson("/api/intelligence/citations"),
+      apiJson("/api/intelligence/decision-media-strategy"),
+      apiJson("/api/v1/market-intelligence/sources")
+    ]);
+    const cards = playbook.ok && playbook.data && (playbook.data.decision_cards || playbook.data.cards) || [];
+    const srcList = miSources.ok && miSources.data && miSources.data.sources || [];
+    const citeData = citeRes.ok && citeRes.data || {};
+    const gotrSources = srcList.filter((s) => {
+      const blob = JSON.stringify(s).toLowerCase();
+      return blob.includes("goturkiye") || blob.includes("tga") || blob.includes("ministry") || blob.includes("turism") || blob.includes("tourism");
+    });
+    let html2 = `<div class="sect"><h2 class="disp">Canl\u0131 anlat\u0131 & kaynak durumu</h2><span class="hint">API \xB7 sahte matris yok</span></div>`;
+    html2 += `<div class="grid g2 card-eq">`;
+    html2 += `<div class="card"><div class="k">Playbook kararlar\u0131</div><div class="v" style="font-size:22px">${cards.length}</div>
+    <div class="d">${cards.length ? esc((cards[0].title_tr || cards[0].problem || "").slice(0, 120)) : "Kay\u0131t yok"}</div></div>`;
+    html2 += `<div class="card"><div class="k">Kurumsal kaynaklar</div><div class="v" style="font-size:22px">${gotrSources.length || srcList.length}</div>
+    <div class="d">${gotrSources.slice(0, 3).map((s) => esc(s.name || "")).join(" \xB7 ") || (srcList.length ? "Genel kaynak listesi" : "Kaynak listesi bo\u015F")}</div></div>`;
+    html2 += `<div class="card"><div class="k">Citation</div><div class="v" style="font-size:18px">${esc(String(citeData.count != null ? citeData.count : citeData.status_label_tr || "\u2014"))}</div>
+    <div class="d">${esc(citeData.status_label_tr || citeData.status || "")}</div></div>`;
+    html2 += `<div class="card"><div class="k">Decision Media</div><div class="v" style="font-size:18px">${strat.ok ? "ba\u011Fl\u0131" : "yok"}</div>
+    <div class="d">${esc(strat.error || "decision-media-strategy")}</div></div>`;
+    html2 += `</div>`;
+    if (cards.length) {
+      html2 += `<div class="sect"><h2 class="disp">Aksiyon kartlar\u0131</h2></div><div class="grid g2 card-eq">`;
+      cards.slice(0, 6).forEach((c) => {
+        html2 += `<div class="card"><div class="k">${esc(c.title_tr || c.theme || "Karar")}</div>
+        <div class="d" style="margin-top:8px">${esc((c.recommendation_tr || c.do_tr || c.problem || "").slice(0, 220))}</div></div>`;
+      });
+      html2 += `</div>`;
+    } else {
+      html2 += `<div class="note"><b>Playbook bo\u015F:</b> canl\u0131 karar kart\u0131 yok. ${formatDiagnosticsHtml(playbook.error || "")}</div>`;
+    }
+    mount.innerHTML = html2;
+    const hardcodedTableWrap = section.querySelector("table")?.closest(".card");
+    if (hardcodedTableWrap && (cards.length || gotrSources.length || srcList.length)) {
+      hardcodedTableWrap.style.display = "none";
+      const prevSect = hardcodedTableWrap.previousElementSibling;
+      if (prevSect && prevSect.classList.contains("sect")) prevSect.style.display = "none";
+    }
+    const landingGrid = section.querySelector(".grid.g3");
+    if (landingGrid && cards.length) {
+      landingGrid.style.display = "none";
+      const prevSect = landingGrid.previousElementSibling;
+      if (prevSect && prevSect.classList.contains("sect")) prevSect.style.display = "none";
+    }
+  }
+  async function loadMarketIntelligenceBundle() {
+    const [dash, timeline, entities, health, metrics] = await Promise.all([
+      apiJson("/api/v1/market-intelligence/dashboard"),
+      apiJson("/api/v1/market-intelligence/timeline?limit=30"),
+      apiJson("/api/v1/market-intelligence/entities?limit=40"),
+      apiJson("/api/v1/market-intelligence/health"),
+      apiJson("/api/v1/market-intelligence/metrics")
+    ]);
+    window._miCache = {
+      dashboard: dash.ok ? dash.data : null,
+      timeline: timeline.ok ? timeline.data : null,
+      entities: entities.ok ? entities.data : null,
+      health: health.ok ? health.data : null,
+      metrics: metrics.ok ? metrics.data : null
+    };
+    const marketAlert = document.getElementById("marketMiStrip");
+    if (marketAlert && dash.ok && dash.data) {
+      const nSrc = dash.data.sources_active || 0;
+      const nSig = dash.data.signals || 0;
+      const nArt = dash.data.articles || 0;
+      marketAlert.innerHTML = `<div class="note"><b>Market Intelligence:</b> ${nSrc} kaynak \xB7 ${nSig} sinyal \xB7 ${nArt} makale \xB7 enrichment ${esc(String(metrics.ok && metrics.data && metrics.data.enrichment_coverage || "\u2014"))}</div>`;
+    }
+    const marketScreen = document.getElementById("s-market");
+    if (marketScreen && !document.getElementById("marketMiStrip")) {
+      const strip = document.createElement("div");
+      strip.id = "marketMiStrip";
+      marketScreen.insertBefore(strip, marketScreen.firstChild);
+      if (dash.ok && dash.data) {
+        strip.innerHTML = `<div class="note"><b>Market Intelligence:</b> ${dash.data.sources_active || 0} kaynak \xB7 ${dash.data.signals || 0} sinyal \xB7 ${dash.data.articles || 0} makale</div>`;
+      } else if (!dash.ok) {
+        strip.innerHTML = `<div class="note"><b>MI dashboard:</b> ${esc(dash.error || "ba\u011Flant\u0131 yok")}</div>`;
+      }
+    }
+    if (timeline.ok && timeline.data && Array.isArray(timeline.data.signals)) {
+      window._miTimelineSignals = timeline.data.signals;
+    }
+    return window._miCache;
   }
   async function submitStrategyFeedback(decisionId, action) {
     try {
@@ -4563,13 +5031,14 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
       if (el && u.display_name) el.textContent = u.display_name + " \xB7 Private Alpha";
     });
   }
-  var intelligenceCache, somFilter, VIEW_MODE_KEY, CIRCLED_NUM, _workstationCache, _workstationPollTimer, TR_CACHE_KEY, confToggle, liveDeltaState, sessionNotes, stSel, ST, STAUD, STBUD, QA;
+  var intelligenceCache, somFilter, advisorCache, VIEW_MODE_KEY, CIRCLED_NUM, _workstationCache, _workstationPollTimer, TR_CACHE_KEY, confToggle, liveDeltaState, sessionNotes, stSel, ADVISOR_PROMPTS;
   var init_destination_core = __esm({
     "assets/js/destination.core.js"() {
       init_state();
       init_api();
       intelligenceCache = state.intelligenceCache;
       somFilter = "all";
+      advisorCache = { recommendations: [], decisions: [], brief: null };
       VIEW_MODE_KEY = "planai_view_mode_v1";
       CIRCLED_NUM = ["\u2460", "\u2461", "\u2462", "\u2463", "\u2464", "\u2465", "\u2466", "\u2467"];
       if (typeof window !== "undefined") {
@@ -4618,26 +5087,10 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
       if (typeof window !== "undefined") window.exportPlaybookBrief = exportPlaybookBrief;
       sessionNotes = {};
       stSel = { aud: "aile", theme: "kis", bud: "orta" };
-      ST = {
-        kis: { dest: "Antalya + Alanya (12-ay \xFCr\xFCn)", win: "Ekim lansman\u0131 \u2192 Kas\u0131m\u2013Aral\u0131k yo\u011Funluk (rezervasyon dalgas\u0131 \xFCst\xFCne)", med: 'Facebook topluluk + YouTube aile yarat\u0131c\u0131lar\u0131 + SEM savunmas\u0131 ("gdzie ciep\u0142o w grudniu")', kpi: "K\u0131\u015F-g\xFCne\u015Fi arama pay\u0131 \xB7 hub trafi\u011Fi \xB7 Ara\u2013\u015Eub PL var\u0131\u015Flar\u0131 (resm\xEE istatistik)" },
-        gastro: { dest: "Gaziantep + Kapadokya hatt\u0131 (UNESCO gastronomi \xE7\u0131pas\u0131)", win: "Q3 i\xE7erik \xFCretimi \u2192 sonbahar bas\u0131n gezisi \u2192 Q1 amplifikasyon", med: "Onet/WP editoryal i\u015F birli\u011Fi + deneyim yarat\u0131c\u0131lar\u0131 (IG/YT)", kpi: '"wakacje gastronomiczne" g\xF6r\xFCn\xFCrl\xFC\u011F\xFC \xB7 citation kazan\u0131m\u0131 \xB7 bas\u0131n yans\u0131mas\u0131' },
-        kultur: { dest: "\u0130stanbul + Kapadokya + Efes \xFC\xE7geni", win: "\u0130lkbahar/sonbahar omuz sezonlar\u0131 (Maj\xF3wka penceresi dahil)", med: 'PL medya i\u015F birlikleri + kar\u015F\u0131la\u015Ft\u0131rma i\xE7eri\u011Fi ("kultura: Turcja czy W\u0142ochy")', kpi: "K\xFClt\xFCr-niyeti SoM \xB7 omuz-sezon var\u0131\u015Flar\u0131" }
-      };
-      STAUD = { aile: 'aile-de\u011Fer yarat\u0131c\u0131lar\u0131, okul-tatili takvim kilidi, "z dzie\u0107mi" dil e\u015Flemesi', cift: "balay\u0131 kay\u0131p-niyetini a\xE7an romantik varl\u0131klar (Kapadokya balon, Bodrum), premium \xE7er\xE7eve", deneyim: "macera/do\u011Fa dikeyi (adventure.goturkiye) + s\xFCrd\xFCr\xFClebilirlik rozetleri" };
-      STBUD = { dusuk: "Owned i\xE7erik + SEM-savunma a\u011F\u0131rl\u0131kl\u0131; yarat\u0131c\u0131 i\u015F birli\u011Fi 1\u20132 mikro", orta: "\u0130\xE7erik + 3\u20135 yarat\u0131c\u0131 + Onet/WP i\u015F birli\u011Fi dengesi", yuksek: "Yukar\u0131s\u0131 + bas\u0131n gezisi + fuar (TT Warsaw) aktivasyonu" };
-      QA = [
-        {
-          q: "\xD6n\xFCm\xFCzdeki \xE7eyrekte k\u0131\u015F b\xFCt\xE7esini nereye koyay\u0131m?",
-          a: `<b>\xD6neri: b\xFCt\xE7enin a\u011F\u0131rl\u0131\u011F\u0131n\u0131 Facebook + k\u0131\u015F-g\xFCne\u015Fi i\xE7erik hatt\u0131na, Ekim lansman\u0131yla.</b><br><br><b>Neden:</b> K\u0131\u015F g\xFCne\u015Fi T\xFCrkiye'nin rakipsiz sezonu; Polonyal\u0131 12 ay u\xE7uyor, Yunanistan/H\u0131rvatistan bu rafta yok.<br><b>Kan\u0131t:</b> Kas\u0131m\u2013Aral\u0131k ikinci talep tepesi [GER\xC7EK] \xB7 Rainbow k\u0131\u015F katalo\u011Fu erken a\xE7\u0131ld\u0131 [GER\xC7EK] \xB7 "gdzie ciep\u0142o w grudniu" +24% [GER\xC7EK].<br><b>Beklenen etki:</b> Aral\u0131k rezervasyon dalgas\u0131nda operat\xF6r-ba\u011F\u0131ms\u0131z resm\xEE g\xF6r\xFCn\xFCrl\xFCk; k\u0131\u015F pay\u0131nda \xF6l\xE7\xFClebilir savunma.<br><b>G\xFCven:</b> Y\xFCksek.<br><b>Alternatifler:</b> (a) SEM-a\u011F\u0131rl\u0131kl\u0131 savunma \u2014 h\u0131zl\u0131 ama kal\u0131c\u0131 varl\u0131k b\u0131rakmaz \xB7 (b) Yaz 2027'ye saklamak \u2014 k\u0131\u015F avantaj\u0131 savunmas\u0131z kal\u0131r.`
-        },
-        {
-          q: "Arnavutluk dizisine cevap verelim mi, yoksa g\xF6rmezden mi gelelim?",
-          a: '<b>\xD6neri: polemi\u011Fe girmeyin; "Turcja vs Albania \u2014 rodzinne wakacje" veri-temelli kar\u015F\u0131la\u015Ft\u0131rmas\u0131yla \xE7er\xE7eveyi devral\u0131n.</b><br><br><b>Neden:</b> "Yeni T\xFCrkiye" \xE7er\xE7evesini reddetmek onu b\xFCy\xFCt\xFCr; kar\u015F\u0131la\u015Ft\u0131rma format\u0131 ise AI motorlar\u0131n\u0131n en \xE7ok al\u0131nt\u0131lad\u0131\u011F\u0131 i\xE7erik t\xFCr\xFCd\xFCr ve g\xFC\xE7l\xFC oldu\u011Funuz eksene (aile altyap\u0131s\u0131, u\xE7u\u015F derinli\u011Fi, 12 ay) \xE7eker.<br><b>Kan\u0131t:</b> WP dizisi 12K+ payla\u015F\u0131m [GER\xC7EK] \xB7 Arnavutluk ITAKA katalo\u011Funda [GER\xC7EK] \xB7 u\xE7u\u015F/altyap\u0131 k\u0131yas\u0131 T\xFCrkiye lehine [GER\xC7EK].<br><b>Beklenen etki:</b> "Turcja czy Albania" sorgular\u0131nda al\u0131nt\u0131lanabilir tek yap\u0131land\u0131r\u0131lm\u0131\u015F kaynak olmak.<br><b>G\xFCven:</b> Orta-Y\xFCksek \u2014 format kan\u0131tl\u0131, etki uygulamaya ba\u011Fl\u0131.<br><b>Alternatifler:</b> (a) Sessizlik \u2014 \xE7er\xE7eve rakipte kal\u0131r \xB7 (b) PR itiraz\u0131 \u2014 savunmac\u0131 g\xF6r\xFCn\xFCr, diziyi b\xFCy\xFCt\xFCr.'
-        },
-        {
-          q: "Ankara'ya bu ay hangi g\xF6stergeyi raporlamal\u0131y\u0131m?",
-          a: '<b>\xD6neri: \xFC\xE7l\xFC bir g\xF6sterge seti \u2014 pazar s\u0131ras\u0131 (#4), erken-rezervasyon a\xE7\u0131\u011F\u0131 (\u2212%22) ve "kay\u0131p \xFC\xE7 niyet" f\u0131rsat \xE7er\xE7evesi.</b><br><br><b>Neden:</b> Tek bir \xF6vg\xFC metri\u011Fi yerine "g\xFC\xE7l\xFC konum + ger\xE7ek risk + net plan" \xFC\xE7l\xFCs\xFC, hem g\xFCvenilirlik hem b\xFCt\xE7e gerek\xE7esi kurar.<br><b>Kan\u0131t:</b> #4 s\u0131ra [GER\xC7EK] \xB7 \u2212%22 erken rezervasyon [GER\xC7EK] \xB7 balay\u0131/gastronomi/wellness bo\u015Flu\u011Fu [TAHM\u0130N\u0130 \u2014 b\xF6yle etiketleyerek raporlay\u0131n].<br><b>Beklenen etki:</b> Merkez nezdinde "sorunu erken g\xF6ren, plan\u0131 haz\u0131r m\xFC\u015Favirlik" konumu; k\u0131\u015F kampanya b\xFCt\xE7esine zemin.<br><b>G\xFCven:</b> Y\xFCksek.<br><b>Alternatifler:</b> Yaln\u0131zca var\u0131\u015F istatisti\u011Fi raporlamak \u2014 gecikmeli g\xF6stergedir, \xF6nc\xFC sinyal de\u011Feri ta\u015F\u0131maz.'
-        }
+      ADVISOR_PROMPTS = [
+        { key: "winter", label: "K\u0131\u015F b\xFCt\xE7esi", match: ["k\u0131\u015F", "kis", "winter", "zimowe", "b\xFCt\xE7e", "budget"] },
+        { key: "competitor", label: "Rakip yan\u0131t\u0131", match: ["arnavut", "albania", "rakip", "competitor", "egypt", "m\u0131s\u0131r", "greece"] },
+        { key: "ankara", label: "Ankara raporu", match: ["ankara", "rapor", "kpi", "g\xF6sterge", "merkez"] }
       ];
       if (typeof window !== "undefined") window.handleDiosPriorityAction = handleDiosPriorityAction;
     }
@@ -4772,7 +5225,11 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
     "openPlaybookDrawer",
     "closePlaybookDrawer",
     "handlePlaybookAction",
-    "exportPlaybookBrief"
+    "exportPlaybookBrief",
+    "loadAnkaraReport",
+    "loadAdvisorLive",
+    "loadGoTurkiyeLive",
+    "loadMarketIntelligenceBundle"
   ];
   function bindGlobals() {
     for (const k of GLOBALS) {
@@ -4792,29 +5249,35 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
 
   // assets/js/app.js
   init_destination_core();
-  var OFFLINE_HINT = "<b>CALISTIR.bat</b> veya <b>START_UI.bat</b> dosyas\u0131na \xE7ift t\u0131klay\u0131n, sonra F5 ile yenileyin.";
-  function showApiOfflineBanner() {
+  function showApiOfflineBanner(detail) {
     const banner = document.getElementById("liveIntelBanner");
     const text = document.getElementById("liveIntelBannerText");
     if (banner && text) {
       banner.classList.add("show");
-      text.innerHTML = "<b>API ba\u011Flant\u0131s\u0131 yok</b> \u2014 " + OFFLINE_HINT;
+      text.innerHTML = '<b>API ba\u011Flant\u0131s\u0131 yok</b> \u2014 FastAPI yan\u0131t vermiyor. <button type="button" class="pill" id="appRetryBtn" style="margin-left:8px">Tekrar dene</button>' + formatDiagnosticsHtml(detail || "");
+      const btn = document.getElementById("appRetryBtn");
+      if (btn) {
+        btn.onclick = async () => {
+          btn.disabled = true;
+          btn.textContent = "Deneniyor\u2026";
+          if (await probeLive()) {
+            banner.classList.remove("show");
+            startDataLoads();
+          } else {
+            btn.disabled = false;
+            btn.textContent = "Tekrar dene";
+            showApiOfflineBanner("H\xE2l\xE2 yan\u0131t yok");
+          }
+        };
+      }
     }
     const chip = document.getElementById("topSeasonChip");
     if (chip) chip.textContent = "Sabah Brifingi \xB7 ba\u011Flant\u0131 yok";
     const meta = document.getElementById("briefMeta");
     if (meta) meta.textContent = "API ba\u011Flant\u0131s\u0131 yok";
     const sig = document.getElementById("briefSignals");
-    if (sig && sig.textContent.indexOf("y\xFCkleniyor") !== -1) {
-      sig.innerHTML = '<div class="sig-line"><span class="t">\u2014</span><span class="icon" style="background:var(--fall)"></span><p><b>Platforma ula\u015F\u0131lamad\u0131</b> \u2014 ' + OFFLINE_HINT + '<span class="why">Neden \xF6nemli: ba\u011Flant\u0131 d\xFCzeldi\u011Finde canl\u0131 sabah brifingi otomatik y\xFCklenir.</span></p></div>';
-    }
-  }
-  async function probeApi() {
-    try {
-      const res = await fetch(API_BASE + "/api/health/live", { credentials: apiCredentials() });
-      return res.ok;
-    } catch (_) {
-      return false;
+    if (sig && (sig.textContent.indexOf("y\xFCkleniyor") !== -1 || sig.textContent.indexOf("ula\u015F\u0131lamad\u0131") !== -1)) {
+      sig.innerHTML = '<div class="sig-line"><span class="t">\u2014</span><span class="icon" style="background:var(--fall)"></span><p><b>Platforma ula\u015F\u0131lamad\u0131</b> \u2014 ba\u011Flant\u0131 d\xFCzelince canl\u0131 brifing y\xFCklenir.<span class="why">Neden \xF6nemli: sahte brifing g\xF6sterilmez.</span></p></div>' + formatDiagnosticsHtml(detail || "");
     }
   }
   function startDataLoads() {
@@ -4823,6 +5286,10 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
     loadIntelligenceHub();
     loadAiVisibility();
     initLiveIntelligence();
+    loadMarketIntelligenceBundle();
+    loadAnkaraReport();
+    loadAdvisorLive();
+    loadGoTurkiyeLive();
   }
   document.addEventListener("DOMContentLoaded", async () => {
     try {
@@ -4835,11 +5302,12 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
       initBriefUxListeners();
       startWorkstationPolling();
       startDataLoads();
-      const online = await probeApi();
+      const online = await probeLive();
       if (!online) {
-        showApiOfflineBanner();
+        apiLog("warn", "startup probe failed", { base: API_BASE });
+        showApiOfflineBanner("health/live failed");
         const retry = setInterval(async () => {
-          if (await probeApi()) {
+          if (await probeLive()) {
             clearInterval(retry);
             const banner = document.getElementById("liveIntelBanner");
             banner?.classList.remove("show");
@@ -4849,7 +5317,7 @@ body.playbook-drawer-open .playbook-drawer-backdrop{display:block}
       }
     } catch (err) {
       console.error("PlanAI UI ba\u015Flat\u0131lamad\u0131:", err);
-      showApiOfflineBanner();
+      showApiOfflineBanner(String(err && err.message ? err.message : err));
     }
   });
 })();
